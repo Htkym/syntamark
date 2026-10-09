@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 internal static class MdSourceMapping
 {

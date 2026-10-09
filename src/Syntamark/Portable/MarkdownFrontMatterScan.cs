@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 /// <summary>Delimiter facts shared by strict optional parsing and the site compatibility adapter.</summary>
 internal readonly record struct MdFrontMatterEnvelope(

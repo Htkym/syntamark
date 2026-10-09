@@ -1,7 +1,7 @@
 #if NETSTANDARD2_0
 using System.Collections.Generic;
 
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 // Only the missing netstandard2.0 BCL operations; modern hosts use their native methods.
 internal static class NetStandardCompatibility

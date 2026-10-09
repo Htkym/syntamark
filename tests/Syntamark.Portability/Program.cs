@@ -6,12 +6,12 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-var runtime = typeof(LithoSharp.Markdown.MarkdownParser).Assembly;
+var runtime = typeof(Syntamark.MarkdownParser).Assembly;
 var runtimeTarget = runtime.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName;
 Check(runtimeTarget == ".NETCoreApp,Version=v10.0", "Product parser host must target net10.0.");
 var portableContext = new AssemblyLoadContext("MD-03 portable canary", isCollectible: true);
 portableContext.Resolving += (_, name) => AssemblyLoadContext.Default.LoadFromAssemblyName(name);
-var portable = portableContext.LoadFromAssemblyPath(Path.Combine(AppContext.BaseDirectory, "Portable", "LithoSharp.Markdown.dll"));
+var portable = portableContext.LoadFromAssemblyPath(Path.Combine(AppContext.BaseDirectory, "Portable", "Syntamark.dll"));
 var portableTarget = portable.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName;
 Check(portableTarget == ".NETStandard,Version=v2.0", "Portable assembly must really target netstandard2.0.");
 Check(!portable.GetReferencedAssemblies().Any(reference => reference.Name == "LithoSharp"),
@@ -73,7 +73,7 @@ Md02ReviewFixChecks.Run(runtime, portable);
 
 static object Parse(Assembly assembly, string input)
 {
-    var parser = assembly.GetType("LithoSharp.Content.Compilation.LithoBlockParser", throwOnError: true)!;
+    var parser = assembly.GetType("Syntamark.Compilation.LithoBlockParser", throwOnError: true)!;
     return parser.GetMethod("ParseBlocks", BindingFlags.Public | BindingFlags.Static)!
         .Invoke(null, new object[] { input, CancellationToken.None })!;
 }

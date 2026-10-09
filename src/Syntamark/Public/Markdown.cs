@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using LithoSharp.Content.Compilation;
+using Syntamark.Compilation;
 
-namespace LithoSharp.Markdown;
+namespace Syntamark;
 
 /// <summary>A half-open UTF-16 range in the complete caller-supplied text.</summary>
 public readonly record struct RawSpan
@@ -39,8 +39,8 @@ public sealed class MarkdownSourceSegment
 {
     internal MarkdownSourceSegment(MdSourceSegment facts)
     {
-        DecodedSpan = global::LithoSharp.Markdown.RawSpan.From(facts.DecodedSpan);
-        RawSpan = global::LithoSharp.Markdown.RawSpan.From(facts.RawSpan);
+        DecodedSpan = global::Syntamark.RawSpan.From(facts.DecodedSpan);
+        RawSpan = global::Syntamark.RawSpan.From(facts.RawSpan);
         Kind = (MarkdownSegmentKind)facts.Kind;
     }
     public RawSpan DecodedSpan { get; }
@@ -53,7 +53,7 @@ public sealed class MarkdownMappingResult
 {
     internal MarkdownMappingResult(MdMappingResult facts)
     {
-        RawFragments = Array.AsReadOnly(facts.RawFragments.Select(value => global::LithoSharp.Markdown.RawSpan.From(value)).ToArray());
+        RawFragments = Array.AsReadOnly(facts.RawFragments.Select(value => global::Syntamark.RawSpan.From(value)).ToArray());
         Precision = (MarkdownMappingPrecision)facts.Precision;
     }
     public IReadOnlyList<RawSpan> RawFragments { get; }
@@ -86,7 +86,7 @@ public sealed class MarkdownYamlNode
     internal MarkdownYamlNode(MdYamlNode facts)
     {
         Kind = (MarkdownYamlKind)facts.Kind;
-        RawSpan = global::LithoSharp.Markdown.RawSpan.From(facts.RawSpan);
+        RawSpan = global::Syntamark.RawSpan.From(facts.RawSpan);
         Scalar = new MarkdownTextProjection(facts.Scalar);
         Children = Array.AsReadOnly(facts.Children.Select(value => new MarkdownYamlNode(value)).ToArray());
     }
@@ -102,9 +102,9 @@ public sealed class MarkdownFrontMatter
     internal MarkdownFrontMatter(MdFrontMatter facts)
     {
         State = (MarkdownFrontMatterState)facts.State;
-        OpeningSpan = global::LithoSharp.Markdown.RawSpan.From(facts.OpeningSpan);
-        YamlSpan = global::LithoSharp.Markdown.RawSpan.From(facts.YamlSpan);
-        ClosingSpan = global::LithoSharp.Markdown.RawSpan.From(facts.ClosingSpan);
+        OpeningSpan = global::Syntamark.RawSpan.From(facts.OpeningSpan);
+        YamlSpan = global::Syntamark.RawSpan.From(facts.YamlSpan);
+        ClosingSpan = global::Syntamark.RawSpan.From(facts.ClosingSpan);
         Root = facts.Root is null ? null : new MarkdownYamlNode(facts.Root);
     }
     public MarkdownFrontMatterState State { get; }
@@ -122,8 +122,8 @@ public sealed class MarkdownHeading
         LocalKey = facts.LocalKey;
         RawLevel = facts.RawLevel;
         Text = new MarkdownTextProjection(facts.Text);
-        RawSpan = global::LithoSharp.Markdown.RawSpan.From(facts.RawSpan);
-        TextRawSpan = global::LithoSharp.Markdown.RawSpan.From(facts.TextRawSpan);
+        RawSpan = global::Syntamark.RawSpan.From(facts.RawSpan);
+        TextRawSpan = global::Syntamark.RawSpan.From(facts.TextRawSpan);
         Anchor = facts.Anchor;
     }
     public string LocalKey { get; }
@@ -142,8 +142,8 @@ public sealed class MarkdownSection
         LocalKey = facts.LocalKey;
         ParentLocalKey = facts.ParentLocalKey;
         HeadingLocalKey = facts.HeadingLocalKey;
-        DirectBodySpan = global::LithoSharp.Markdown.RawSpan.From(facts.DirectBodySpan);
-        SubtreeSpan = global::LithoSharp.Markdown.RawSpan.From(facts.SubtreeSpan);
+        DirectBodySpan = global::Syntamark.RawSpan.From(facts.DirectBodySpan);
+        SubtreeSpan = global::Syntamark.RawSpan.From(facts.SubtreeSpan);
     }
     public string LocalKey { get; }
     public string? ParentLocalKey { get; }
@@ -160,11 +160,11 @@ public sealed class MarkdownLink
         Kind = (MarkdownLinkKind)facts.Kind;
         Resolution = (MarkdownLinkResolution)facts.Resolution;
         Image = facts.Image;
-        RawSpan = global::LithoSharp.Markdown.RawSpan.From(facts.RawSpan);
+        RawSpan = global::Syntamark.RawSpan.From(facts.RawSpan);
         Label = new MarkdownTextProjection(facts.Label);
         Target = facts.Target;
         Title = facts.Title;
-        TargetRawSpan = global::LithoSharp.Markdown.RawSpan.From(facts.TargetRawSpan);
+        TargetRawSpan = global::Syntamark.RawSpan.From(facts.TargetRawSpan);
         ReferenceLabel = facts.ReferenceLabel;
     }
     public MarkdownLinkKind Kind { get; }
@@ -183,11 +183,11 @@ public sealed class MarkdownFence
 {
     internal MarkdownFence(MdFence facts)
     {
-        RawSpan = global::LithoSharp.Markdown.RawSpan.From(facts.RawSpan);
-        OpeningMarkerSpan = global::LithoSharp.Markdown.RawSpan.From(facts.OpeningMarkerSpan);
-        InfoSpan = global::LithoSharp.Markdown.RawSpan.From(facts.InfoSpan);
-        ContentSpan = global::LithoSharp.Markdown.RawSpan.From(facts.ContentSpan);
-        ClosingMarkerSpan = global::LithoSharp.Markdown.RawSpan.From(facts.ClosingMarkerSpan);
+        RawSpan = global::Syntamark.RawSpan.From(facts.RawSpan);
+        OpeningMarkerSpan = global::Syntamark.RawSpan.From(facts.OpeningMarkerSpan);
+        InfoSpan = global::Syntamark.RawSpan.From(facts.InfoSpan);
+        ContentSpan = global::Syntamark.RawSpan.From(facts.ContentSpan);
+        ClosingMarkerSpan = global::Syntamark.RawSpan.From(facts.ClosingMarkerSpan);
         Closed = facts.Closed;
         Info = facts.Info;
         Content = new MarkdownTextProjection(facts.Content);
@@ -208,7 +208,7 @@ public sealed class MarkdownTextRegion
     internal MarkdownTextRegion(MdTextRegion facts)
     {
         Kind = facts.Kind;
-        RawSpan = global::LithoSharp.Markdown.RawSpan.From(facts.RawSpan);
+        RawSpan = global::Syntamark.RawSpan.From(facts.RawSpan);
         Content = new MarkdownTextProjection(facts.Content);
     }
     public string Kind { get; }
@@ -224,7 +224,7 @@ public sealed class MarkdownDiagnostic
         Id = facts.Id;
         Severity = (MarkdownDiagnosticSeverity)facts.Severity;
         Message = facts.Message;
-        RawSpan = global::LithoSharp.Markdown.RawSpan.From(facts.RawSpan);
+        RawSpan = global::Syntamark.RawSpan.From(facts.RawSpan);
         Origin = facts.Origin;
         Reason = facts.Reason;
     }
@@ -277,7 +277,7 @@ public sealed class MarkdownDocument
         OptionsHash = facts.OptionsHash;
         TextHash = facts.TextHash;
         Status = (MarkdownParseStatus)facts.Status;
-        BodySpan = global::LithoSharp.Markdown.RawSpan.From(facts.BodySpan);
+        BodySpan = global::Syntamark.RawSpan.From(facts.BodySpan);
         FrontMatter = new MarkdownFrontMatter(facts.FrontMatter);
         Headings = Array.AsReadOnly(facts.Headings.Select(value => new MarkdownHeading(value)).ToArray());
         Sections = Array.AsReadOnly(facts.Sections.Select(value => new MarkdownSection(value)).ToArray());

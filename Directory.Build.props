@@ -2,6 +2,8 @@
   <PropertyGroup>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/Htkym/syntamark</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Htkym/syntamark</PackageProjectUrl>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
 </Project>

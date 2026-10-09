@@ -1,6 +1,6 @@
 using System;
 
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 /// <summary>
 /// A half-open range over source text in UTF-16 code units.

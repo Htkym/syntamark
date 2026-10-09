@@ -21,8 +21,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: dotnet restore tests/LithoSharp.Markdown.Portability --locked-mode
-      - run: dotnet run --project tests/LithoSharp.Markdown.Portability -c Release --no-restore
+      - run: dotnet restore tests/Syntamark.Portability --locked-mode
+      - run: dotnet run --project tests/Syntamark.Portability -c Release --no-restore
       - name: Prepare candidate
         if: github.event_name == 'workflow_dispatch'
         env:

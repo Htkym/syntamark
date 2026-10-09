@@ -1,6 +1,6 @@
 using System;
 
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 /// <summary>Finds opaque token envelopes only at positions reached by the Markdown inline scanner.</summary>
 internal static class MdOpaqueSyntax

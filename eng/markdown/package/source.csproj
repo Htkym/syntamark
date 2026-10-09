@@ -4,13 +4,16 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
-    <PackageId>LithoSharp.Markdown.Source</PackageId>
+    <PackageId>Syntamark.Source</PackageId>
     <Version>__VERSION__</Version>
     <Authors>Htkym</Authors>
     <Description>Explicitly selected portable Markdown source for compiler hosts.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryCommit>__COMMIT__</RepositoryCommit>
+    <RepositoryUrl>https://github.com/Htkym/syntamark</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/Htkym/syntamark</PackageProjectUrl>
   </PropertyGroup>
   <ItemGroup>
     <None Include="src/Portable/**/*.cs" Pack="true" PackagePath="src/Portable/%(RecursiveDir)" />

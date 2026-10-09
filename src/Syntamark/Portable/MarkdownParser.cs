@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 internal static class MdInlineFacts
 {

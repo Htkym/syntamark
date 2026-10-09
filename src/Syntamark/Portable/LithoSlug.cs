@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 /// <summary>
 /// Heading auto-identifier matching the Markdig output observed on the C00 baseline

@@ -4,14 +4,17 @@
     <LangVersion>13.0</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <AssemblyName>LithoSharp.Markdown</AssemblyName>
-    <PackageId>LithoSharp.Markdown</PackageId>
+    <AssemblyName>Syntamark</AssemblyName>
+    <PackageId>Syntamark</PackageId>
     <Version>__VERSION__</Version>
     <Authors>Htkym</Authors>
     <Description>Parse-only Markdown facts and original UTF-16 source positions.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryCommit>__COMMIT__</RepositoryCommit>
+    <RepositoryUrl>https://github.com/Htkym/syntamark</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/Htkym/syntamark</PackageProjectUrl>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <ItemGroup>

@@ -8,9 +8,9 @@ import {fileURLToPath} from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const [action,...args]=process.argv.slice(2);
-const component='src/LithoSharp.Markdown/';
+const component='src/Syntamark/';
 const stamp=component+'Portable/MarkdownParserVersion.g.cs';
-const ids=['LithoSharp.Markdown','LithoSharp.Markdown.Source'];
+const ids=['Syntamark','Syntamark.Source'];
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const json=p=>JSON.parse(fs.readFileSync(p,'utf8'));
 function assert(ok,why){if(!ok)throw Error(why);}
@@ -67,7 +67,7 @@ function prepare(commit,version,out){
   assert(JSON.stringify(dependencies.dependencies)===JSON.stringify({YamlDotNet:'18.1.0'}),'Unexpected portable dependencies');
   const metadata={
     componentVersion:version,sourceCommit:commit,canonicalSourceHash:hash,parserVersion,
-    sourceRepository:{kind:'local-scoped-migration',component:'LithoSharp.Markdown',historyMap:'eng/markdown/source-history.json'},
+    sourceRepository:{kind:'git',url:'https://github.com/Htkym/syntamark',component:'Syntamark',historyMap:'eng/markdown/source-history.json'},
     contractVersion:'1.0',profileId:'lithosharp-markdown/1',
     hashEncoding:'UTF8 path byte order + uint64 BE path/content lengths + Git blob bytes',
     excludedGeneratedStamp:stamp,
@@ -80,7 +80,7 @@ function prepare(commit,version,out){
   };
   const licenseMap=[['LICENSE','LICENSE'],['licenses/YamlDotNet.LICENSE.txt','licenses/YamlDotNet.LICENSE.txt']];
   // Keep notices specific to the portable component; site-only dependencies are not distributed.
-  const notice=Buffer.from('LithoSharp.Markdown and LithoSharp.Markdown.Source include YamlDotNet 18.1.0 (MIT).\nSee licenses/YamlDotNet.LICENSE.txt. Portable parser author/license are preserved in LICENSE.\n');
+  const notice=Buffer.from('Syntamark and Syntamark.Source include YamlDotNet 18.1.0 (MIT).\nSee licenses/YamlDotNet.LICENSE.txt. Portable parser author/license are preserved in LICENSE.\n');
   for(const [original,packagePath] of licenseMap){
     const bytes=blob(commit,original);metadata.licenses.push({sourcePath:original,packagePath,sha256:sha(bytes)});
     for(const kind of ['runtime','source'])write(path.join(out,kind,packagePath),bytes);
@@ -101,7 +101,7 @@ function prepare(commit,version,out){
     metadata.runtimeFiles.push({path:original,stagePath,byteLength:bytes.length,sha256:sha(bytes)});
     write(path.join(out,'runtime',stagePath),bytes);
   }
-  for(const template of ['runtime.csproj','source.csproj','LithoSharp.Markdown.Source.targets']){
+  for(const template of ['runtime.csproj','source.csproj','Syntamark.Source.targets']){
     const input=fs.readFileSync(path.join(root,'eng/markdown/package',template));
     const text=input.toString().replaceAll('__VERSION__',version).replaceAll('__COMMIT__',commit).replaceAll('__PARSER_VERSION__',parserVersion);
     const target=template.endsWith('.targets')?path.join(out,'source','build',template):
@@ -109,12 +109,15 @@ function prepare(commit,version,out){
     metadata.packagingInputs.push({path:'eng/markdown/package/'+template,sha256:sha(input),stagePath:path.relative(out,target).replaceAll('\\','/'),stagedSha256:sha(Buffer.from(text))});
     write(target,text);
   }
+  const readmeInput=blob(commit,'README.md');
+  const readme=Buffer.from(readmeInput.toString().replaceAll(/2\.0\.0-preview\.[1-9][0-9]*/g,version));
+  metadata.readme={sourcePath:'README.md',packagePath:'README.md',sourceSha256:sha(readmeInput),sha256:sha(readme)};
   for(const kind of ['runtime','source']){
     writeJson(path.join(out,kind,'markdown/manifest.json'),metadata);
-    write(path.join(out,kind,'README.md'),'# '+ids[kind==='runtime'?0:1]+'\n\nImmutable local candidate '+version+'.\n\nCanonical parser '+parserVersion+' from '+commit+'.\nSource hosts explicitly enable LithoSharpMarkdownIncludeSource and reference exact [V], PrivateAssets=all, IncludeAssets=build.\nThey reference YamlDotNet [18.1.0] directly. Public facade and runtime friend metadata are excluded from source payload.\n');
+    write(path.join(out,kind,'README.md'),readme);
   }
   fs.mkdirSync(path.join(out,'feed'));fs.mkdirSync(path.join(out,'packages'));
-  write(path.join(out,'NuGet.Config'),'<?xml version="1.0" encoding="utf-8"?>\n<configuration><packageSources><clear/><add key="pair-local" value="'+path.join(out,'feed').replaceAll('\\','/')+'"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="pair-local"><package pattern="LithoSharp.Markdown"/><package pattern="LithoSharp.Markdown.Source"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>\n');
+  write(path.join(out,'NuGet.Config'),'<?xml version="1.0" encoding="utf-8"?>\n<configuration><packageSources><clear/><add key="pair-local" value="'+path.join(out,'feed').replaceAll('\\','/')+'"/><add key="nuget.org" value="https://api.nuget.org/v3/index.json"/></packageSources><packageSourceMapping><packageSource key="pair-local"><package pattern="Syntamark"/><package pattern="Syntamark.Source"/></packageSource><packageSource key="nuget.org"><package pattern="*"/></packageSource></packageSourceMapping></configuration>\n');
   writeJson(path.join(out,'prepared.json'),{task:'MD-06',state:'PREPARED_NOT_PACKED',preparedAt:new Date().toISOString(),metadata,
     output:out,feed:path.join(out,'feed'),packages:path.join(out,'packages')});
   console.log(JSON.stringify({state:'PREPARED_NOT_PACKED',componentVersion:version,sourceCommit:commit,canonicalSourceHash:hash,files:entries.length,output:out}));
@@ -131,6 +134,7 @@ function checkStage(out){
     assert(sha(fs.readFileSync(path.join(out,kind,p)))===m.generatedStamp.sha256,'Staged stamp changed');
     assert(JSON.stringify(json(path.join(out,kind,'markdown/manifest.json')))===JSON.stringify(m),'Staged metadata changed');
     for(const e of m.licenses)assert(sha(fs.readFileSync(path.join(out,kind,e.packagePath)))===e.sha256,'Staged license changed');
+    assert(sha(blob(m.sourceCommit,m.readme.sourcePath))===m.readme.sourceSha256&&sha(fs.readFileSync(path.join(out,kind,m.readme.packagePath)))===m.readme.sha256,'Staged README changed');
   }
   const expected=m.canonicalFiles.filter(e=>e.path.startsWith(component+'Portable/')).map(e=>e.path.slice(component.length));
   expected.push('Portable/MarkdownParserVersion.g.cs',...m.runtimeFiles.map(e=>e.stagePath));
@@ -163,11 +167,12 @@ function seal(out){
     const bytes=fs.readFileSync(p),z=zip(p),inside=JSON.parse(z.get('markdown/manifest.json').toString());
     assert(JSON.stringify(inside)===JSON.stringify(metadata),'Pair metadata mismatch');
     checkLicenses(z,metadata);
+    assert(z.has(metadata.readme.packagePath)&&sha(z.get(metadata.readme.packagePath))===metadata.readme.sha256,'Packaged README changed');
     const nuspec=z.get(ids[i]+'.nuspec').toString();
     assert(nuspec.includes('<id>'+ids[i]+'</id>')&&nuspec.includes('<version>'+metadata.componentVersion+'</version>'),'Package identity mismatch');
     if(kind==='runtime'){
       assert(/<dependency id="YamlDotNet" version="\[18\.1\.0\]"/.test(nuspec),'Runtime dependency is not exact');
-      assert(z.has('lib/net10.0/LithoSharp.Markdown.dll'),'Runtime facade DLL missing');
+      assert(z.has('lib/net10.0/Syntamark.dll'),'Runtime facade DLL missing');
     }else{
       assert(![...z.keys()].some(p=>p.startsWith('lib/')||p.startsWith('buildTransitive/')||p.startsWith('contentFiles/')||p.includes('/Public/')||p.includes('/Properties/')||p.endsWith('AssemblyInfo.cs')),'Forbidden source payload');
       const expected=metadata.canonicalFiles.filter(e=>e.path.startsWith(component+'Portable/')).map(e=>['src/'+e.path.slice(component.length),e.sha256]);
@@ -177,12 +182,12 @@ function seal(out){
       for(const [name,hash] of expected)assert(z.has(name)&&sha(z.get(name))===hash,'Source byte mismatch: '+name);
       for(const e of metadata.canonicalFiles.filter(e=>e.path.startsWith(component+'Contracts/')))
         assert(z.has('contracts/'+path.basename(e.path))&&sha(z.get('contracts/'+path.basename(e.path)))===e.sha256,'Contract byte mismatch');
-      const targets=z.get('build/LithoSharp.Markdown.Source.targets').toString();
-      assert(targets.includes('LITHOSHARP_MARKDOWN_SOURCE')&&targets.includes(metadata.parserVersion),'Source target/stamp missing');
+      const targets=z.get('build/Syntamark.Source.targets').toString();
+      assert(targets.includes('SYNTAMARK_SOURCE')&&targets.includes(metadata.parserVersion),'Source target/stamp missing');
       assert(!/<dependencies>[\s\S]*<dependency /.test(nuspec),'Source hosts must directly reference their dependencies');
     }
     artifacts[kind]={packageId:ids[i],componentVersion:metadata.componentVersion,fileName:path.basename(p),sha256:sha(bytes),byteLength:bytes.length};
-    if(kind==='runtime')artifacts[kind].assemblySha256=sha(z.get('lib/net10.0/LithoSharp.Markdown.dll'));
+    if(kind==='runtime')artifacts[kind].assemblySha256=sha(z.get('lib/net10.0/Syntamark.dll'));
   }
   writeJson(path.join(out,'pair-manifest.json'),{...metadata,state:'PACKED_NOT_HOST_VERIFIED',artifacts});
   console.log(JSON.stringify({state:'PACKED_NOT_HOST_VERIFIED',artifacts}));

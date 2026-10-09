@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 internal sealed class MdOptions
 {

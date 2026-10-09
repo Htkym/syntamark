@@ -5,7 +5,7 @@ using System.Threading;
 
 using System.Text;
 
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 /// <summary>
 /// Inline parser for the Litho subset: text, escapes, entities, code spans,

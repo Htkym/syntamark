@@ -1,4 +1,4 @@
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 /// <summary>ASCII-only predicates shared by all parser targets.</summary>
 internal static class LithoCharacters

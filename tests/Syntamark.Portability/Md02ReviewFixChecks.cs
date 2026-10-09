@@ -1,6 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
-using LithoSharp.Markdown;
+using Syntamark;
 
 internal static class Md02ReviewFixChecks
 {
@@ -62,16 +62,16 @@ internal static class Md02ReviewFixChecks
 
     private static void CheckAnchors(Assembly assembly)
     {
-        var slug = assembly.GetType("LithoSharp.Content.Compilation.LithoSlug", throwOnError: true)!;
+        var slug = assembly.GetType("Syntamark.Compilation.LithoSlug", throwOnError: true)!;
         var assign = slug.GetMethod("Assign", BindingFlags.Public | BindingFlags.Static)!;
         Check(((IReadOnlyList<string>)assign.Invoke(null, new object[] { new[] { "A", "A-1", "A", "A" } })!)
             .SequenceEqual(new[] { "a", "a-1", "a-2", "a-3" }), "Literal -1 must keep its collision slot");
         Check(((IReadOnlyList<string>)assign.Invoke(null, new object[] { new[] { "A", "A", "A-1", "A" } })!)
             .SequenceEqual(new[] { "a", "a-1", "a-1-1", "a-2" }), "Suffix-family ordering must stay compatible");
         // Exercise this loop directly: a whole-parse low budget could fail before anchor allocation.
-        var optionsType = assembly.GetType("LithoSharp.Content.Compilation.MdOptions", true)!;
-        var contextType = assembly.GetType("LithoSharp.Content.Compilation.MdParseContext", true)!;
-        var allocatorType = assembly.GetType("LithoSharp.Content.Compilation.LithoAnchorIds", true)!;
+        var optionsType = assembly.GetType("Syntamark.Compilation.MdOptions", true)!;
+        var contextType = assembly.GetType("Syntamark.Compilation.MdParseContext", true)!;
+        var allocatorType = assembly.GetType("Syntamark.Compilation.LithoAnchorIds", true)!;
         var next = allocatorType.GetMethod("Next", BindingFlags.NonPublic | BindingFlags.Instance)!;
         object Allocator(int budget, CancellationToken token)
         {

@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using LithoSharp.Markdown;
+using Syntamark;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 /// <summary>
 /// Source text with precomputed line starts for offset-to-line/column mapping.

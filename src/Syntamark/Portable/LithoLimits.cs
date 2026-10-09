@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 /// <summary>Parser limits shared by runtime and source hosts.</summary>
 internal static partial class LithoParserLimits

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 /// <summary>
 /// Node tree for the Litho Markdown frontend (CommonMark 0.31.2 + GFM 0.29 subset).

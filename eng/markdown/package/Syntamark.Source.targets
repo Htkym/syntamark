@@ -1,0 +1,20 @@
+<Project>
+  <PropertyGroup>
+    <SyntamarkSourcePackageVersion>__VERSION__</SyntamarkSourcePackageVersion>
+    <SyntamarkSourceParserVersion>__PARSER_VERSION__</SyntamarkSourceParserVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(SyntamarkIncludeSource)' == 'true'">
+    <DefineConstants>$(DefineConstants);SYNTAMARK_SOURCE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(SyntamarkIncludeSource)' == 'true'">
+    <Compile Include="$(MSBuildThisFileDirectory)../src/Portable/**/*.cs"
+             Link="Syntamark/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <Target Name="CheckSyntamarkSourceArtifact" BeforeTargets="CoreCompile"
+          Condition="'$(SyntamarkIncludeSource)' == 'true'">
+    <Error Condition="'$(SyntamarkSourceVersion)' != '$(SyntamarkSourcePackageVersion)'"
+           Text="Selected Markdown source version differs from the restored immutable artifact." />
+    <Error Condition="'$(SyntamarkExpectedParserVersion)' != '' and '$(SyntamarkExpectedParserVersion)' != '$(SyntamarkSourceParserVersion)'"
+           Text="Selected Markdown parser stamp differs from the expected pair manifest." />
+  </Target>
+</Project>

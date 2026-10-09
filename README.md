@@ -1,11 +1,37 @@
-# LithoSharp.Markdown
+# Syntamark
 
-Parse-only Markdown component for LithoSharp and SharpDeps. The runtime package is `LithoSharp.Markdown`; compiler hosts use `LithoSharp.Markdown.Source` with an exact matching version. Package IDs, contract 1.0 and profile `lithosharp-markdown/1` are unchanged by the repository move.
+Syntamarkは、Markdownから見出し、リンク、front matter、元テキストの位置などを取り出すライブラリです。LithoSharpやSharpDepsを参照せずに利用できます。runtime packageの対象は.NET 10で、公開namespaceはSyntamarkです。
 
-Canonical parser, DTOs and contracts remain under `src/LithoSharp.Markdown` so the parser hash and logical source paths are preserved. Runtime friend metadata is included only in the runtime assembly. Source payloads contain portable sources and explicit build targets; they exclude the public facade and friend metadata. HTML rendering, workspace policy and graph projection belong to the consumers.
+ローカル候補のfeedから、固定版を追加します。NuGetへの公開はまだ行っていません。
 
-`eng/markdown/source-history.json` maps original commits to the scoped imported history. `LICENSE`, `THIRD-PARTY-NOTICES.md` and `licenses/YamlDotNet.LICENSE.txt` retain author and dependency notices.
+```powershell
+dotnet add package Syntamark --version 2.0.0-preview.3 --source <candidate-feed>
+```
 
-Run the existing parser checks with `dotnet run --project tests/LithoSharp.Markdown.Portability -c Release`. To create a fresh local immutable candidate, run `node eng/markdown/New-ArtifactPair.mjs prepare <full source commit> <2.0.0-preview.N> <new stage>`, restore and pack both prepared projects, then run `check-stage` and `seal`. Never replace an existing version or stage. Registered versions in `eng/markdown/immutable-versions.json` are rejected before stage creation. Record each sealed pair there before selecting it as a fixed consumer candidate. The CI workflow has read-only repository permission, runs the parser checks, and optionally packs a candidate without publishing it.
+```csharp
+using Syntamark;
 
-This MD-06 checkout has no remote yet. The final owner and publication destination must be approved before repository creation or source upload. Local candidate metadata deliberately omits a GitHub RepositoryUrl until that destination exists.
+var document = MarkdownParser.Parse("# Hello", "example", "hello.md");
+Console.WriteLine(document.Status);
+Console.WriteLine(document.Headings.Count);
+```
+
+scopeIdとsourceIdは呼び出し元が指定する入力の識別子です。位置のoffsetと長さは元入力のUTF-16 code unitを使います。結果のStatus・Coverage・Diagnosticsを確認して、解析し切れた範囲を判断してください。HTML描画、site診断、graphへの投影は呼び出し元で行います。
+
+compiler host向けにはSyntamark.Sourceを用意しています。netstandard2.0/C# 13のportable sourceを明示的にCompileへ取り込むpackageです。runtime facadeとfriend metadataは含みません。runtime/sourceの版を揃え、YamlDotNetも正確な18.1.0を直接参照します。
+
+```xml
+<PropertyGroup>
+  <SyntamarkIncludeSource>true</SyntamarkIncludeSource>
+  <SyntamarkSourceVersion>2.0.0-preview.3</SyntamarkSourceVersion>
+</PropertyGroup>
+<ItemGroup>
+  <PackageReference Include="Syntamark.Source" Version="[2.0.0-preview.3]"
+                    PrivateAssets="all" IncludeAssets="build" />
+  <PackageReference Include="YamlDotNet" Version="[18.1.0]" />
+</ItemGroup>
+```
+
+現在の解析契約は1.0、dialect profileは互換性を保つためlithosharp-markdown/1です。名称変更による構文追加はありません。旧LithoSharp.Markdownの固定候補と、新しいSyntamark候補は別のpackageとして保持します。
+
+ライセンスはMITです。著作権と依存ライブラリの通知はLICENSE、THIRD-PARTY-NOTICES.md、licenses/YamlDotNet.LICENSE.txtに記載しています。eng/markdown/source-history.jsonは移管元の履歴対応を保持します。

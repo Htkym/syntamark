@@ -5,7 +5,7 @@ using System.Text;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 
-namespace LithoSharp.Content.Compilation;
+namespace Syntamark.Compilation;
 
 internal static class MdFrontMatterParser
 {

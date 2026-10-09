@@ -40,5 +40,34 @@
         "byteLength": 55020
       }
     }
+  },
+  {
+    "componentVersion": "2.0.0-preview.3",
+    "sourceCommit": "a1e27e071c0e50bcad82986e83bc76929e6addef",
+    "canonicalSourceHash": "7e854150d5cad96e554b90a550251dce74d29b79ceef2964fa9cfa4a226e2051",
+    "parserVersion": "1/7e854150d5cad96e554b90a550251dce74d29b79ceef2964fa9cfa4a226e2051",
+    "sourceRepository": {
+      "kind": "git",
+      "url": "https://github.com/Htkym/syntamark",
+      "component": "Syntamark",
+      "historyMap": "eng/markdown/source-history.json"
+    },
+    "artifacts": {
+      "runtime": {
+        "packageId": "Syntamark",
+        "componentVersion": "2.0.0-preview.3",
+        "fileName": "Syntamark.2.0.0-preview.3.nupkg",
+        "sha256": "ad0e010a1443d3f969f6ed41af5ba3c551034c591bf03a315f8b45bdb27eca7c",
+        "byteLength": 78372,
+        "assemblySha256": "1603cfdfe41cb06b2f7772990d5898fae5687947ab5adc93c78a82c41a1b13d4"
+      },
+      "source": {
+        "packageId": "Syntamark.Source",
+        "componentVersion": "2.0.0-preview.3",
+        "fileName": "Syntamark.Source.2.0.0-preview.3.nupkg",
+        "sha256": "075bef89ccbae2e2d26607e65a1559ab65e753e00ced6fa715c3c406d7dd397e",
+        "byteLength": 55987
+      }
+    }
   }
 ]

@@ -1,0 +1,44 @@
+[
+  {
+    "componentVersion": "2.0.0-preview.1",
+    "sourceCommit": "ccd165a1fd0eff9cb7b54004c8b472547ba74e8e",
+    "artifacts": {
+      "runtime": {
+        "packageId": "LithoSharp.Markdown",
+        "componentVersion": "2.0.0-preview.1",
+        "fileName": "LithoSharp.Markdown.2.0.0-preview.1.nupkg",
+        "sha256": "554a4c71de4fb8c55872895a985cf8f66e9518346e451e91a2607d69d17fb8ed",
+        "byteLength": 77332,
+        "assemblySha256": "1208ca8b32332ef58ea68838a6c672e3ea760257f84728e0a7e20b353d8389a5"
+      },
+      "source": {
+        "packageId": "LithoSharp.Markdown.Source",
+        "componentVersion": "2.0.0-preview.1",
+        "fileName": "LithoSharp.Markdown.Source.2.0.0-preview.1.nupkg",
+        "sha256": "537bd22998e5a2560a8cffea2f829b3bfae79179b91572671fbf66d0a46d9a06",
+        "byteLength": 54966
+      }
+    }
+  },
+  {
+    "componentVersion": "2.0.0-preview.2",
+    "sourceCommit": "54295e8275cf5f2da7769a76668cea1c6cf7a7cc",
+    "artifacts": {
+      "runtime": {
+        "packageId": "LithoSharp.Markdown",
+        "componentVersion": "2.0.0-preview.2",
+        "fileName": "LithoSharp.Markdown.2.0.0-preview.2.nupkg",
+        "sha256": "613261660f8f15c0d56d160886af042d8d6eca316bf14f3b4b7d0811a960bd80",
+        "byteLength": 77263,
+        "assemblySha256": "f7a153d16f5ac06a8c9f975205c5529662a89aa9842fcfdfcfab238d24c4a817"
+      },
+      "source": {
+        "packageId": "LithoSharp.Markdown.Source",
+        "componentVersion": "2.0.0-preview.2",
+        "fileName": "LithoSharp.Markdown.Source.2.0.0-preview.2.nupkg",
+        "sha256": "6bc469aca1f1e687361fede6010c14c5a30e9cee141bdc7c8eb494fb81e0ea94",
+        "byteLength": 55020
+      }
+    }
+  }
+]

@@ -54,6 +54,7 @@ function checkLicenses(z,metadata){
 function prepare(commit,version,out){
   assert(/^[0-9a-f]{40}$/.test(commit),'Require one full source commit');
   assert(/^2\.0\.0-preview\.[1-9][0-9]*$/.test(version),'Require one new immutable 2.0.0-preview.N');
+  assert(!json(path.join(root,'eng/markdown/immutable-versions.json')).some(a=>a.componentVersion===version),'Version is already immutable; choose a new preview version');
   out=path.resolve(out);assert(!fs.existsSync(out),'Never overwrite an artifact stage; choose new output/version');
   assert(git(['rev-parse',commit+'^{commit}']).toString().trim()===commit,'Source commit mismatch');
   const all=git(['ls-tree','-r','--name-only',commit,'--',component]).toString().trim().split('\n');

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/LithoSharp.Markdown/LithoSharp.Markdown.csproj" />
+    <None Include="../LithoSharp.Tests/Fixtures/MarkdigBaseline/body-basics.md" Link="Fixtures/body-basics.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="CopyPortableMarkdownComponent" BeforeTargets="CopyFilesToOutputDirectory">
+    <MSBuild Projects="$(MSBuildProjectDirectory)/../../src/LithoSharp.Markdown/LithoSharp.Markdown.csproj" Targets="Build" Properties="TargetFramework=netstandard2.0" BuildInParallel="false">
+      <Output TaskParameter="TargetOutputs" ItemName="_PortableMarkdownAssembly" />
+    </MSBuild>
+    <Error Condition="'@(_PortableMarkdownAssembly)' == ''" Text="Portable Markdown output was not produced." />
+    <Copy SourceFiles="@(_PortableMarkdownAssembly)" DestinationFolder="$(TargetDir)Portable/" />
+  </Target>
+</Project>

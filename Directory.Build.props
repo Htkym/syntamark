@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RepositoryType>git</RepositoryType>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+</Project>

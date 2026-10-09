@@ -1,0 +1,46 @@
+name: Markdown component
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      component_version:
+        description: Fresh immutable 2.0.0-preview.N version
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: dotnet restore tests/LithoSharp.Markdown.Portability --locked-mode
+      - run: dotnet run --project tests/LithoSharp.Markdown.Portability -c Release --no-restore
+      - name: Prepare candidate
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          COMPONENT_VERSION: ${{ inputs.component_version }}
+        run: node eng/markdown/New-ArtifactPair.mjs prepare "$GITHUB_SHA" "$COMPONENT_VERSION" "$RUNNER_TEMP/markdown-pair"
+      - name: Pack candidate
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          dotnet restore "$RUNNER_TEMP/markdown-pair/runtime/runtime.csproj" --configfile "$RUNNER_TEMP/markdown-pair/NuGet.Config" --packages "$RUNNER_TEMP/markdown-pair/packages"
+          dotnet restore "$RUNNER_TEMP/markdown-pair/source/source.csproj" --configfile "$RUNNER_TEMP/markdown-pair/NuGet.Config" --packages "$RUNNER_TEMP/markdown-pair/packages"
+          node eng/markdown/New-ArtifactPair.mjs check-stage "$RUNNER_TEMP/markdown-pair"
+          dotnet pack "$RUNNER_TEMP/markdown-pair/runtime/runtime.csproj" -c Release --no-restore -o "$RUNNER_TEMP/markdown-pair/feed"
+          dotnet pack "$RUNNER_TEMP/markdown-pair/source/source.csproj" -c Release --no-restore -o "$RUNNER_TEMP/markdown-pair/feed"
+          node eng/markdown/New-ArtifactPair.mjs seal "$RUNNER_TEMP/markdown-pair"
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'workflow_dispatch'
+        with:
+          name: markdown-pair-${{ inputs.component_version }}
+          path: |
+            ${{ runner.temp }}/markdown-pair/feed/*.nupkg
+            ${{ runner.temp }}/markdown-pair/pair-manifest.json

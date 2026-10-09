@@ -10,7 +10,6 @@
     <Description>Explicitly selected portable Markdown source for compiler hosts.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <RepositoryUrl>https://github.com/Htkym/lithosharp</RepositoryUrl>
     <RepositoryCommit>__COMMIT__</RepositoryCommit>
   </PropertyGroup>
   <ItemGroup>

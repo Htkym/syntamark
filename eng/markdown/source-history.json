@@ -1,0 +1,100 @@
+{
+  "origins": [
+    {
+      "repository": "https://github.com/Htkym/lithosharp",
+      "sourceHead": "7649c4031a94f5327fdc7f7adad72e3ddf3644f5",
+      "paths": [
+        "LICENSE",
+        "eng/markdown/New-ArtifactPair.mjs",
+        "eng/markdown/package/LithoSharp.Markdown.Source.targets",
+        "eng/markdown/package/runtime.csproj",
+        "eng/markdown/package/source.csproj",
+        "licenses/YamlDotNet.LICENSE.txt",
+        "src/LithoSharp.Markdown/Contracts/markdown-dependencies.json",
+        "src/LithoSharp.Markdown/Contracts/markdown-options.json",
+        "src/LithoSharp.Markdown/Contracts/markdown-profile.json",
+        "src/LithoSharp.Markdown/LithoSharp.Markdown.csproj",
+        "src/LithoSharp.Markdown/Portable/IndexRange.cs",
+        "src/LithoSharp.Markdown/Portable/IsExternalInit.cs",
+        "src/LithoSharp.Markdown/Portable/LithoBlockParser.cs",
+        "src/LithoSharp.Markdown/Portable/LithoCharacters.cs",
+        "src/LithoSharp.Markdown/Portable/LithoDirectives.cs",
+        "src/LithoSharp.Markdown/Portable/LithoInlineParser.cs",
+        "src/LithoSharp.Markdown/Portable/LithoLimits.cs",
+        "src/LithoSharp.Markdown/Portable/LithoNodes.cs",
+        "src/LithoSharp.Markdown/Portable/LithoSlug.cs",
+        "src/LithoSharp.Markdown/Portable/MarkdownFacts.cs",
+        "src/LithoSharp.Markdown/Portable/MarkdownFrontMatter.cs",
+        "src/LithoSharp.Markdown/Portable/MarkdownFrontMatterScan.cs",
+        "src/LithoSharp.Markdown/Portable/MarkdownOpaqueSyntax.cs",
+        "src/LithoSharp.Markdown/Portable/MarkdownOptions.cs",
+        "src/LithoSharp.Markdown/Portable/MarkdownParser.cs",
+        "src/LithoSharp.Markdown/Portable/MarkdownParserVersion.g.cs",
+        "src/LithoSharp.Markdown/Portable/MarkdownSourceMapping.cs",
+        "src/LithoSharp.Markdown/Portable/NetStandardCompatibility.cs",
+        "src/LithoSharp.Markdown/Portable/SourceSpan.cs",
+        "src/LithoSharp.Markdown/Portable/SourceText.cs",
+        "src/LithoSharp.Markdown/Properties/AssemblyInfo.cs",
+        "src/LithoSharp.Markdown/Public/Markdown.cs",
+        "src/LithoSharp.Markdown/README.md",
+        "src/LithoSharp.Markdown/packages.lock.json",
+        "tests/LithoSharp.Markdown.Portability/MarkdownFactsChecks.cs",
+        "tests/LithoSharp.Markdown.Portability/Md02ReviewFixChecks.cs",
+        "tests/LithoSharp.Tests/Fixtures/MarkdigBaseline/body-basics.md"
+      ],
+      "commits": [
+        {
+          "originalCommit": "1c242a986f9d80f188b6c3c8459c4a41cd3e0347",
+          "newCommit": "63ed7a166fbf3b5260816964801fe5c950234780"
+        },
+        {
+          "originalCommit": "d3f9b272a92ce484f9ee29c60f697b9dbcaf2edb",
+          "newCommit": "4b40d41301c585268394ed29b9edf644235c2e70"
+        },
+        {
+          "originalCommit": "0eeffe2ddf389b05c2b0937608bd51b70562b73e",
+          "newCommit": "88d79d616539a09da50d504c91f2a92285250dea"
+        },
+        {
+          "originalCommit": "aef618b6031ac26485f7b4e457a885aa9de471f5",
+          "newCommit": "c956a140cffb0d9bb407494855a6fd3559d404d2"
+        },
+        {
+          "originalCommit": "41f80208cd7256421f84dcb927a7d34308704a91",
+          "newCommit": "bc5eef76a7401c1a696816b85925d52525c7a893"
+        },
+        {
+          "originalCommit": "1c5cc789ba389ff6abbbfa5c501a3a833d54d30c",
+          "newCommit": "c52c296412155a1e3a73238e4d89285917678ffd"
+        },
+        {
+          "originalCommit": "00d18f770afc529949429ff4ab6b9e59432d870b",
+          "newCommit": "30fc2022c4119afb5a81b3c5b054c622244bcdc6"
+        },
+        {
+          "originalCommit": "15edc2765198e48ba9200bae8d3fd6d4ae127eb8",
+          "newCommit": "b3471517823db4576e27d4cc5aa63fd697f931f0"
+        },
+        {
+          "originalCommit": "230f02391614d083acf43a14e4493902b643a0b0",
+          "newCommit": "f60dbc51d4bd487282ef76b79128565e25875ce4"
+        }
+      ]
+    },
+    {
+      "repository": "https://github.com/Htkym/SharpDeps",
+      "sourceHead": "50728f01597fc0a9c4d9973310571771cfefb97d",
+      "paths": [
+        "docs/contracts/markdown-consumer-conformance-v1.json"
+      ],
+      "commits": [
+        {
+          "originalCommit": "50728f01597fc0a9c4d9973310571771cfefb97d",
+          "newCommit": "50b79a2c30978e541510b3053da7598446177c17"
+        }
+      ]
+    }
+  ],
+  "method": "git fast-export --show-original-ids scoped paths / fast-import; author, committer, dates, messages and HEAD blobs verified",
+  "canonicalPathsRetained": true
+}

@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       component_version:
-        description: Fresh immutable 2.0.0 or 2.0.0-preview.N version
+        description: Fresh immutable 1.0.0 or 2.0.0-preview.N version
         required: true
         type: string
 permissions:

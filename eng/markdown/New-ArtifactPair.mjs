@@ -208,8 +208,39 @@ function verifyRestored(out,canaryPath){
     scope:'Fixed local pair + actual Generator Parse body on net10 CLR; both-repo and real Roslyn-host matrix remains IN-01'});
   console.log(JSON.stringify({state:'PASS',componentVersion:m.componentVersion,parserVersion:m.parserVersion,restored}));
 }
+function checkPair(out,expectedManifestHash){
+  out=path.resolve(out);
+  assert(/^[0-9a-f]{64}$/.test(expectedManifestHash),'Require the reviewed sealed manifest SHA256');
+  const manifest=fs.readFileSync(path.join(out,'pair-manifest.json'));
+  assert(sha(manifest)===expectedManifestHash,'Sealed manifest hash mismatch');
+  const {state,artifacts,...metadata}=JSON.parse(manifest.toString());
+  assert(state==='PACKED_NOT_HOST_VERIFIED','Require a sealed pair manifest');
+  assert(/^[0-9a-f]{40}$/.test(metadata.sourceCommit)&&/^[0-9a-f]{64}$/.test(metadata.canonicalSourceHash),'Invalid source identity');
+  assert(metadata.parserVersion==='1/'+metadata.canonicalSourceHash,'Parser identity mismatch');
+  assert(Object.keys(artifacts).sort().join(',')==='runtime,source','Unexpected artifact set');
+  for(let i=0;i<ids.length;i++){
+    const kind=i===0?'runtime':'source',a=artifacts[kind];
+    assert(a.packageId===ids[i]&&a.componentVersion===metadata.componentVersion&&a.fileName===ids[i]+'.'+metadata.componentVersion+'.nupkg','Artifact identity mismatch');
+    const bytes=fs.readFileSync(path.join(out,'feed',a.fileName));
+    assert(bytes.length===a.byteLength&&sha(bytes)===a.sha256,'Sealed '+kind+' package hash mismatch');
+    const z=zip(path.join(out,'feed',a.fileName));
+    assert(JSON.stringify(JSON.parse(z.get('markdown/manifest.json').toString()))===JSON.stringify(metadata),'Packaged metadata mismatch');
+    const nuspec=z.get(ids[i]+'.nuspec').toString();
+    assert(nuspec.includes('<id>'+ids[i]+'</id>')&&nuspec.includes('<version>'+metadata.componentVersion+'</version>'),'Packaged version mismatch');
+    checkLicenses(z,metadata);
+    assert(z.has(metadata.readme.packagePath)&&sha(z.get(metadata.readme.packagePath))===metadata.readme.sha256,'Packaged README mismatch');
+    if(kind==='runtime')assert(sha(z.get('lib/net10.0/Syntamark.dll'))===a.assemblySha256,'Runtime assembly mismatch');
+    else for(const e of metadata.canonicalFiles){
+      const relative=e.path.slice(component.length),name=relative.startsWith('Portable/')?'src/'+relative:'contracts/'+path.basename(relative);
+      assert(z.has(name)&&sha(z.get(name))===e.sha256,'Packaged canonical source mismatch');
+    }
+  }
+  console.log(JSON.stringify({state:'SEALED_PAIR_BYTES_PASS',componentVersion:metadata.componentVersion,sourceCommit:metadata.sourceCommit,
+    canonicalSourceHash:metadata.canonicalSourceHash,manifestSha256:expectedManifestHash,hostVerificationIncluded:false}));
+}
 if(action==='prepare'&&args.length===3)prepare(...args);
 else if(action==='check-stage'&&args.length===1){const m=checkStage(args[0]);console.log(JSON.stringify({state:'STAGE_BYTES_PASS',componentVersion:m.componentVersion,canonicalSourceHash:m.canonicalSourceHash}));}
 else if(action==='seal'&&args.length===1)seal(args[0]);
 else if(action==='verify-restored'&&args.length===2)verifyRestored(...args);
-else throw Error('Usage: New-ArtifactPair.mjs prepare <source SHA> <2.0.0|2.0.0-preview.N> <new absolute stage>; check-stage <stage>; seal <stage>; verify-restored <stage> <canary JSON>');
+else if(action==='check-pair'&&args.length===2)checkPair(...args);
+else throw Error('Usage: New-ArtifactPair.mjs prepare <source SHA> <2.0.0|2.0.0-preview.N> <new absolute stage>; check-stage <stage>; seal <stage>; verify-restored <stage> <canary JSON>; check-pair <artifact directory> <manifest SHA256>');

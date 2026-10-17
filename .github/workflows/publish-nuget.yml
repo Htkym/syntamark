@@ -1,0 +1,124 @@
+name: Publish NuGet pair
+on:
+  workflow_dispatch:
+    inputs:
+      component_version:
+        description: Exact approved stable component version
+        required: true
+        type: string
+      pair_run_id:
+        description: Successful component.yml run that produced the sealed pair
+        required: true
+        type: string
+      pair_manifest_sha256:
+        description: Sealed manifest SHA256 reviewed with the required host evidence
+        required: true
+        type: string
+      publish:
+        description: Publish the reviewed pair from its matching source tag
+        required: false
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate selection
+        env:
+          VERSION: ${{ inputs.component_version }}
+          PAIR_RUN_ID: ${{ inputs.pair_run_id }}
+          MANIFEST_SHA256: ${{ inputs.pair_manifest_sha256 }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          assert(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(process.env.VERSION), 'Select an exact stable version');
+          assert(/^[1-9]\d*$/.test(process.env.PAIR_RUN_ID), 'Select one producer run');
+          assert(/^[0-9a-f]{64}$/.test(process.env.MANIFEST_SHA256), 'Select the reviewed manifest hash');
+          if (process.env.PUBLISH === 'true') assert.equal(process.env.GITHUB_REF, 'refs/tags/v' + process.env.VERSION, 'Publication requires the matching source tag');
+          JS
+      - name: Read producer metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PAIR_RUN_ID: ${{ inputs.pair_run_id }}
+        run: gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PAIR_RUN_ID" > producer-run.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: markdown-pair-${{ inputs.component_version }}
+          path: artifacts/pair
+          run-id: ${{ inputs.pair_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify the selected pair
+        env:
+          VERSION: ${{ inputs.component_version }}
+          MANIFEST_SHA256: ${{ inputs.pair_manifest_sha256 }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          node eng/markdown/New-ArtifactPair.mjs check-pair artifacts/pair "$MANIFEST_SHA256" > pair-check.json
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const pair = JSON.parse(fs.readFileSync('pair-check.json'));
+          const run = JSON.parse(fs.readFileSync('producer-run.json'));
+          assert.equal(pair.componentVersion, process.env.VERSION);
+          assert.equal(run.conclusion, 'success');
+          assert.equal(run.event, 'workflow_dispatch');
+          assert.equal(run.path, '.github/workflows/component.yml');
+          assert.equal(run.head_sha, pair.sourceCommit);
+          if (process.env.PUBLISH === 'true') assert.equal(pair.sourceCommit, process.env.GITHUB_SHA, 'Tag and package source must match');
+          JS
+          if [ "$PUBLISH" = true ]; then
+            git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-pair-${{ github.run_id }}
+          path: artifacts/pair/
+          if-no-files-found: error
+  publish:
+    if: inputs.publish
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-pair-${{ github.run_id }}
+          path: artifacts/pair
+      - name: Recheck package bytes
+        env:
+          MANIFEST_SHA256: ${{ inputs.pair_manifest_sha256 }}
+        run: node eng/markdown/New-ArtifactPair.mjs check-pair artifacts/pair "$MANIFEST_SHA256"
+      - name: NuGet login (OIDC)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+      - name: Publish the selected pair
+        env:
+          VERSION: ${{ inputs.component_version }}
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: |
+          for id in Syntamark Syntamark.Source; do
+            dotnet nuget push "artifacts/pair/feed/$id.$VERSION.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
+          done

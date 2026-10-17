@@ -51,6 +51,12 @@ function checkLicenses(z,metadata){
   for(const license of metadata.licenses)
     assert(z.has(license.packagePath)&&sha(z.get(license.packagePath))===license.sha256,'License mismatch: '+license.packagePath);
 }
+function checkIcon(z,metadata,nuspec){
+  if(!metadata.icon)return;
+  const {packagePath,sha256}=metadata.icon;
+  assert(z.has(packagePath)&&sha(z.get(packagePath))===sha256,'Packaged icon changed');
+  assert(nuspec.includes('<icon>'+packagePath+'</icon>'),'Package icon reference mismatch');
+}
 function checkPublishedPackage(local,published){
   const expected=zip(local),actual=zip(published);
   // NuGet.org adds a repository signature; all original package entries must match.
@@ -62,7 +68,7 @@ function checkPublishedPackage(local,published){
 }
 function prepare(commit,version,out){
   assert(/^[0-9a-f]{40}$/.test(commit),'Require one full source commit');
-  assert(/^(?:1\.0\.0|2\.0\.0-preview\.[1-9][0-9]*)$/.test(version),'Require one new immutable 1.0.0 or 2.0.0-preview.N');
+  assert(/^(?:1\.0\.[01]|2\.0\.0-preview\.[1-9][0-9]*)$/.test(version),'Require one new immutable 1.0.0, 1.0.1 or 2.0.0-preview.N');
   assert(!json(path.join(root,'eng/markdown/immutable-versions.json')).some(a=>a.componentVersion===version),'Version is already immutable; choose an unused version');
   out=path.resolve(out);assert(!fs.existsSync(out),'Never overwrite an artifact stage; choose new output/version');
   assert(git(['rev-parse',commit+'^{commit}']).toString().trim()===commit,'Source commit mismatch');
@@ -87,6 +93,9 @@ function prepare(commit,version,out){
     generatedStamp:{packagePath:'src/Portable/MarkdownParserVersion.g.cs',sha256:sha(stampBytes)},
     licenses:[],runtimeFiles:[],packagingInputs:[]
   };
+  const icon=blob(commit,'images/icon.png');
+  metadata.icon={sourcePath:'images/icon.png',packagePath:'icon.png',sha256:sha(icon)};
+  for(const kind of ['runtime','source'])write(path.join(out,kind,metadata.icon.packagePath),icon);
   const licenseMap=[['LICENSE','LICENSE'],['licenses/YamlDotNet.LICENSE.txt','licenses/YamlDotNet.LICENSE.txt']];
   // Keep notices specific to the portable component; site-only dependencies are not distributed.
   const notice=Buffer.from('Syntamark and Syntamark.Source include YamlDotNet 18.1.0 (MIT).\nSee licenses/YamlDotNet.LICENSE.txt. Portable parser author/license are preserved in LICENSE.\n');
@@ -119,7 +128,7 @@ function prepare(commit,version,out){
     write(target,text);
   }
   const readmeInput=blob(commit,'README.md');
-  const readme=Buffer.from(readmeInput.toString().replaceAll(/2\.0\.0-preview\.[1-9][0-9]*/g,version));
+  const readme=Buffer.from(readmeInput.toString().replaceAll(/1\.0\.[01]|2\.0\.0-preview\.[1-9][0-9]*/g,version));
   metadata.readme={sourcePath:'README.md',packagePath:'README.md',sourceSha256:sha(readmeInput),sha256:sha(readme)};
   for(const kind of ['runtime','source']){
     writeJson(path.join(out,kind,'markdown/manifest.json'),metadata);
@@ -142,6 +151,7 @@ function checkStage(out){
     const p=kind==='runtime'?'Portable/MarkdownParserVersion.g.cs':m.generatedStamp.packagePath;
     assert(sha(fs.readFileSync(path.join(out,kind,p)))===m.generatedStamp.sha256,'Staged stamp changed');
     assert(JSON.stringify(json(path.join(out,kind,'markdown/manifest.json')))===JSON.stringify(m),'Staged metadata changed');
+    assert(sha(blob(m.sourceCommit,m.icon.sourcePath))===m.icon.sha256&&sha(fs.readFileSync(path.join(out,kind,m.icon.packagePath)))===m.icon.sha256,'Staged icon changed');
     for(const e of m.licenses)assert(sha(fs.readFileSync(path.join(out,kind,e.packagePath)))===e.sha256,'Staged license changed');
     assert(sha(blob(m.sourceCommit,m.readme.sourcePath))===m.readme.sourceSha256&&sha(fs.readFileSync(path.join(out,kind,m.readme.packagePath)))===m.readme.sha256,'Staged README changed');
   }
@@ -178,6 +188,7 @@ function seal(out){
     checkLicenses(z,metadata);
     assert(z.has(metadata.readme.packagePath)&&sha(z.get(metadata.readme.packagePath))===metadata.readme.sha256,'Packaged README changed');
     const nuspec=z.get(ids[i]+'.nuspec').toString();
+    checkIcon(z,metadata,nuspec);
     assert(nuspec.includes('<id>'+ids[i]+'</id>')&&nuspec.includes('<version>'+metadata.componentVersion+'</version>'),'Package identity mismatch');
     if(kind==='runtime'){
       assert(/<dependency id="YamlDotNet" version="\[18\.1\.0\]"/.test(nuspec),'Runtime dependency is not exact');
@@ -235,6 +246,7 @@ function checkPair(out,expectedManifestHash){
     const z=zip(path.join(out,'feed',a.fileName));
     assert(JSON.stringify(JSON.parse(z.get('markdown/manifest.json').toString()))===JSON.stringify(metadata),'Packaged metadata mismatch');
     const nuspec=z.get(ids[i]+'.nuspec').toString();
+    checkIcon(z,metadata,nuspec);
     assert(nuspec.includes('<id>'+ids[i]+'</id>')&&nuspec.includes('<version>'+metadata.componentVersion+'</version>'),'Packaged version mismatch');
     checkLicenses(z,metadata);
     assert(z.has(metadata.readme.packagePath)&&sha(z.get(metadata.readme.packagePath))===metadata.readme.sha256,'Packaged README mismatch');
@@ -253,4 +265,4 @@ else if(action==='seal'&&args.length===1)seal(args[0]);
 else if(action==='verify-restored'&&args.length===2)verifyRestored(...args);
 else if(action==='check-pair'&&args.length===2)checkPair(...args);
 else if(action==='check-published-package'&&args.length===2)checkPublishedPackage(...args);
-else throw Error('Usage: New-ArtifactPair.mjs prepare <source SHA> <1.0.0|2.0.0-preview.N> <new absolute stage>; check-stage <stage>; seal <stage>; verify-restored <stage> <canary JSON>; check-pair <artifact directory> <manifest SHA256>; check-published-package <sealed nupkg> <published nupkg>');
+else throw Error('Usage: New-ArtifactPair.mjs prepare <source SHA> <1.0.0|1.0.1|2.0.0-preview.N> <new absolute stage>; check-stage <stage>; seal <stage>; verify-restored <stage> <canary JSON>; check-pair <artifact directory> <manifest SHA256>; check-published-package <sealed nupkg> <published nupkg>');

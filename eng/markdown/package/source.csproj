@@ -10,6 +10,7 @@
     <Description>Explicitly selected portable Markdown source for compiler hosts.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <RepositoryCommit>__COMMIT__</RepositoryCommit>
     <RepositoryUrl>https://github.com/Htkym/syntamark</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -19,7 +20,7 @@
     <None Include="src/Portable/**/*.cs" Pack="true" PackagePath="src/Portable/%(RecursiveDir)" />
     <None Include="contracts/*.json" Pack="true" PackagePath="contracts/" />
     <None Include="build/*.targets" Pack="true" PackagePath="build/" />
-    <None Include="LICENSE;README.md" Pack="true" PackagePath="/" />
+    <None Include="LICENSE;README.md;icon.png" Pack="true" PackagePath="/" />
     <None Include="licenses/*" Pack="true" PackagePath="licenses/" />
     <None Include="markdown/manifest.json" Pack="true" PackagePath="markdown/" />
   </ItemGroup>

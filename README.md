@@ -2,10 +2,10 @@
 
 Syntamarkは、Markdownから見出し、リンク、front matter、元テキストの位置などを取り出すライブラリです。LithoSharpやSharpDepsを参照せずに利用できます。runtime packageの対象は.NET 10で、公開namespaceはSyntamarkです。
 
-ローカル候補のfeedから、固定版を追加します。NuGetへの公開はまだ行っていません。
+NuGetから、バージョンを固定して追加します。1.0.1では、NuGetパッケージのアイコンを追加しました。
 
 ```powershell
-dotnet add package Syntamark --version 2.0.0-preview.3 --source <candidate-feed>
+dotnet add package Syntamark --version 1.0.1
 ```
 
 ```csharp
@@ -23,10 +23,10 @@ compiler host向けにはSyntamark.Sourceを用意しています。netstandard2
 ```xml
 <PropertyGroup>
   <SyntamarkIncludeSource>true</SyntamarkIncludeSource>
-  <SyntamarkSourceVersion>2.0.0-preview.3</SyntamarkSourceVersion>
+  <SyntamarkSourceVersion>1.0.1</SyntamarkSourceVersion>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="Syntamark.Source" Version="[2.0.0-preview.3]"
+  <PackageReference Include="Syntamark.Source" Version="[1.0.1]"
                     PrivateAssets="all" IncludeAssets="build" />
   <PackageReference Include="YamlDotNet" Version="[18.1.0]" />
 </ItemGroup>

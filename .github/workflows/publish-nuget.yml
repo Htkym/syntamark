@@ -15,7 +15,7 @@ on:
         required: true
         type: string
       publish:
-        description: Publish from current main with the existing matching source tag
+        description: Publish the reviewed main pair from its matching source tag
         required: false
         type: boolean
         default: false
@@ -40,7 +40,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PUBLISH: ${{ inputs.publish }}
         run: |
-          if ($env:PUBLISH -eq 'true') { ./eng/Test-MainRelease.ps1 -CiWorkflow component.yml -ReleaseTag $env:RELEASE_TAG -RequireTag }
+          if ($env:PUBLISH -eq 'true' -or $env:GITHUB_REF.StartsWith('refs/tags/')) { ./eng/Test-MainRelease.ps1 -CiWorkflow component.yml -ReleaseTag $env:RELEASE_TAG -RequireTag }
           else { ./eng/Test-MainRelease.ps1 -CiWorkflow component.yml }
       - uses: actions/setup-node@v4
         with:
@@ -57,6 +57,7 @@ jobs:
           assert(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(process.env.VERSION), 'Select an exact stable version');
           assert(/^[1-9]\d*$/.test(process.env.PAIR_RUN_ID), 'Select one producer run');
           assert(/^[0-9a-f]{64}$/.test(process.env.MANIFEST_SHA256), 'Select the reviewed manifest hash');
+          if (process.env.PUBLISH === 'true') assert.equal(process.env.GITHUB_REF, 'refs/tags/v' + process.env.VERSION, 'Publication requires the matching source tag');
           JS
       - name: Read producer metadata
         env:

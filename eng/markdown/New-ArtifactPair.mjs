@@ -51,6 +51,15 @@ function checkLicenses(z,metadata){
   for(const license of metadata.licenses)
     assert(z.has(license.packagePath)&&sha(z.get(license.packagePath))===license.sha256,'License mismatch: '+license.packagePath);
 }
+function checkPublishedPackage(local,published){
+  const expected=zip(local),actual=zip(published);
+  // NuGet.org adds a repository signature; all original package entries must match.
+  actual.delete('.signature.p7s');
+  assert(expected.size===actual.size,'Published package entry set differs from the sealed package');
+  for(const [name,bytes] of expected)
+    assert(actual.has(name)&&bytes.equals(actual.get(name)),'Published package differs from the sealed package: '+name);
+  console.log(JSON.stringify({matchesSealedPackage:true,entries:expected.size}));
+}
 function prepare(commit,version,out){
   assert(/^[0-9a-f]{40}$/.test(commit),'Require one full source commit');
   assert(/^(?:1\.0\.0|2\.0\.0-preview\.[1-9][0-9]*)$/.test(version),'Require one new immutable 1.0.0 or 2.0.0-preview.N');
@@ -243,4 +252,5 @@ else if(action==='check-stage'&&args.length===1){const m=checkStage(args[0]);con
 else if(action==='seal'&&args.length===1)seal(args[0]);
 else if(action==='verify-restored'&&args.length===2)verifyRestored(...args);
 else if(action==='check-pair'&&args.length===2)checkPair(...args);
-else throw Error('Usage: New-ArtifactPair.mjs prepare <source SHA> <1.0.0|2.0.0-preview.N> <new absolute stage>; check-stage <stage>; seal <stage>; verify-restored <stage> <canary JSON>; check-pair <artifact directory> <manifest SHA256>');
+else if(action==='check-published-package'&&args.length===2)checkPublishedPackage(...args);
+else throw Error('Usage: New-ArtifactPair.mjs prepare <source SHA> <1.0.0|2.0.0-preview.N> <new absolute stage>; check-stage <stage>; seal <stage>; verify-restored <stage> <canary JSON>; check-pair <artifact directory> <manifest SHA256>; check-published-package <sealed nupkg> <published nupkg>');

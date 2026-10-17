@@ -95,6 +95,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: verified-pair-${{ github.run_id }}
+          overwrite: true
           path: artifacts/pair/
           if-no-files-found: error
   publish:
@@ -128,16 +129,44 @@ jobs:
         env:
           MANIFEST_SHA256: ${{ inputs.pair_manifest_sha256 }}
         run: node eng/markdown/New-ArtifactPair.mjs check-pair artifacts/pair "$MANIFEST_SHA256"
+      - name: Check existing publications before pushing either package
+        id: publication
+        env:
+          VERSION: ${{ inputs.component_version }}
+        run: |
+          : > missing-packages.txt
+          curl --fail --silent --show-error --location --connect-timeout 15 --max-time 120 https://api.nuget.org/v3/index.json > nuget-index.json
+          base=$(node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          const base = JSON.parse(fs.readFileSync('nuget-index.json')).resources.find(r => r['@type'] === 'PackageBaseAddress/3.0.0')['@id'];
+          assert.equal(new URL(base).protocol, 'https:');
+          console.log(base.endsWith('/') ? base : base + '/');
+          JS
+          )
+          for id in Syntamark Syntamark.Source; do
+            lower="${id,,}"
+            local="artifacts/pair/feed/$id.$VERSION.nupkg"
+            published="$RUNNER_TEMP/$id.published.nupkg"
+            status=$(curl --silent --show-error --location --connect-timeout 15 --max-time 120 --max-filesize 8388608 --output "$published" --write-out '%{http_code}' "$base$lower/$VERSION/$lower.$VERSION.nupkg")
+            case "$status" in
+              200) node eng/markdown/New-ArtifactPair.mjs check-published-package "$local" "$published" ;;
+              404) printf '%s\n' "$local" >> missing-packages.txt ;;
+              *) echo "Cannot check published package $id: HTTP $status" >&2; exit 1 ;;
+            esac
+          done
+          if [ -s missing-packages.txt ]; then echo 'needed=true' >> "$GITHUB_OUTPUT"; else echo 'needed=false' >> "$GITHUB_OUTPUT"; fi
       - name: NuGet login (OIDC)
+        if: steps.publication.outputs.needed == 'true'
         id: login
         uses: NuGet/login@v1
         with:
           user: ${{ vars.NUGET_USER }}
       - name: Publish the selected pair
+        if: steps.publication.outputs.needed == 'true'
         env:
-          VERSION: ${{ inputs.component_version }}
           NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: |
-          for id in Syntamark Syntamark.Source; do
-            dotnet nuget push "artifacts/pair/feed/$id.$VERSION.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
-          done
+          while IFS= read -r package; do
+            dotnet nuget push "$package" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json
+          done < missing-packages.txt

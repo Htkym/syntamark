@@ -15,10 +15,13 @@ on:
         required: true
         type: string
       publish:
-        description: Publish the reviewed pair from its matching source tag
+        description: Publish from current main with the existing matching source tag
         required: false
         type: boolean
         default: false
+env:
+  DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+  RELEASE_TAG: v${{ inputs.component_version }}
 permissions:
   contents: read
 jobs:
@@ -31,6 +34,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Verify reviewed main and normal CI
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          if ($env:PUBLISH -eq 'true') { ./eng/Test-MainRelease.ps1 -CiWorkflow component.yml -ReleaseTag $env:RELEASE_TAG -RequireTag }
+          else { ./eng/Test-MainRelease.ps1 -CiWorkflow component.yml }
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -46,7 +57,6 @@ jobs:
           assert(/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(process.env.VERSION), 'Select an exact stable version');
           assert(/^[1-9]\d*$/.test(process.env.PAIR_RUN_ID), 'Select one producer run');
           assert(/^[0-9a-f]{64}$/.test(process.env.MANIFEST_SHA256), 'Select the reviewed manifest hash');
-          if (process.env.PUBLISH === 'true') assert.equal(process.env.GITHUB_REF, 'refs/tags/v' + process.env.VERSION, 'Publication requires the matching source tag');
           JS
       - name: Read producer metadata
         env:
@@ -55,7 +65,7 @@ jobs:
         run: gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PAIR_RUN_ID" > producer-run.json
       - uses: actions/download-artifact@v4
         with:
-          name: markdown-pair-${{ inputs.component_version }}
+          name: main-markdown-pair-${{ inputs.component_version }}-${{ github.sha }}
           path: artifacts/pair
           run-id: ${{ inputs.pair_run_id }}
           github-token: ${{ github.token }}
@@ -76,11 +86,11 @@ jobs:
           assert.equal(run.event, 'workflow_dispatch');
           assert.equal(run.path, '.github/workflows/component.yml');
           assert.equal(run.head_sha, pair.sourceCommit);
-          if (process.env.PUBLISH === 'true') assert.equal(pair.sourceCommit, process.env.GITHUB_SHA, 'Tag and package source must match');
+          assert.equal(run.head_branch, 'main');
+          assert.equal(run.run_attempt, 1);
+          assert.equal(run.display_title, 'Formal Markdown pair ' + process.env.VERSION);
+          assert.equal(pair.sourceCommit, process.env.GITHUB_SHA, 'Current main and package source must match');
           JS
-          if [ "$PUBLISH" = true ]; then
-            git merge-base --is-ancestor "$GITHUB_SHA" origin/main
-          fi
       - uses: actions/upload-artifact@v4
         with:
           name: verified-pair-${{ github.run_id }}
@@ -92,9 +102,17 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify current main, release tag, and normal CI
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./eng/Test-MainRelease.ps1 -CiWorkflow component.yml -ReleaseTag $env:RELEASE_TAG -RequireTag
       - uses: actions/setup-node@v4
         with:
           node-version: 22

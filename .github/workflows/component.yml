@@ -21,7 +21,7 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Require reviewed main and its normal CI
@@ -30,12 +30,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: ./eng/Test-MainRelease.ps1 -CiWorkflow component.yml
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
+          package-manager-cache: false
       - run: dotnet restore tests/Syntamark.Portability --locked-mode
       - run: dotnet run --project tests/Syntamark.Portability -c Release --no-restore
       - name: Refuse repeated formal issuance
@@ -68,7 +69,7 @@ jobs:
           dotnet pack "$RUNNER_TEMP/markdown-pair/runtime/runtime.csproj" -c Release --no-restore -o "$RUNNER_TEMP/markdown-pair/feed"
           dotnet pack "$RUNNER_TEMP/markdown-pair/source/source.csproj" -c Release --no-restore -o "$RUNNER_TEMP/markdown-pair/feed"
           node eng/markdown/New-ArtifactPair.mjs seal "$RUNNER_TEMP/markdown-pair"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: github.event_name == 'workflow_dispatch'
         with:
           name: main-markdown-pair-${{ inputs.component_version }}-${{ github.sha }}

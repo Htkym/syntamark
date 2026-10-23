@@ -31,7 +31,7 @@ jobs:
       contents: read
       actions: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Verify reviewed main and normal CI
@@ -42,9 +42,10 @@ jobs:
         run: |
           if ($env:PUBLISH -eq 'true' -or $env:GITHUB_REF.StartsWith('refs/tags/')) { ./eng/Test-MainRelease.ps1 -CiWorkflow component.yml -ReleaseTag $env:RELEASE_TAG -RequireTag }
           else { ./eng/Test-MainRelease.ps1 -CiWorkflow component.yml }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
+          package-manager-cache: false
       - name: Validate selection
         env:
           VERSION: ${{ inputs.component_version }}
@@ -64,7 +65,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PAIR_RUN_ID: ${{ inputs.pair_run_id }}
         run: gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PAIR_RUN_ID" > producer-run.json
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: main-markdown-pair-${{ inputs.component_version }}-${{ github.sha }}
           path: artifacts/pair
@@ -92,7 +93,7 @@ jobs:
           assert.equal(run.display_title, 'Formal Markdown pair ' + process.env.VERSION);
           assert.equal(pair.sourceCommit, process.env.GITHUB_SHA, 'Current main and package source must match');
           JS
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: verified-pair-${{ github.run_id }}
           overwrite: true
@@ -107,7 +108,7 @@ jobs:
       actions: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Verify current main, release tag, and normal CI
@@ -115,13 +116,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: ./eng/Test-MainRelease.ps1 -CiWorkflow component.yml -ReleaseTag $env:RELEASE_TAG -RequireTag
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - uses: actions/setup-dotnet@v4
+          package-manager-cache: false
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: verified-pair-${{ github.run_id }}
           path: artifacts/pair

@@ -14,7 +14,8 @@ internal static partial class LithoSlug
     /// <summary>Creates a base slug for heading text (without duplicate suffixing).</summary>
     public static string Slugify(string text)
     {
-        if (text is null) throw new ArgumentNullException(nameof(text));
+        if (text is null)
+            throw new ArgumentNullException(nameof(text));
         var lowered = LithoParserLimits.RemoveDiacritics(text.ToLowerInvariant());
         var builder = new System.Text.StringBuilder(lowered.Length);
         foreach (var ch in lowered)
@@ -35,26 +36,28 @@ internal static partial class LithoSlug
     /// <summary>Assigns unique slugs across a document, suffixing duplicates with -1, -2, ....</summary>
     public static IReadOnlyList<string> Assign(IReadOnlyList<string> texts)
     {
-        if (texts is null) throw new ArgumentNullException(nameof(texts));
+        if (texts is null)
+            throw new ArgumentNullException(nameof(texts));
         var allocator = new LithoAnchorIds();
         var result = new string[texts.Count];
-        for (var index = 0; index < texts.Count; index++) result[index] = allocator.Next(Slugify(texts[index]));
+        for (var index = 0; index < texts.Count; index++)
+            result[index] = allocator.Next(Slugify(texts[index]));
 
         return result;
     }
 
-    #if NETSTANDARD2_0
+#if NETSTANDARD2_0
     private static readonly Regex HyphenDotRunRegex = new(@"[-.]+");
     private static Regex HyphenDotRun() => HyphenDotRunRegex;
     private static readonly Regex LeadingDigitsRegex = new(@"^[0-9]+");
     private static Regex LeadingDigits() => LeadingDigitsRegex;
-    #else
+#else
     [GeneratedRegex(@"[-.]+")]
     private static partial Regex HyphenDotRun();
 
     [GeneratedRegex(@"^[0-9]+")]
     private static partial Regex LeadingDigits();
-    #endif
+#endif
 }
 
 /// <summary>Remembers the next suffix for each base while preserving first-unused collision ordering.</summary>
@@ -65,7 +68,8 @@ internal sealed class LithoAnchorIds(MdParseContext? context = null)
     internal string Next(string basis)
     {
         context?.Scan((long)basis.Length * 2);
-        if (used.Add(basis)) return basis;
+        if (used.Add(basis))
+            return basis;
         var suffix = nextSuffix.TryGetValue(basis, out var next) ? next : 1;
         while (true)
         {
@@ -73,7 +77,8 @@ internal sealed class LithoAnchorIds(MdParseContext? context = null)
             context?.Scan(((long)basis.Length + 11) * 2);
             var candidate = basis + "-" + suffix.ToString(System.Globalization.CultureInfo.InvariantCulture);
             suffix = checked(suffix + 1);
-            if (!used.Add(candidate)) continue;
+            if (!used.Add(candidate))
+                continue;
             nextSuffix[basis] = suffix;
             return candidate;
         }

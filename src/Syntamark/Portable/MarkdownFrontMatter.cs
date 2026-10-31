@@ -46,8 +46,10 @@ internal static class MdFrontMatterParser
     // An out-of-range event mark is an invariant failure, never silently clamped.
     private static MdRawRange MarkSpan(Mark start, Mark end, int length, int offset)
     {
-        var from = checked((int)start.Index); var to = checked((int)end.Index);
-        if (from < 0 || to < from || to > length) throw new InvalidOperationException("YAML mark is outside its input.");
+        var from = checked((int)start.Index);
+        var to = checked((int)end.Index);
+        if (from < 0 || to < from || to > length)
+            throw new InvalidOperationException("YAML mark is outside its input.");
         return new MdRawRange(checked(offset + from), to - from);
     }
 
@@ -61,22 +63,31 @@ internal static class MdFrontMatterParser
     {
         private readonly IParser parser = new Parser(new StringReader(yaml));
         private ParsingEvent Current => parser.Current ?? throw new InvalidOperationException("Missing YAML event.");
-        private void Next() { context.CancellationToken.ThrowIfCancellationRequested(); parser.MoveNext(); }
+        private void Next()
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+            parser.MoveNext();
+        }
         private MdRawRange Span(ParsingEvent e) => MarkSpan(e.Start, e.End, yaml.Length, offset);
         private YamlFactsError Fail(string reason, string message) => new(reason, message, Span(Current));
 
         internal MdYamlNode Parse()
         {
             Next();
-            if (Current is not StreamStart) throw Fail("syntax", "Missing YAML stream start.");
+            if (Current is not StreamStart)
+                throw Fail("syntax", "Missing YAML stream start.");
             Next();
-            if (Current is not DocumentStart) throw Fail("syntax", "Missing YAML document start.");
+            if (Current is not DocumentStart)
+                throw Fail("syntax", "Missing YAML document start.");
             Next();
-            if (Current is not MappingStart) throw Fail("invalidRoot", "YAML root must be a mapping.");
+            if (Current is not MappingStart)
+                throw Fail("invalidRoot", "YAML root must be a mapping.");
             var root = Node(1);
-            if (Current is not DocumentEnd) throw Fail("syntax", "Unexpected trailing YAML content.");
+            if (Current is not DocumentEnd)
+                throw Fail("syntax", "Unexpected trailing YAML content.");
             Next();
-            if (Current is not StreamEnd) throw Fail("multipleDocument", "YAML must contain exactly one document.");
+            if (Current is not StreamEnd)
+                throw Fail("multipleDocument", "YAML must contain exactly one document.");
             return root;
         }
 
@@ -103,7 +114,8 @@ internal static class MdFrontMatterParser
                 else if (scalar.Style is ScalarStyle.SingleQuoted or ScalarStyle.DoubleQuoted)
                     projection = new MdTextProjection(value, value.Length == 0 ? MdFreeze.Empty<MdSourceSegment>()
                         : new[] { new MdSourceSegment(new MdRawRange(0, value.Length), span, MdSegmentKind.Atomic) });
-                else projection = MdSourceMapping.Unknown(value);
+                else
+                    projection = MdSourceMapping.Unknown(value);
                 context.Emit(1 + projection.SourceSegments.Count);
                 Next();
                 return new MdYamlNode(MdYamlKind.Scalar, span, projection, MdFreeze.Empty<MdYamlNode>());
@@ -111,8 +123,10 @@ internal static class MdFrontMatterParser
             if (current is SequenceStart)
             {
                 context.Emit();
-                Next(); var children = new List<MdYamlNode>();
-                while (Current is not SequenceEnd) children.Add(Node(depth + 1));
+                Next();
+                var children = new List<MdYamlNode>();
+                while (Current is not SequenceEnd)
+                    children.Add(Node(depth + 1));
                 var span = MarkSpan(current.Start, Current.End, yaml.Length, offset);
                 Next();
                 return new MdYamlNode(MdYamlKind.Sequence, span, MdSourceMapping.Unknown(null), children);
@@ -120,16 +134,22 @@ internal static class MdFrontMatterParser
             if (current is MappingStart)
             {
                 context.Emit();
-                Next(); var children = new List<MdYamlNode>(); var keys = new HashSet<string>(StringComparer.Ordinal);
+                Next();
+                var children = new List<MdYamlNode>();
+                var keys = new HashSet<string>(StringComparer.Ordinal);
                 while (Current is not MappingEnd)
                 {
                     context.CancellationToken.ThrowIfCancellationRequested();
                     if (Current is AnchorAlias || Current is NodeEvent keyNode && !keyNode.Anchor.IsEmpty)
                         throw Fail("alias", "YAML anchors and aliases are not allowed.");
-                    if (Current is not Scalar key || IsNull(key)) throw Fail("invalidKey", "Mapping keys must be non-null scalars.");
-                    if (!keys.Add(key.Value.Normalize(NormalizationForm.FormC))) throw Fail("duplicateKey", "A mapping key is duplicated.");
-                    var keyFacts = Node(depth + 1); var valueFacts = Node(depth + 1);
-                    children.Add(keyFacts); children.Add(valueFacts); // alternating key/value facts, without typed binding
+                    if (Current is not Scalar key || IsNull(key))
+                        throw Fail("invalidKey", "Mapping keys must be non-null scalars.");
+                    if (!keys.Add(key.Value.Normalize(NormalizationForm.FormC)))
+                        throw Fail("duplicateKey", "A mapping key is duplicated.");
+                    var keyFacts = Node(depth + 1);
+                    var valueFacts = Node(depth + 1);
+                    children.Add(keyFacts);
+                    children.Add(valueFacts); // alternating key/value facts, without typed binding
                 }
                 var span = MarkSpan(current.Start, Current.End, yaml.Length, offset);
                 Next();

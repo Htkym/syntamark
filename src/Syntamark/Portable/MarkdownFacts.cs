@@ -8,9 +8,11 @@ internal readonly record struct MdRawRange
 {
     internal MdRawRange(int start, int length)
     {
-        if (start < 0 || length < 0) throw new ArgumentOutOfRangeException(nameof(start));
+        if (start < 0 || length < 0)
+            throw new ArgumentOutOfRangeException(nameof(start));
         _ = checked(start + length);
-        Start = start; Length = length;
+        Start = start;
+        Length = length;
     }
     internal int Start { get; }
     internal int Length { get; }

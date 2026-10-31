@@ -16,9 +16,12 @@ internal sealed class MdOptions
             throw new ArgumentOutOfRangeException(nameof(maxInputUtf16), "Resource limits must be positive integers.");
         if (profileId != "lithosharp-markdown/1" || optionsSchemaVersion != 1)
             throw new ArgumentException("Only the contract-v1 profile and options schema are supported.");
-        MaxInputUtf16 = maxInputUtf16; MaxOutputItems = maxOutputItems;
-        MaxNestingDepth = maxNestingDepth; MaxScanUnits = maxScanUnits;
-        ProfileId = profileId; OptionsSchemaVersion = optionsSchemaVersion;
+        MaxInputUtf16 = maxInputUtf16;
+        MaxOutputItems = maxOutputItems;
+        MaxNestingDepth = maxNestingDepth;
+        MaxScanUnits = maxScanUnits;
+        ProfileId = profileId;
+        OptionsSchemaVersion = optionsSchemaVersion;
     }
     internal int MaxInputUtf16 { get; }
     internal int MaxOutputItems { get; }
@@ -40,20 +43,24 @@ internal static class MdHash
         using var hash = SHA256.Create();
         var bytes = hash.ComputeHash(new UTF8Encoding(false, true).GetBytes(text));
         var result = new StringBuilder(64);
-        foreach (var value in bytes) result.Append(value.ToString("x2", CultureInfo.InvariantCulture));
+        foreach (var value in bytes)
+            result.Append(value.ToString("x2", CultureInfo.InvariantCulture));
         return result.ToString();
     }
     internal static int InvalidUnicode(string text, CancellationToken cancellationToken)
     {
         for (var i = 0; i < text.Length; i++)
         {
-            if ((i & 127) == 0) cancellationToken.ThrowIfCancellationRequested();
+            if ((i & 127) == 0)
+                cancellationToken.ThrowIfCancellationRequested();
             if (char.IsHighSurrogate(text[i]))
             {
-                if (i + 1 >= text.Length || !char.IsLowSurrogate(text[i + 1])) return i;
+                if (i + 1 >= text.Length || !char.IsLowSurrogate(text[i + 1]))
+                    return i;
                 i++;
             }
-            else if (char.IsLowSurrogate(text[i])) return i;
+            else if (char.IsLowSurrogate(text[i]))
+                return i;
         }
         return -1;
     }
@@ -75,22 +82,30 @@ internal sealed class MdParseContext(MdOptions options, CancellationToken cancel
     internal void Scan(long units = 1)
     {
         CancellationToken.ThrowIfCancellationRequested();
-        if (units < 0) throw new ArgumentOutOfRangeException(nameof(units));
-        if (units > Options.MaxScanUnits - scanUnits) throw new MdResourceLimit("scan");
+        if (units < 0)
+            throw new ArgumentOutOfRangeException(nameof(units));
+        if (units > Options.MaxScanUnits - scanUnits)
+            throw new MdResourceLimit("scan");
         scanUnits += units;
     }
     // Charging the whole operand before a library string/regex operation is conservative.
-    internal string Inspect(string value) { Scan(value.Length); return value; }
+    internal string Inspect(string value)
+    {
+        Scan(value.Length);
+        return value;
+    }
     internal void Depth(int depth)
     {
         CancellationToken.ThrowIfCancellationRequested();
-        if (depth > Options.MaxNestingDepth) throw new MdResourceLimit("depth");
+        if (depth > Options.MaxNestingDepth)
+            throw new MdResourceLimit("depth");
     }
     internal void Emit(int count = 1)
     {
         CancellationToken.ThrowIfCancellationRequested();
         // Keep one slot for the first resource diagnostic.
-        if (count > Options.MaxOutputItems - 1 - outputItems) throw new MdResourceLimit("output");
+        if (count > Options.MaxOutputItems - 1 - outputItems)
+            throw new MdResourceLimit("output");
         outputItems += count;
     }
 }

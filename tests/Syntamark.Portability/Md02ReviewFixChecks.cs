@@ -33,7 +33,8 @@ internal static class Md02ReviewFixChecks
 
         foreach (var source in new[] { "# <Widget> [Guide](/docs)\n", "| Cell |\n| --- |\n| <Widget> [Guide](/docs) |\n" })
         {
-            var doc = Parse(source); Guide(doc);
+            var doc = Parse(source);
+            Guide(doc);
             Check(doc.Status == MarkdownParseStatus.Partial && doc.Coverage.UnprojectedRegions.Count == 1,
                 "Real HTML in heading/table must be Partial");
             var text = doc.Headings.Count != 0 ? doc.Headings[0].Text
@@ -41,23 +42,32 @@ internal static class Md02ReviewFixChecks
             Check(text.Map(new RawSpan(0, text.Text!.Length)).Precision == MarkdownMappingPrecision.Partial,
                 "Heading/table opaque mapping must not advertise Exact");
         }
-        opaque = Parse("[<Widget>][missing] [Guide](/docs)\n"); Guide(opaque);
+        opaque = Parse("[<Widget>][missing] [Guide](/docs)\n");
+        Guide(opaque);
         var unresolved = opaque.Links.Single(link => link.Resolution == MarkdownLinkResolution.UnresolvedReference);
         Check(unresolved.Label.Map(new RawSpan(0, unresolved.Label.Text!.Length)).Precision == MarkdownMappingPrecision.Unknown,
             "Unresolved reference labels use the same opaque mask");
         foreach (var prose in new[] { "import the guide", "export useful features" })
         {
-            var doc = Parse(prose + " [Guide](/docs)\n"); Guide(doc);
+            var doc = Parse(prose + " [Guide](/docs)\n");
+            Guide(doc);
             Check(doc.Status == MarkdownParseStatus.Complete && doc.Coverage.UnprojectedRegions.Count == 0,
                 "Ordinary import/export prose must not hide a Markdown link");
         }
-        opaque = Parse("import X from 'x'; [Guide](/docs)\n"); Guide(opaque);
+        opaque = Parse("import X from 'x'; [Guide](/docs)\n");
+        Guide(opaque);
         Check(opaque.Status == MarkdownParseStatus.Partial && opaque.Coverage.UnprojectedRegions.Count == 1,
             "ESM candidate preserves the following Markdown link");
 
-        foreach (var assembly in new[] { runtime, portable }) CheckAnchors(assembly);
-        Console.WriteLine(JsonSerializer.Serialize(new { task = "MD-02 reviewer fixes", status = "PASS",
-            checks = "opaque protected tokens/outside links/heading/table/unresolved label/ESM; suffix ordering/budget/cancellation", parserVersion = opaque.ParserVersion }));
+        foreach (var assembly in new[] { runtime, portable })
+            CheckAnchors(assembly);
+        Console.WriteLine(JsonSerializer.Serialize(new
+        {
+            task = "MD-02 reviewer fixes",
+            status = "PASS",
+            checks = "opaque protected tokens/outside links/heading/table/unresolved label/ESM; suffix ordering/budget/cancellation",
+            parserVersion = opaque.ParserVersion
+        }));
     }
 
     private static void CheckAnchors(Assembly assembly)
@@ -84,11 +94,21 @@ internal static class Md02ReviewFixChecks
         }
         var tiny = Allocator(9, CancellationToken.None);
         Check((string)next.Invoke(tiny, new object[] { "a" })! == "a", "First anchor fits the tiny budget");
-        try { next.Invoke(tiny, new object[] { "a" }); throw new InvalidOperationException("Suffix search bypassed budget"); }
+        try
+        {
+            next.Invoke(tiny, new object[] { "a" });
+            throw new InvalidOperationException("Suffix search bypassed budget");
+        }
         catch (TargetInvocationException error) when (error.InnerException?.GetType().Name == "MdResourceLimit") { }
         using var cancelled = new CancellationTokenSource();
-        var cancellable = Allocator(10000, cancelled.Token); next.Invoke(cancellable, new object[] { "a" }); cancelled.Cancel();
-        try { next.Invoke(cancellable, new object[] { "a" }); throw new InvalidOperationException("Suffix search swallowed cancellation"); }
+        var cancellable = Allocator(10000, cancelled.Token);
+        next.Invoke(cancellable, new object[] { "a" });
+        cancelled.Cancel();
+        try
+        {
+            next.Invoke(cancellable, new object[] { "a" });
+            throw new InvalidOperationException("Suffix search swallowed cancellation");
+        }
         catch (TargetInvocationException error) when (error.InnerException is OperationCanceledException) { }
         var repeated = Allocator(10000, CancellationToken.None);
         for (var index = 0; index < 256; index++)
@@ -99,5 +119,9 @@ internal static class Md02ReviewFixChecks
     private static MarkdownDocument Parse(string source) => MarkdownParser.Parse(source, "scope", "source");
     private static string Slice(string source, RawSpan? span) => span.HasValue ? source.Substring(span.Value.Start, span.Value.Length) : "";
     private static void Guide(MarkdownDocument doc) => Check(doc.Links.Any(link => link.Target == "/docs" && link.Label.Text == "Guide"), "Outside Guide link lost");
-    private static void Check(bool valid, string message) { if (!valid) throw new InvalidOperationException(message); }
+    private static void Check(bool valid, string message)
+    {
+        if (!valid)
+            throw new InvalidOperationException(message);
+    }
 }

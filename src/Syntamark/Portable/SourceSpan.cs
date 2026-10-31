@@ -15,16 +15,18 @@ internal readonly partial record struct SourceSpan
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="start"/> or <paramref name="length"/> is negative.</exception>
     public SourceSpan(int start, int length)
     {
-        #if NETSTANDARD2_0
-        if (start < 0) throw new ArgumentOutOfRangeException(nameof(start), start, "Non-negative number required.");
-        #else
+#if NETSTANDARD2_0
+        if (start < 0)
+            throw new ArgumentOutOfRangeException(nameof(start), start, "Non-negative number required.");
+#else
         ArgumentOutOfRangeException.ThrowIfNegative(start);
-        #endif
-        #if NETSTANDARD2_0
-        if (length < 0) throw new ArgumentOutOfRangeException(nameof(length), length, "Non-negative number required.");
-        #else
+#endif
+#if NETSTANDARD2_0
+        if (length < 0)
+            throw new ArgumentOutOfRangeException(nameof(length), length, "Non-negative number required.");
+#else
         ArgumentOutOfRangeException.ThrowIfNegative(length);
-        #endif
+#endif
         Start = start;
         Length = length;
     }

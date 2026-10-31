@@ -91,7 +91,8 @@ internal abstract record LithoInline(SourceSpan Span) : LithoNode(Span)
             cancellationToken.ThrowIfCancellationRequested();
             if (frame.Index == frame.Nodes.Count)
             {
-                if (frame.Parent is not null) yield return (frame.Parent, true);
+                if (frame.Parent is not null)
+                    yield return (frame.Parent, true);
                 continue;
             }
 
@@ -105,7 +106,8 @@ internal abstract record LithoInline(SourceSpan Span) : LithoNode(Span)
                 LithoLink link when includeImageLabels || !link.Image => link.Label,
                 _ => null,
             };
-            if (children is not null) pending.Push((children, 0, node));
+            if (children is not null)
+                pending.Push((children, 0, node));
         }
     }
 }

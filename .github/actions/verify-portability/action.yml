@@ -7,3 +7,9 @@ runs:
       run: dotnet restore tests/Syntamark.Portability --locked-mode
     - shell: bash
       run: dotnet run --project tests/Syntamark.Portability -c Release --no-restore
+    - shell: bash
+      run: |
+        for project in src/Syntamark/Syntamark.csproj tests/Syntamark.Portability/Syntamark.Portability.csproj; do
+          dotnet format style "$project" --diagnostics IDE2001 --exclude src/Syntamark/Portable/MarkdownParserVersion.g.cs --no-restore --verify-no-changes
+          dotnet format whitespace "$project" --exclude src/Syntamark/Portable/MarkdownParserVersion.g.cs --no-restore --verify-no-changes
+        done

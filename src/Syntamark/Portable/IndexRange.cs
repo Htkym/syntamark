@@ -9,7 +9,8 @@ internal readonly struct Index
 
     public Index(int value, bool fromEnd = false)
     {
-        if (value < 0) throw new ArgumentOutOfRangeException(nameof(value));
+        if (value < 0)
+            throw new ArgumentOutOfRangeException(nameof(value));
         _value = fromEnd ? ~value : value;
     }
 
@@ -23,7 +24,11 @@ internal readonly struct Index
 
 internal readonly struct Range
 {
-    public Range(Index start, Index end) { Start = start; End = end; }
+    public Range(Index start, Index end)
+    {
+        Start = start;
+        End = end;
+    }
     public Index Start { get; }
     public Index End { get; }
     public static Range All => new(Index.Start, Index.End);

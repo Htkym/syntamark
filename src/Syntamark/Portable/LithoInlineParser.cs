@@ -47,9 +47,12 @@ internal static class LithoInlineParser
         IReadOnlyDictionary<string, LithoReference> references,
         CancellationToken cancellationToken = default, MdParseContext? context = null)
     {
-        if (text is null) throw new ArgumentNullException(nameof(text));
-        if (map is null) throw new ArgumentNullException(nameof(map));
-        if (references is null) throw new ArgumentNullException(nameof(references));
+        if (text is null)
+            throw new ArgumentNullException(nameof(text));
+        if (map is null)
+            throw new ArgumentNullException(nameof(map));
+        if (references is null)
+            throw new ArgumentNullException(nameof(references));
         return new Scanner(text, map, references, cancellationToken, context).Scan();
     }
 
@@ -66,8 +69,11 @@ internal static class LithoInlineParser
         private int _referenceTailEnd;
         private int _opaqueUntil;
         private LithoText TextNode(string value, int local, int length, SourceSpan legacySpan, bool atomic = false) =>
-            new(value, legacySpan) { Projection = context is null ? null
-                : MdSourceMapping.Local(value, text, map, local, length, atomic) };
+            new(value, legacySpan)
+            {
+                Projection = context is null ? null
+                : MdSourceMapping.Local(value, text, map, local, length, atomic)
+            };
         private MdTextProjection? Project(string value, int local, int length, bool atomic = false) =>
             context is null ? null : MdSourceMapping.Local(value, text, map, local, length, atomic);
 
@@ -91,12 +97,21 @@ internal static class LithoInlineParser
 
         private int MaxInlineDepth(IReadOnlyList<LithoInline> nodes)
         {
-            var max = 0; var depth = 0;
+            var max = 0;
+            var depth = 0;
             foreach (var (node, exit) in LithoInline.Walk(nodes))
             {
                 context?.Scan(8);
-                if (exit) { depth--; continue; }
-                if (node is LithoEmphasis or LithoStrike or LithoLink) { depth++; max = Math.Max(max, depth); }
+                if (exit)
+                {
+                    depth--;
+                    continue;
+                }
+                if (node is LithoEmphasis or LithoStrike or LithoLink)
+                {
+                    depth++;
+                    max = Math.Max(max, depth);
+                }
             }
             return max;
         }
@@ -179,7 +194,7 @@ internal static class LithoInlineParser
                     case '[':
                         FlushText();
                         context?.Depth(_stack.Count);
-                            _stack.Add(new BracketFrame { Image = false, Span = SpanLocal(_position, 1) });
+                        _stack.Add(new BracketFrame { Image = false, Span = SpanLocal(_position, 1) });
                         _position++;
                         break;
                     case ']':
@@ -244,7 +259,7 @@ internal static class LithoInlineParser
             }
 
             Current.Add(new LithoLineBreak(spaces >= 2, SpanAt(_position, breakLength))
-                { Projection = Project("\n", _position, breakLength, atomic: breakLength != 1) });
+            { Projection = Project("\n", _position, breakLength, atomic: breakLength != 1) });
             _position += breakLength;
         }
 
@@ -282,7 +297,11 @@ internal static class LithoInlineParser
             _position + value.Length <= text.Length
             && string.CompareOrdinal(text, _position, value, 0, value.Length) == 0;
 
-        private bool ChargeMatch(int length) { context!.Scan(length); return true; }
+        private bool ChargeMatch(int length)
+        {
+            context!.Scan(length);
+            return true;
+        }
 
         private SourceSpan SpanAt(int local, int length) =>
             Glob(new SourceSpan(local, length));
@@ -297,7 +316,7 @@ internal static class LithoInlineParser
             {
                 FlushText();
                 Current.Add(new LithoLineBreak(true, SpanAt(_position, 2))
-                    { Projection = Project("\n", _position, 2, atomic: true) });
+                { Projection = Project("\n", _position, 2, atomic: true) });
                 _position += 2;
             }
             else if (next == '\r')
@@ -305,7 +324,7 @@ internal static class LithoInlineParser
                 FlushText();
                 var length = Peek(2) == '\n' ? 3 : 2;
                 Current.Add(new LithoLineBreak(true, SpanAt(_position, length))
-                    { Projection = Project("\n", _position, length, atomic: true) });
+                { Projection = Project("\n", _position, length, atomic: true) });
                 _position += length;
             }
             else if (next != '\0' && IsAsciiPunctuation(next))
@@ -328,7 +347,7 @@ internal static class LithoInlineParser
             {
                 for (var i = 0; i < run; i++)
                 {
-                context?.Scan(8);
+                    context?.Scan(8);
                     AppendTextChar();
                 }
 
@@ -345,7 +364,7 @@ internal static class LithoInlineParser
             }
 
             Current.Add(new LithoCodeSpan(content, SpanAt(_position, (closer + run) - _position))
-                { Projection = Project(content, _position + run, closer - _position - run, atomic: true) });
+            { Projection = Project(content, _position + run, closer - _position - run, atomic: true) });
             _position = closer + run;
         }
 
@@ -372,7 +391,7 @@ internal static class LithoInlineParser
                     var length = 0;
                     while (cursor + length < text.Length && text[cursor + length] == '`')
                     {
-                context?.Scan(8);
+                        context?.Scan(8);
                         length++;
                     }
 
@@ -407,7 +426,7 @@ internal static class LithoInlineParser
                 var digits = 0;
                 while (end < text.Length && IsHexDigit(text[end]) && digits < 8)
                 {
-                context?.Scan(8);
+                    context?.Scan(8);
                     end++;
                     digits++;
                 }
@@ -485,7 +504,7 @@ internal static class LithoInlineParser
 
             FlushText();
             Current.Add(new LithoAutolink(href, inner, SpanAt(_position, (close + 1) - _position))
-                { Projection = Project(inner, _position + 1, inner.Length) });
+            { Projection = Project(inner, _position + 1, inner.Length) });
             _position = close + 1;
             return true;
         }
@@ -554,7 +573,7 @@ internal static class LithoInlineParser
                 ? "http://" + candidate
                 : candidate;
             Current.Add(new LithoAutolink(href, candidate, SpanAt(_position, candidate.Length))
-                { Projection = Project(candidate, _position, candidate.Length) });
+            { Projection = Project(candidate, _position, candidate.Length) });
             _position += candidate.Length;
         }
 
@@ -625,7 +644,7 @@ internal static class LithoInlineParser
             {
                 _stack.RemoveAt(opener);
                 parent.Add(new LithoLink(frame.Children, url!, title, frame.Image, SpanAt(frame.Span.Start, end - frame.Span.Start))
-                    { LinkSyntax = context is null ? null : new MdLinkSyntax(MdLinkKind.Inline, null, _targetSpan) });
+                { LinkSyntax = context is null ? null : new MdLinkSyntax(MdLinkKind.Inline, null, _targetSpan) });
                 if (!frame.Image)
                 {
                     DeactivateBrackets();
@@ -664,7 +683,7 @@ internal static class LithoInlineParser
             {
                 _stack.RemoveAt(opener);
                 parent.Add(new LithoLink(frame.Children, definition.Url, definition.Title, frame.Image, SpanAt(frame.Span.Start, after - frame.Span.Start))
-                    { LinkSyntax = context is null ? null : new MdLinkSyntax(MdLinkKind.ReferenceUse, reference, null) });
+                { LinkSyntax = context is null ? null : new MdLinkSyntax(MdLinkKind.ReferenceUse, reference, null) });
                 if (!frame.Image)
                 {
                     DeactivateBrackets();
@@ -678,7 +697,8 @@ internal static class LithoInlineParser
             if (context is not null && reference is not null && frame.Span.Start >= _referenceTailEnd)
             {
                 var labelProjection = MdInlineFacts.Text(frame.Children, cancellationToken);
-                if (after > _position + 1) _referenceTailEnd = after;
+                if (after > _position + 1)
+                    _referenceTailEnd = after;
                 context.Emit(1 + labelProjection.SourceSegments.Count);
                 unresolved = new MdLink(MdLinkKind.ReferenceUse, MdLinkResolution.UnresolvedReference, frame.Image,
                     new MdRawRange(Glob(new SourceSpan(frame.Span.Start, after - frame.Span.Start)).Start,
@@ -689,7 +709,7 @@ internal static class LithoInlineParser
             frame.Active = false;
             _stack.RemoveAt(opener);
             parent.Add(TextNode(frame.Image ? "![" : "[", frame.Span.Start, frame.Image ? 2 : 1, Glob(frame.Span)) with
-                { UnresolvedReference = unresolved });
+            { UnresolvedReference = unresolved });
             parent.AddRange(frame.Children);
             parent.Add(TextNode("]", _position, 1, SpanAt(_position, 1)));
             _position++;
@@ -809,7 +829,7 @@ internal static class LithoInlineParser
                 var close = cursor + 1;
                 while (close < text.Length && text[close] != '>')
                 {
-                context?.Scan(8);
+                    context?.Scan(8);
                     if (text[close] is '\n' or '\r')
                     {
                         return false;
@@ -833,7 +853,7 @@ internal static class LithoInlineParser
                 var depth = 0;
                 while (cursor < text.Length && text[cursor] is not (' ' or '\t' or '\n' or '\r'))
                 {
-                context?.Scan(8);
+                    context?.Scan(8);
                     cancellationToken.ThrowIfCancellationRequested();
                     if (text[cursor] == '(')
                     {
@@ -841,7 +861,8 @@ internal static class LithoInlineParser
                     }
                     else if (text[cursor] == ')')
                     {
-                        if (depth == 0) break;
+                        if (depth == 0)
+                            break;
                         depth--;
                     }
                     else if (text[cursor] == '\\' && cursor + 1 < text.Length)
@@ -981,7 +1002,7 @@ internal static class LithoInlineParser
                 var closeRun = 0;
                 while (cursor + closeRun < text.Length && text[cursor + closeRun] == '$')
                 {
-                context?.Scan(8);
+                    context?.Scan(8);
                     closeRun++;
                 }
 
@@ -994,7 +1015,7 @@ internal static class LithoInlineParser
                     Current.Add(new LithoMathInline(
                         text[contentStart..cursor],
                         SpanAt(_position, (cursor + length) - _position))
-                        { Projection = Project(text[contentStart..cursor], contentStart, cursor - contentStart) });
+                    { Projection = Project(text[contentStart..cursor], contentStart, cursor - contentStart) });
                     _position = cursor + length;
                     return;
                 }
@@ -1051,7 +1072,7 @@ internal static class LithoInlineParser
                 var tildeRun = 0;
                 while (_position + tildeRun < text.Length && text[_position + tildeRun] == '~')
                 {
-                context?.Scan(8);
+                    context?.Scan(8);
                     tildeRun++;
                 }
 
@@ -1095,7 +1116,7 @@ internal static class LithoInlineParser
             {
                 FlushText();
                 context?.Depth(_stack.Count);
-                            _stack.Add(new DelimiterFrame
+                _stack.Add(new DelimiterFrame
                 {
                     Marker = marker,
                     Length = length,
@@ -1120,7 +1141,7 @@ internal static class LithoInlineParser
                 var opener = -1;
                 for (var i = _stack.Count - 1; i >= 1; i--)
                 {
-                context?.Scan(8);
+                    context?.Scan(8);
                     if (_stack[i] is BracketFrame)
                     {
                         break;

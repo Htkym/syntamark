@@ -26,12 +26,13 @@ internal static partial class LithoBlockParser
     /// <summary>Splits text into lines, tracking body-relative offsets.</summary>
     public static List<Line> SplitLines(string text, MdParseContext? context = null)
     {
-        if (text is null) throw new ArgumentNullException(nameof(text));
+        if (text is null)
+            throw new ArgumentNullException(nameof(text));
         var lines = new List<Line>();
         var start = 0;
         for (var index = 0; index < text.Length; index++)
         {
-                context?.Scan(8);
+            context?.Scan(8);
             if (text[index] == '\r')
             {
                 if (index + 1 < text.Length && text[index + 1] == '\n')
@@ -62,7 +63,8 @@ internal static partial class LithoBlockParser
         string body,
         CancellationToken cancellationToken = default)
     {
-        if (body is null) throw new ArgumentNullException(nameof(body));
+        if (body is null)
+            throw new ArgumentNullException(nameof(body));
         // NUL bytes become the replacement character, per CommonMark.
         var normalized = body.Replace('\0', '\uFFFD');
         var parser = new Parser(SplitLines(normalized), cancellationToken);
@@ -97,7 +99,7 @@ internal static partial class LithoBlockParser
         var resolved = new List<LithoBlock>(blocks.Count);
         foreach (var block in blocks)
         {
-                context?.Scan(8);
+            context?.Scan(8);
             cancellationToken.ThrowIfCancellationRequested();
             resolved.Add(ResolveBlock(block, references, cancellationToken, context));
         }
@@ -109,44 +111,44 @@ internal static partial class LithoBlockParser
         LithoBlock block,
         Dictionary<string, LithoReference> references,
         CancellationToken cancellationToken, MdParseContext? context = null) => block switch
-    {
-        LithoParagraph paragraph => paragraph with
         {
-            Inlines = ResolveRaw(paragraph.Inlines, references, cancellationToken, context),
-            RawContent = context is null ? null : paragraph.Inlines.OfType<LithoRawText>().FirstOrDefault(),
-        },
-        LithoHeading heading => heading with
-        {
-            Inlines = ResolveRaw(heading.Inlines, references, cancellationToken, context),
-            RawContent = context is null ? null : heading.Inlines.OfType<LithoRawText>().FirstOrDefault(),
-        },
-        LithoQuote quote => quote with
-        {
-            Children = ResolveInlines([.. quote.Children], references, cancellationToken, context),
-        },
-        LithoAdmonition admonition => admonition with
-        {
-            Children = ResolveInlines([.. admonition.Children], references, cancellationToken, context),
-        },
-        LithoDirective directive => directive with
-        {
-            Children = ResolveInlines([.. directive.Children], references, cancellationToken, context),
-        },
-        LithoList list => list with
-        {
-            Items = list.Items.Select(item => item with
+            LithoParagraph paragraph => paragraph with
             {
-                Children = ResolveInlines([.. item.Children], references, cancellationToken, context),
-            }).ToArray(),
-        },
-        LithoTable table => table with
-        {
-            Rows = table.Rows.Select(row => (IReadOnlyList<IReadOnlyList<LithoInline>>)row
-                .Select(cell => (IReadOnlyList<LithoInline>)ResolveRaw(cell, references, cancellationToken, context))
-                .ToArray()).ToArray(),
-        },
-        _ => block,
-    };
+                Inlines = ResolveRaw(paragraph.Inlines, references, cancellationToken, context),
+                RawContent = context is null ? null : paragraph.Inlines.OfType<LithoRawText>().FirstOrDefault(),
+            },
+            LithoHeading heading => heading with
+            {
+                Inlines = ResolveRaw(heading.Inlines, references, cancellationToken, context),
+                RawContent = context is null ? null : heading.Inlines.OfType<LithoRawText>().FirstOrDefault(),
+            },
+            LithoQuote quote => quote with
+            {
+                Children = ResolveInlines([.. quote.Children], references, cancellationToken, context),
+            },
+            LithoAdmonition admonition => admonition with
+            {
+                Children = ResolveInlines([.. admonition.Children], references, cancellationToken, context),
+            },
+            LithoDirective directive => directive with
+            {
+                Children = ResolveInlines([.. directive.Children], references, cancellationToken, context),
+            },
+            LithoList list => list with
+            {
+                Items = list.Items.Select(item => item with
+                {
+                    Children = ResolveInlines([.. item.Children], references, cancellationToken, context),
+                }).ToArray(),
+            },
+            LithoTable table => table with
+            {
+                Rows = table.Rows.Select(row => (IReadOnlyList<IReadOnlyList<LithoInline>>)row
+                    .Select(cell => (IReadOnlyList<LithoInline>)ResolveRaw(cell, references, cancellationToken, context))
+                    .ToArray()).ToArray(),
+            },
+            _ => block,
+        };
 
     private static List<LithoInline> ResolveRaw(
         IReadOnlyList<LithoInline> inlines,
@@ -156,7 +158,7 @@ internal static partial class LithoBlockParser
         var resolved = new List<LithoInline>(inlines.Count);
         foreach (var inline in inlines)
         {
-                context?.Scan(8);
+            context?.Scan(8);
             if (inline is LithoRawText raw)
             {
                 resolved.AddRange(LithoInlineParser.Parse(
@@ -208,7 +210,8 @@ internal static partial class LithoBlockParser
 
                 if (depth > LithoParserLimits.MaxNestingDepth)
                 {
-                    if (context is not null) throw new MdResourceLimit("depth");
+                    if (context is not null)
+                        throw new MdResourceLimit("depth");
                     blocks.AddRange(ParseParagraph(index, to, out index));
                     continue;
                 }
@@ -462,7 +465,11 @@ internal static partial class LithoBlockParser
                 {
                     var closeIndent = CountIndent(candidate, 0, context);
                     var closeRun = 0;
-                    while (closeIndent.Chars + closeRun < candidate.Length && candidate[closeIndent.Chars + closeRun] == fenceChar) { context?.Scan(8); closeRun++; }
+                    while (closeIndent.Chars + closeRun < candidate.Length && candidate[closeIndent.Chars + closeRun] == fenceChar)
+                    {
+                        context?.Scan(8);
+                        closeRun++;
+                    }
                     closing = new SourceSpan(Lines[cursor].Offset + closeIndent.Chars, closeRun);
                     cursor++;
                     break;
@@ -484,23 +491,32 @@ internal static partial class LithoBlockParser
             {
                 var markerEnd = indent.Chars + run;
                 var infoStart = markerEnd;
-                while (infoStart < line.Length && char.IsWhiteSpace(line[infoStart])) { context?.Scan(8); infoStart++; }
+                while (infoStart < line.Length && char.IsWhiteSpace(line[infoStart]))
+                {
+                    context?.Scan(8);
+                    infoStart++;
+                }
                 var contentStart = Lines[index].Offset + line.Length + Lines[index].Break.Length;
                 var contentEnd = closing.HasValue ? Lines[cursor - 1].Offset : end;
                 var pieces = new List<MdTextProjection>();
                 foreach (var source in contentLines)
                 {
-                context?.Scan(8);
-                    if (source.Text.Length != 0) pieces.Add(MdSourceMapping.Local(source.Text, source.Text,
+                    context?.Scan(8);
+                    if (source.Text.Length != 0)
+                        pieces.Add(MdSourceMapping.Local(source.Text, source.Text,
                         LithoLineMap.Contiguous(source.Offset, source.Text.Length), 0, source.Text.Length));
-                    if (source.Break.Length != 0) pieces.Add(new MdTextProjection("\n", new[] { new MdSourceSegment(new MdRawRange(0, 1),
+                    if (source.Break.Length != 0)
+                        pieces.Add(new MdTextProjection("\n", new[] { new MdSourceSegment(new MdRawRange(0, 1),
                             new MdRawRange(source.Offset + source.Text.Length, source.Break.Length),
                             source.Break == "\n" ? MdSegmentKind.Linear : MdSegmentKind.Atomic) }));
                 }
-                code = code with { FenceSyntax = new MdFenceSyntax(new SourceSpan(start + indent.Chars, run),
+                code = code with
+                {
+                    FenceSyntax = new MdFenceSyntax(new SourceSpan(start + indent.Chars, run),
                     info.Length == 0 ? null : new SourceSpan(start + infoStart, info.Length),
                     new SourceSpan(contentStart, Math.Max(0, contentEnd - contentStart)), closing,
-                    info.Length == 0 ? null : info, MdSourceMapping.Join(pieces)) };
+                    info.Length == 0 ? null : info, MdSourceMapping.Join(pieces))
+                };
             }
             return true;
         }
@@ -528,37 +544,37 @@ internal static partial class LithoBlockParser
                 : new LithoCodeMeta(title, highlight, numbered, start);
         }
 
-        #if NETSTANDARD2_0
+#if NETSTANDARD2_0
         private static readonly Regex TitleAttributeRegex = new("(?:^|\\s)title=\"([^\"]*)\"");
         private Regex TitleAttribute() => TitleAttributeRegex;
-        #else
+#else
         [System.Text.RegularExpressions.GeneratedRegex("(?:^|\\s)title=\"([^\"]*)\"")]
         private static partial Regex TitleAttribute();
-        #endif
+#endif
 
-        #if NETSTANDARD2_0
+#if NETSTANDARD2_0
         private static readonly Regex HighlightAttributeRegex = new("\\{([\\d, -]+)\\}");
         private Regex HighlightAttribute() => HighlightAttributeRegex;
-        #else
+#else
         [System.Text.RegularExpressions.GeneratedRegex("\\{([\\d, -]+)\\}")]
         private static partial Regex HighlightAttribute();
-        #endif
+#endif
 
-        #if NETSTANDARD2_0
+#if NETSTANDARD2_0
         private static readonly Regex LineNumbersAttributeRegex = new("(?:^|\\s)showLineNumbers(?:\\s|$)");
         private Regex LineNumbersAttribute() => LineNumbersAttributeRegex;
-        #else
+#else
         [System.Text.RegularExpressions.GeneratedRegex("(?:^|\\s)showLineNumbers(?:\\s|$)")]
         private static partial Regex LineNumbersAttribute();
-        #endif
+#endif
 
-        #if NETSTANDARD2_0
+#if NETSTANDARD2_0
         private static readonly Regex StartAttributeRegex = new("(?:^|\\s)start=(\\d+)");
         private Regex StartAttribute() => StartAttributeRegex;
-        #else
+#else
         [System.Text.RegularExpressions.GeneratedRegex("(?:^|\\s)start=(\\d+)")]
         private static partial Regex StartAttribute();
-        #endif
+#endif
 
         private bool IsClosingFence(string text, char fenceChar, int minRun)
         {
@@ -716,7 +732,7 @@ internal static partial class LithoBlockParser
                     next = cursor + 1;
                     while (content.Count > 0 && content[^1].Length == 0)
                     {
-                context?.Scan(8);
+                        context?.Scan(8);
                         content.RemoveAt(content.Count - 1);
                     }
 
@@ -840,7 +856,7 @@ internal static partial class LithoBlockParser
             {
                 while (end - run - 1 >= 0 && (content[end - run - 1] is ' ' or '\t'))
                 {
-                context?.Scan(8);
+                    context?.Scan(8);
                     run++;
                 }
 
@@ -1051,7 +1067,7 @@ internal static partial class LithoBlockParser
                 var rest = content.GetRange(1, content.Count - 1);
                 while (rest.Count > 0 && rest[0].Text.Length == 0)
                 {
-                context?.Scan(8);
+                    context?.Scan(8);
                     rest.RemoveAt(0);
                 }
 
@@ -1116,10 +1132,10 @@ internal static partial class LithoBlockParser
                 var pendingBlanks = 0;
                 while (cursor < to)
                 {
-                context?.Scan(8);
+                    context?.Scan(8);
                     cancellationToken.ThrowIfCancellationRequested();
                     var line = Lines[cursor];
-                context?.Scan(line.Text.Length);
+                    context?.Scan(line.Text.Length);
                     if (IsBlank(line.Text, context))
                     {
                         pendingBlanks++;
@@ -1134,7 +1150,10 @@ internal static partial class LithoBlockParser
                         {
                             blankInside = true;
                             for (var blank = cursor - pendingBlanks; blank < cursor; blank++)
-                                { context?.Scan(8); itemLines.Add(new Line(string.Empty, Lines[blank].Offset, Lines[blank].Break)); }
+                            {
+                                context?.Scan(8);
+                                itemLines.Add(new Line(string.Empty, Lines[blank].Offset, Lines[blank].Break));
+                            }
                             pendingBlanks = 0;
                         }
 
@@ -1182,7 +1201,7 @@ internal static partial class LithoBlockParser
 
                 while (itemLines.Count > 0 && itemLines[^1].Text.Length == 0)
                 {
-                context?.Scan(8);
+                    context?.Scan(8);
                     itemLines.RemoveAt(itemLines.Count - 1);
                 }
 
@@ -1397,7 +1416,7 @@ internal static partial class LithoBlockParser
         {
             next = index;
             var line = Lines[index];
-                context?.Scan(line.Text.Length);
+            context?.Scan(line.Text.Length);
             var indent = CountIndent(line.Text, 0, context);
             if (indent.Columns >= 4)
             {
@@ -1453,8 +1472,13 @@ internal static partial class LithoBlockParser
             {
                 var activeContext = context;
                 var targetStart = after;
-                while (targetStart < text.Length && text[targetStart] is ' ' or '\t') { activeContext.Scan(8); targetStart++; }
-                if (targetStart < text.Length && text[targetStart] == '<') targetStart++;
+                while (targetStart < text.Length && text[targetStart] is ' ' or '\t')
+                {
+                    activeContext.Scan(8);
+                    targetStart++;
+                }
+                if (targetStart < text.Length && text[targetStart] == '<')
+                    targetStart++;
                 var last = Lines[index + consumedLines - 1];
                 var definitionSpan = new MdRawRange(line.Offset, last.Offset + last.Text.Length - line.Offset);
                 var label = MdSourceMapping.Local(rawLabel, text, LithoLineMap.Contiguous(line.Offset, text.Length), pos + 1, rawLabel.Length);
@@ -1501,7 +1525,7 @@ internal static partial class LithoBlockParser
                 var depth = 0;
                 while (end < rest.Length && rest[end] is not (' ' or '\t'))
                 {
-                context?.Scan(8);
+                    context?.Scan(8);
                     if (rest[end] == '(')
                     {
                         depth++;
@@ -1811,7 +1835,7 @@ internal static partial class LithoBlockParser
 
                 while (cells.Count < headerCells.Count)
                 {
-                context?.Scan(8);
+                    context?.Scan(8);
                     cells.Add(string.Empty);
                 }
 
@@ -1862,7 +1886,7 @@ internal static partial class LithoBlockParser
         var index = from;
         while (index < text.Length && (text[index] is ' ' or '\t'))
         {
-                context?.Scan(8);
+            context?.Scan(8);
             columns = text[index] == '\t' ? columns + (4 - (columns % 4)) : columns + 1;
             index++;
         }
@@ -1874,7 +1898,7 @@ internal static partial class LithoBlockParser
     {
         foreach (var ch in text)
         {
-                context?.Scan(8);
+            context?.Scan(8);
             if (ch is not (' ' or '\t'))
             {
                 return false;
@@ -1890,7 +1914,7 @@ internal static partial class LithoBlockParser
         var index = 0;
         while (index < text.Length && consumed < columns && (text[index] is ' ' or '\t'))
         {
-                context?.Scan(8);
+            context?.Scan(8);
             consumed = text[index] == '\t' ? consumed + (4 - (consumed % 4)) : consumed + 1;
             index++;
         }
@@ -1901,11 +1925,11 @@ internal static partial class LithoBlockParser
     private static SourceSpan SpanOf(Line line) =>
         new(line.Offset, line.Text.Length);
 
-    #if NETSTANDARD2_0
+#if NETSTANDARD2_0
     private static readonly Regex WhitespaceRunRegex = new(@"\s+");
     private static Regex WhitespaceRun() => WhitespaceRunRegex;
-    #else
+#else
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRun();
-    #endif
+#endif
 }

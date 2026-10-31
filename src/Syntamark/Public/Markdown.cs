@@ -11,9 +11,11 @@ public readonly record struct RawSpan
 {
     public RawSpan(int start, int length)
     {
-        if (start < 0 || length < 0) throw new ArgumentOutOfRangeException(nameof(start));
+        if (start < 0 || length < 0)
+            throw new ArgumentOutOfRangeException(nameof(start));
         _ = checked(start + length);
-        Start = start; Length = length;
+        Start = start;
+        Length = length;
     }
     public int Start { get; }
     public int Length { get; }
@@ -310,13 +312,27 @@ public sealed class MarkdownDocument
     public string ProfileId => "lithosharp-markdown/1";
     public MarkdownLinePosition GetLinePosition(int rawOffset)
     {
-        if (rawOffset < 0 || rawOffset > RawText.Length) throw new ArgumentOutOfRangeException(nameof(rawOffset));
-        var line = 1; var column = 1;
+        if (rawOffset < 0 || rawOffset > RawText.Length)
+            throw new ArgumentOutOfRangeException(nameof(rawOffset));
+        var line = 1;
+        var column = 1;
         for (var i = 0; i < rawOffset; i++)
         {
-            if (RawText[i] == '\r') { line++; column = 1; if (i + 1 < rawOffset && RawText[i + 1] == '\n') i++; }
-            else if (RawText[i] == '\n') { if (i == 0 || RawText[i - 1] != '\r') line++; column = 1; }
-            else column++;
+            if (RawText[i] == '\r')
+            {
+                line++;
+                column = 1;
+                if (i + 1 < rawOffset && RawText[i + 1] == '\n')
+                    i++;
+            }
+            else if (RawText[i] == '\n')
+            {
+                if (i == 0 || RawText[i - 1] != '\r')
+                    line++;
+                column = 1;
+            }
+            else
+                column++;
         }
         return new MarkdownLinePosition(line, column);
     }

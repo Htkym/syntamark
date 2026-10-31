@@ -37,8 +37,7 @@ jobs:
         with:
           node-version: 22
           package-manager-cache: false
-      - run: dotnet restore tests/Syntamark.Portability --locked-mode
-      - run: dotnet run --project tests/Syntamark.Portability -c Release --no-restore
+      - uses: ./.github/actions/verify-portability
       - name: Refuse repeated formal issuance
         if: github.event_name == 'workflow_dispatch'
         env:

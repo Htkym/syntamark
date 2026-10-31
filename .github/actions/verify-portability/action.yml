@@ -1,0 +1,9 @@
+name: Verify portability
+description: Build and run the existing portable component checks without issuing packages.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: dotnet restore tests/Syntamark.Portability --locked-mode
+    - shell: bash
+      run: dotnet run --project tests/Syntamark.Portability -c Release --no-restore

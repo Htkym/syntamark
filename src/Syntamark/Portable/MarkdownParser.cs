@@ -38,6 +38,9 @@ internal static class MdInlineFacts
 
 internal static class MdParser
 {
+    internal static MdFrontMatterScanResult ScanFrontMatter(string raw, MdOptions options, CancellationToken cancellationToken)
+        => MdFrontMatterScan.AnalyzeHeader(raw, options, cancellationToken);
+
     internal static MdDocumentFacts Parse(string raw, string scopeId, string sourceId, string? sourceVersion,
         MdOptions options, CancellationToken cancellationToken)
         => ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, false, out _, out _, out _);

@@ -18,6 +18,7 @@ if (args is ["--editor-analysis"])
     EditorAnalysisChecks.Run(portable);
     UnsupportedSyntaxChecks.Run(portable);
     BodyAnalysisChecks.Run(portable);
+    HeaderScanChecks.Run(portable);
     return;
 }
 if (args is ["--review-fixes"])
@@ -96,6 +97,7 @@ AnalysisChecks.Run(portable);
 EditorAnalysisChecks.Run(portable);
 UnsupportedSyntaxChecks.Run(portable);
 BodyAnalysisChecks.Run(portable);
+HeaderScanChecks.Run(portable);
 OwnedSliceChecks.Run(portable);
 MappingRegressionChecks.Run(portable);
 CommonMarkInlineChecks.Run(portable);

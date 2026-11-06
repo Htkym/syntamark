@@ -1,10 +1,6 @@
-# Read-only syntax view
+# 構文の探索
 
-SM 10 は `MarkdownParser.ParseWithSyntax` を追加する。既存の `Parse(string, string, string, string?, MarkdownParseOptions?, CancellationToken)` はそのまま残す。追加 entry は一回の構文解析から `Facts` と `Root` を返し、通常の facts 取得では構文 view を作成・保持しない。
-
-## 公開形の判断
-
-見出し、quote 内の link、list 内の code の三用途を比較した。typed subclass 群では各用途に cast と複数の公開型が必要になる。今回は `Kind`、`RawSpan`、`Children` を共通とし、必要な値だけ nullable の readonly property に持たせる。constructor は internal に閉じ、呼び出し側が無効な組合せを作れないようにする。
+`MarkdownParser.ParseWithSyntax` は一回の解析から `Facts` と読み取り専用の `Root` を返します。通常の `Parse(string, string, string, string?, MarkdownParseOptions?, CancellationToken)` は公開する構文 view を作成・保持しません。
 
 ```csharp
 var parsed = MarkdownParser.ParseWithSyntax(markdown, "sample", "example.md");
@@ -18,31 +14,35 @@ if (parsed.Root is { } root)
 }
 ```
 
-`HeadingLevel` は Heading、`OrderedListStart` は OrderedList、`IsTightList` は両 list、`TaskChecked` は task の ListItem にだけ値がある。`CodeInfo` は code block の info、`Target`・`Title`・`TargetRawSpan`・`ReferenceLabel` は link/image/autolink の情報である。それ以外の kind では null。将来 kind を追加し得るため、caller の switch は未知の値を処理する分岐を残す。
+## ノードと位置
 
-## 所有権と位置
+ノードは `Kind`、`RawSpan`、`Children` と、種類に応じた値を持ちます。直接生成・変更する API はありません。将来の種類の追加に備え、`Kind` の分岐には未知の値を扱う処理を残してください。
 
-- 一つの parse が元の owned string と immutable tree/facts を所有する。node を保持するとその元文字列も保持する。node ID、parent pointer、編集をまたぐ identity は設けない。
-- `RawSpan` は元入力の UTF-16 半開区間。root は入力全体で、front matter は構文 children へ追加せず既存 facts に残す。BOM や前置き部分による body offset を一度だけ加える。
-- node の範囲は marker を含む raw envelope。container は内部の prefix や whitespace も含み得る。既存 parser の block によって末尾の改行を含むかは異なる。`GetRawText()` はその区間をそのまま返し、AST の再構成や round-trip writer ではない。
-- HardLineBreak は backslash または末尾の2個以上の ASCII space と元の改行（CRLF は2文字）を含める。互換 profile の内部 AST が改行だけの span を持つ場合も、新しい syntax view では確認できた raw marker を含める。既存 facts/AST の範囲は変更しない。
-- decoded 値と raw slice を同じ文字列とはみなさない。`Text` は Text/Code/HTML/Math/Autolink/LineBreak の leaf 値のみ。code/HTML の改行は parser が正規化し得る。Heading/Paragraph/Link の decoded projection は既存 facts を使う。
-- 不明な raw span は null とし、既知の0幅とは区別する。content span や marker の帰属を一般化した API は追加せず、fence/link の精密 token 位置は既存 facts を使う。
-- 互換 profile の既存 emphasis AST には、子が親の外へ出る、または兄弟と重なる位置を持つ例がある。新しい view は、その矛盾が確認された emphasis の `RawSpan` を null にする。marker 位置を推測して補正せず、元の AST・facts の値と認識結果は保持する。この処理は標準 profile に適用しない。`Facts.Coverage` は facts の投影範囲、node の nullable `RawSpan` は syntax 位置の既知性であり、別の契約である。
-- 参照定義は位置順の `Facts.Links` の ReferenceDefinition として残す。use の label だけが syntax child になり、定義へ向く `TargetRawSpan` は semantic relation であるため親子の包含規則の対象にしない。未解決の参照候補は Link と偽装せず、通常の Text と既存の unresolved facts で表す。
+| プロパティ | 値を持つ種類 |
+|---|---|
+| `HeadingLevel` | Heading |
+| `OrderedListStart` | OrderedList |
+| `IsTightList` | OrderedList / UnorderedList |
+| `TaskChecked` | task の ListItem |
+| `CodeInfo` | code block |
+| `Target` / `Title` / `TargetRawSpan` / `ReferenceLabel` | link / image / autolink の該当する情報 |
 
-GFM table は現在の内部 tree が row/cell の独立 span を持たないため、Table の下に inline を文書順に置く。偽の TableRow/TableCell node は追加しない。CommonMark の native HTML token は block/inline を分ける。互換 profile 固有の directive、admonition、math、strike 等も対応する kind として区別する。
+該当しない値は null です。`Text` は Text、Code、HTML、Math、Autolink、LineBreak の葉の値です。Heading、Paragraph、Link のデコード済みテキストには既存 facts の投影を使います。code や HTML の改行は正規化される場合があります。
 
-## 不完全な結果と探索
+`RawSpan` は渡した元文字列の UTF-16 半開区間で、記号を含みます。位置不明の null と、位置が分かっている0幅の範囲は別です。コンテナーには内部の接頭辞や空白を含み、末尾改行の有無は block の種類によって異なります。HardLineBreak は backslash または末尾の2個以上の ASCII space と元の改行を含み、CRLF は2文字です。fence や link の細かな記号・内容の位置には既存 facts を使ってください。
 
-入力拒否、または構文・facts・view の構築が budget 停止した場合、`Root` は null。投影上の制約によって facts が Partial と分類されても、構築が終わっていれば tree は存在し得る。caller は `Facts.Status`・`Coverage` を見て、Partial/Failed から構文や定義が存在しないという診断を作らない。
+root は BOM や front matter を含む入力全体を覆います。front matter は children に追加せず facts に残します。`GetRawText()` は該当範囲の元文字列を返し、位置不明なら null を返します。構文から原文を再生成する機能ではありません。ノードを保持すると元文字列も保持します。parent pointer、node ID、編集をまたぐ同一性はありません。
 
-構築と `DescendantsAndSelf` は反復走査で、document の深さをそのまま call stack に積まない。各 node の走査時に cancellation を確認する。キャンセルは例外であり、成功した空 tree に変換しない。結果は読み取り専用で、並行探索に状態を共有しない。
+互換 profile の emphasis で親子・兄弟の位置が矛盾する場合、その emphasis の `RawSpan` は null になります。既存 AST・facts の認識結果や位置は変更しません。この扱いは標準 profile には適用しません。`Facts.Coverage` が示す投影の網羅範囲と、各ノードの位置が既知かどうかは別に確認してください。
 
-syntax opt-in は追加の node ごとに output budget、構築の走査に scan budget を課す。facts のみと同じ限度でも、追加出力の分だけ先に止まる場合がある。構築中の停止は既存の resource 診断と Partial を返し、完成していない Root を公開しない。投影済みの facts は保持する。
+参照定義は `Facts.Links` の ReferenceDefinition に位置順で残ります。参照 use の child は label であり、定義への `TargetRawSpan` はノードの外を指す場合があります。これは親子関係ではありません。未解決の候補は通常の Text と unresolved facts で表します。
 
-source package には同じ `MdParser.ParseWithSyntax` と `MdSyntaxDocument` / `MdSyntaxNode` が含まれる。runtime facade は従来どおり source package に含めない。source host からは internal entry を consumer の shim が呼ぶ。Roslyn 自体や renderer を core の依存へ追加しない。
+GFM table の下には inline を文書順に置き、独立した位置を持たない row/cell のノードは作りません。HTML は block と inline を分け、互換 profile の directive、admonition、math、strike も種類を区別します。
 
-visitor、rewriter、incremental parsing、全 trivia の帰属、安定 node ID、AST からの原文再生成は今回の対象外。syntax opt-in は構文探索のための追加機能であり、性能改善としては扱わない。時間・割当て・保持メモリの測定記録は、性能を扱う後続の変更で示す。
+## 制限とキャンセル
 
-CommonMark 0.31.2 の固定された全652例を `Syntamark.Conformance --syntax` で検査した結果、標準 profile は HTML 652/652、facts/syntax invariant 違反0、位置不明 node 0。互換 profile は従来の HTML 分類 521 passed / 129 failed / 2 not-observable を保持し、facts/syntax invariant 違反0、24例に計25個の位置不明 emphasis node がある。位置検査は known range の入力境界、親子の包含、兄弟の非重複・文書順を調べ、semantic target を除外する。これは node の意味的な完全性を証明する検査ではない。
+入力拒否や、構文・facts・ツリー構築中の資源制限による停止では `Root` が null になります。投影の制約で facts が Partial でも、完成したツリーが存在する場合があります。`Facts.Status` と `Coverage` を確認し、不完全な結果から構文や定義が存在しないと断定しないでください。
+
+構築と `DescendantsAndSelf` は反復走査で、キャンセル時は例外を返します。読み取り専用の結果は並行探索できます。構文ノードには追加の output budget、構築には scan budget がかかるため、facts だけの解析と同じ制限でも先に停止する場合があります。停止時は既存の資源制限診断と Partial を返し、投影済み facts を保持します。
+
+source package には internal な `MdParser.ParseWithSyntax`、`MdSyntaxDocument`、`MdSyntaxNode` が含まれます。runtime の公開 facade は含まれず、利用側の shim から internal entry を呼びます。core は Roslyn や renderer に依存しません。visitor、rewriter、incremental parsing、全 trivia の帰属、構文からの原文再生成は提供しません。

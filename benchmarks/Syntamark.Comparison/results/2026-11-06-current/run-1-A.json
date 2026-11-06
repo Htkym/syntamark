@@ -1,0 +1,1218 @@
+{
+  "contract": "bounded-common-facts-and-roslyn-locations/1",
+  "label": "run-1-A",
+  "processOrder": "A",
+  "engineOrder": [
+    "Syntamark",
+    "Markdig"
+  ],
+  "timestampUtc": "2026-11-06T01:34:30.1637771Z",
+  "processId": 24736,
+  "framework": ".NET 10.0.14",
+  "os": "Microsoft Windows 10.0.26300",
+  "cpu": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+  "processors": 8,
+  "tieredCompilation": "0",
+  "serverGc": false,
+  "loadContext": "Non-dedicated workstation; other agent/build activity and OS scheduling are uncontrolled. No wall-clock CI gate.",
+  "samplesPerWorkload": 5,
+  "warmupBatches": 1,
+  "coldMeasurements": "None. All reported timings follow validation and a complete untimed workload batch; not process-start or JIT latency.",
+  "snapshotLineIndex": "Shared immutable SourceText snapshots and their line indexes are warmed by preflight. Timed ToString materializes the genuine SubText; Location objects are new per operation.",
+  "memoryContract": "Retained managed heap delta after full collection, eight simultaneous outputs. Input/snapshot and shared pipelines are pre-existing roots. No native memory/RSS claim; small deltas are noisy.",
+  "stages": [
+    {
+      "id": "representation-unequal-work",
+      "syntamark": "ParseWithSyntax: all facts \u002B immutable syntax view",
+      "markdig": "Parse: AST \u002B precise raw positions",
+      "comparison": "Unequal work; cannot rank as equivalent parse-only throughput."
+    },
+    {
+      "id": "common-facts",
+      "syntamark": "Parse all facts, select common heading/link/fenced-code output",
+      "markdig": "Parse AST, traverse/decode/copy common output",
+      "comparison": "Same validated output; adapter costs included. Syntamark still computes extra facts/mapping/diagnostics/budget checks; no claim of identical internal work."
+    },
+    {
+      "id": "snapshot-to-locations",
+      "syntamark": "SourceText.ToString -\u003E common-facts -\u003E Location[]",
+      "markdig": "SourceText.ToString -\u003E common-facts -\u003E Location[]",
+      "comparison": "Same snapshot, output ranges and Roslyn UTF-16 line spans; SourceText constructed outside timed scope."
+    }
+  ],
+  "decodedSubset": "Heading text and link labels/targets/titles; fenced code logical content with exactly one terminal line separator excluded. CRLF is normalized to LF in code only. No arbitrary decoded-substring mapping in either common stage.",
+  "syntamark": {
+    "profile": "commonmark/0.31.2",
+    "ParserVersion": "1/a6a14ab542fa607d81208f8dcb67a4243b807ac744d5492cf4e067f872170b86",
+    "OptionsHash": "740ccf0155f5998cbbcf24bfc6357251830931068e8de3c6d0731c62f63e8702",
+    "assembly": {
+      "name": "Syntamark, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "informationalVersion": "1.0.0\u002Bde0a64272e5a75faceb1ff093d29d6bd10105984",
+      "sha256": "d874958d2eda50cdf3ae18ce6f8263a7f02f754fe789b5af2448749b1ad4b2da"
+    },
+    "options": {
+      "MaxInputUtf16": 1048576,
+      "MaxOutputItems": 1048576,
+      "MaxNestingDepth": 200,
+      "MaxScanUnits": 134217728,
+      "ProfileId": "commonmark/0.31.2",
+      "OptionsSchemaVersion": 1
+    }
+  },
+  "markdig": {
+    "packageVersion": "1.5.1",
+    "assembly": {
+      "name": "Markdig, Version=1.5.0.0, Culture=neutral, PublicKeyToken=null",
+      "informationalVersion": "1.5.1\u002Bbbf197eaf3c96b9a6ada6532ec970b59751ca9c6",
+      "sha256": "1386c42c5e40e6b746673a068e32e95e8fbf31017b05784d47e4ea695c82eb63"
+    },
+    "preciseSourceLocation": true,
+    "extensions": [],
+    "MaximumNestingDepth": 128,
+    "resourceStatus": "No equivalent accounting/cancellation adapter. Fixed bounded fixtures validate normally; not an adversarial resource-contract test."
+  },
+  "roslyn": {
+    "packageVersion": "4.14.0",
+    "assembly": {
+      "name": "Microsoft.CodeAnalysis, Version=4.14.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35",
+      "informationalVersion": "4.14.0-3.25262.10\u002B8edf7bcd4f1594c3d68a6a567469f41dbd33dd1b",
+      "sha256": "395736b2d0e02be77bedc3847b269da7a93bf8e49cd3431a4a8e68d2c52d5846"
+    },
+    "compilerHost": "Not measured. This is .NET 10 CLI application use of SourceText/Location."
+  },
+  "yamlRuntimeDependency": {
+    "packageVersion": "18.1.0",
+    "usedByFixtures": false
+  },
+  "validation": [
+    {
+      "Id": "small",
+      "utf16Length": 229,
+      "inputSha256": "d0470dc81f91f211cc562fbbe44072d80181311e5948404b382386f3e3c356cf",
+      "expectedCommonFactsSha256": "6ae7fca940d8a0dee91fa273ce656593485af140b3757dd0dcbcb300e26eb836",
+      "expectedLocationsSha256": "d4f61155f44cca4a35bbcd0d3e8ae68f27759b2fec72b93fe23356fc93782a13",
+      "headings": 1,
+      "links": 2,
+      "fencedCode": 1,
+      "locations": 6,
+      "status": "Complete",
+      "resourceDiagnostics": 0,
+      "rawCoverage": "Complete",
+      "mappingCoverage": "Complete",
+      "ParserVersion": "1/a6a14ab542fa607d81208f8dcb67a4243b807ac744d5492cf4e067f872170b86",
+      "OptionsHash": "740ccf0155f5998cbbcf24bfc6357251830931068e8de3c6d0731c62f63e8702",
+      "extraSyntamarkFacts": {
+        "sections": 2,
+        "textRegions": 1,
+        "referenceDefinitions": 1,
+        "sourceSegments": 5
+      },
+      "snapshotType": "Microsoft.CodeAnalysis.Text.SubText",
+      "snapshotToStringReusesOriginal": false,
+      "independentOracles": "Constructed from unique raw tokens, explicit decoded values, and a separate raw UTF-16 CR/LF scanner before any timing."
+    },
+    {
+      "Id": "medium",
+      "utf16Length": 5496,
+      "inputSha256": "e170a247d7e29a7c48d905256c25c21a72e7713d16ca21a3e0441e2f8bb4281a",
+      "expectedCommonFactsSha256": "9ba2105df38b8398ce0ebb6c887c532b536ecda0c360d2ad5413284d4d5a98e7",
+      "expectedLocationsSha256": "233cf8a7e974c586b919d5da7f382c58e2c80de690da8d51c2f0d56f1c1b9835",
+      "headings": 24,
+      "links": 48,
+      "fencedCode": 24,
+      "locations": 144,
+      "status": "Complete",
+      "resourceDiagnostics": 0,
+      "rawCoverage": "Complete",
+      "mappingCoverage": "Complete",
+      "ParserVersion": "1/a6a14ab542fa607d81208f8dcb67a4243b807ac744d5492cf4e067f872170b86",
+      "OptionsHash": "740ccf0155f5998cbbcf24bfc6357251830931068e8de3c6d0731c62f63e8702",
+      "extraSyntamarkFacts": {
+        "sections": 25,
+        "textRegions": 24,
+        "referenceDefinitions": 24,
+        "sourceSegments": 120
+      },
+      "snapshotType": "Microsoft.CodeAnalysis.Text.SubText",
+      "snapshotToStringReusesOriginal": false,
+      "independentOracles": "Constructed from unique raw tokens, explicit decoded values, and a separate raw UTF-16 CR/LF scanner before any timing."
+    },
+    {
+      "Id": "larger",
+      "utf16Length": 21984,
+      "inputSha256": "b21770f3aea6392c27a13dec6788264f5b28bd1400ec9d52b3d3bd8cee1031b1",
+      "expectedCommonFactsSha256": "dff0ad11f2a6296e1a5798411c0ac787433387ba1b7da0daa471883136034f69",
+      "expectedLocationsSha256": "50615f6db8471d0750cb73fe815afc2ea248b0114d0955351ea14856959e2e66",
+      "headings": 96,
+      "links": 192,
+      "fencedCode": 96,
+      "locations": 576,
+      "status": "Complete",
+      "resourceDiagnostics": 0,
+      "rawCoverage": "Complete",
+      "mappingCoverage": "Complete",
+      "ParserVersion": "1/a6a14ab542fa607d81208f8dcb67a4243b807ac744d5492cf4e067f872170b86",
+      "OptionsHash": "740ccf0155f5998cbbcf24bfc6357251830931068e8de3c6d0731c62f63e8702",
+      "extraSyntamarkFacts": {
+        "sections": 97,
+        "textRegions": 96,
+        "referenceDefinitions": 96,
+        "sourceSegments": 480
+      },
+      "snapshotType": "Microsoft.CodeAnalysis.Text.SubText",
+      "snapshotToStringReusesOriginal": false,
+      "independentOracles": "Constructed from unique raw tokens, explicit decoded values, and a separate raw UTF-16 CR/LF scanner before any timing."
+    }
+  ],
+  "results": [
+    {
+      "Fixture": "small",
+      "Engine": "Syntamark",
+      "Stage": "representation-unequal-work",
+      "OperationsPerSample": 100,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 42763,
+          "AllocatedBytesPerOperation": 50899.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 29054,
+          "AllocatedBytesPerOperation": 50899.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 24566,
+          "AllocatedBytesPerOperation": 50899.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 22678,
+          "AllocatedBytesPerOperation": 50899.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 33942,
+          "AllocatedBytesPerOperation": 50899.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "small",
+      "Engine": "Markdig",
+      "Stage": "representation-unequal-work",
+      "OperationsPerSample": 100,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 3115,
+          "AllocatedBytesPerOperation": 4128,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 3068,
+          "AllocatedBytesPerOperation": 4128,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 3060,
+          "AllocatedBytesPerOperation": 4128,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 3135,
+          "AllocatedBytesPerOperation": 4128,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 3223,
+          "AllocatedBytesPerOperation": 4128,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "small",
+      "Engine": "Syntamark",
+      "Stage": "common-facts",
+      "OperationsPerSample": 100,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 35469,
+          "AllocatedBytesPerOperation": 40971.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 19665,
+          "AllocatedBytesPerOperation": 40971.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 18779,
+          "AllocatedBytesPerOperation": 40971.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 30852,
+          "AllocatedBytesPerOperation": 40971.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 21423,
+          "AllocatedBytesPerOperation": 40971.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "small",
+      "Engine": "Markdig",
+      "Stage": "common-facts",
+      "OperationsPerSample": 100,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 4229,
+          "AllocatedBytesPerOperation": 7264,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 4095,
+          "AllocatedBytesPerOperation": 7264,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 4232,
+          "AllocatedBytesPerOperation": 7264,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 4024,
+          "AllocatedBytesPerOperation": 7264,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 4044,
+          "AllocatedBytesPerOperation": 7264,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "small",
+      "Engine": "Syntamark",
+      "Stage": "snapshot-to-locations",
+      "OperationsPerSample": 100,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 24089,
+          "AllocatedBytesPerOperation": 42683.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 25686,
+          "AllocatedBytesPerOperation": 42683.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 38521,
+          "AllocatedBytesPerOperation": 42683.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 22432,
+          "AllocatedBytesPerOperation": 42683.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 19913,
+          "AllocatedBytesPerOperation": 42683.28,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "small",
+      "Engine": "Markdig",
+      "Stage": "snapshot-to-locations",
+      "OperationsPerSample": 100,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 5117,
+          "AllocatedBytesPerOperation": 8976,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 5028,
+          "AllocatedBytesPerOperation": 8976,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 6187,
+          "AllocatedBytesPerOperation": 8976,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 10108,
+          "AllocatedBytesPerOperation": 8976,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 5266,
+          "AllocatedBytesPerOperation": 8976,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "small",
+      "Engine": "Syntamark-only",
+      "Stage": "additional-preparsed-substring-map",
+      "OperationsPerSample": 10000,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 109.2,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 111.62,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 94.99,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 96.84,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 90.52,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "medium",
+      "Engine": "Syntamark",
+      "Stage": "representation-unequal-work",
+      "OperationsPerSample": 8,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 782387.5,
+          "AllocatedBytesPerOperation": 1014290,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 506637.5,
+          "AllocatedBytesPerOperation": 1014290,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 478750,
+          "AllocatedBytesPerOperation": 1014290,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 617062.5,
+          "AllocatedBytesPerOperation": 1014290,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 544575,
+          "AllocatedBytesPerOperation": 1014290,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "medium",
+      "Engine": "Markdig",
+      "Stage": "representation-unequal-work",
+      "OperationsPerSample": 8,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 76100,
+          "AllocatedBytesPerOperation": 85840,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 73387.5,
+          "AllocatedBytesPerOperation": 85840,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 69462.5,
+          "AllocatedBytesPerOperation": 85840,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 69512.5,
+          "AllocatedBytesPerOperation": 85840,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 69150,
+          "AllocatedBytesPerOperation": 85840,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "medium",
+      "Engine": "Syntamark",
+      "Stage": "common-facts",
+      "OperationsPerSample": 8,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 490812.5,
+          "AllocatedBytesPerOperation": 783185,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 478237.5,
+          "AllocatedBytesPerOperation": 783185,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 608662.5,
+          "AllocatedBytesPerOperation": 783185,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 554275,
+          "AllocatedBytesPerOperation": 783185,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 531012.5,
+          "AllocatedBytesPerOperation": 783185,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "medium",
+      "Engine": "Markdig",
+      "Stage": "common-facts",
+      "OperationsPerSample": 8,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 164675,
+          "AllocatedBytesPerOperation": 146736,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 101287.5,
+          "AllocatedBytesPerOperation": 146736,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 88337.5,
+          "AllocatedBytesPerOperation": 146736,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 105150,
+          "AllocatedBytesPerOperation": 146736,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 92525,
+          "AllocatedBytesPerOperation": 146736,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "medium",
+      "Engine": "Syntamark",
+      "Stage": "snapshot-to-locations",
+      "OperationsPerSample": 8,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 503737.5,
+          "AllocatedBytesPerOperation": 812034,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 541762.5,
+          "AllocatedBytesPerOperation": 812034,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 729925,
+          "AllocatedBytesPerOperation": 812034,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 652350,
+          "AllocatedBytesPerOperation": 812034,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 452187.5,
+          "AllocatedBytesPerOperation": 812034,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "medium",
+      "Engine": "Markdig",
+      "Stage": "snapshot-to-locations",
+      "OperationsPerSample": 8,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 112962.5,
+          "AllocatedBytesPerOperation": 175544,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 100975,
+          "AllocatedBytesPerOperation": 175544,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 100462.5,
+          "AllocatedBytesPerOperation": 175544,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 98050,
+          "AllocatedBytesPerOperation": 175544,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 97700,
+          "AllocatedBytesPerOperation": 175544,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "medium",
+      "Engine": "Syntamark-only",
+      "Stage": "additional-preparsed-substring-map",
+      "OperationsPerSample": 10000,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 100.87,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 110.08,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 88.44,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 87.64,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 97.53,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "larger",
+      "Engine": "Syntamark",
+      "Stage": "representation-unequal-work",
+      "OperationsPerSample": 2,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 2538250,
+          "AllocatedBytesPerOperation": 4024976,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 2712550,
+          "AllocatedBytesPerOperation": 4024976,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 3165000,
+          "AllocatedBytesPerOperation": 4024976,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 2466600,
+          "AllocatedBytesPerOperation": 4024976,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 3135850,
+          "AllocatedBytesPerOperation": 4024976,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "larger",
+      "Engine": "Markdig",
+      "Stage": "representation-unequal-work",
+      "OperationsPerSample": 2,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 285650,
+          "AllocatedBytesPerOperation": 349616,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 270000,
+          "AllocatedBytesPerOperation": 349616,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 337900,
+          "AllocatedBytesPerOperation": 349616,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 425850,
+          "AllocatedBytesPerOperation": 349616,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 328400,
+          "AllocatedBytesPerOperation": 349616,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "larger",
+      "Engine": "Syntamark",
+      "Stage": "common-facts",
+      "OperationsPerSample": 2,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 1555200,
+          "AllocatedBytesPerOperation": 3110516,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 1871550,
+          "AllocatedBytesPerOperation": 3110516,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 1348150,
+          "AllocatedBytesPerOperation": 3110516,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 1320050,
+          "AllocatedBytesPerOperation": 3110516,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 2039650,
+          "AllocatedBytesPerOperation": 3110516,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "larger",
+      "Engine": "Markdig",
+      "Stage": "common-facts",
+      "OperationsPerSample": 2,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 395800,
+          "AllocatedBytesPerOperation": 590848,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 349800,
+          "AllocatedBytesPerOperation": 590848,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 329450,
+          "AllocatedBytesPerOperation": 590848,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 326850,
+          "AllocatedBytesPerOperation": 590848,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 323350,
+          "AllocatedBytesPerOperation": 590848,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "larger",
+      "Engine": "Syntamark",
+      "Stage": "snapshot-to-locations",
+      "OperationsPerSample": 2,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 2088250,
+          "AllocatedBytesPerOperation": 3224140,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 2483550,
+          "AllocatedBytesPerOperation": 3224140,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 2086750,
+          "AllocatedBytesPerOperation": 3224140,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 1852250,
+          "AllocatedBytesPerOperation": 3224140,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 2180450,
+          "AllocatedBytesPerOperation": 3224140,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "larger",
+      "Engine": "Markdig",
+      "Stage": "snapshot-to-locations",
+      "OperationsPerSample": 2,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 462750,
+          "AllocatedBytesPerOperation": 704472,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 544950,
+          "AllocatedBytesPerOperation": 704472,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 437700,
+          "AllocatedBytesPerOperation": 704472,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 450200,
+          "AllocatedBytesPerOperation": 704472,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 432650,
+          "AllocatedBytesPerOperation": 704472,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Fixture": "larger",
+      "Engine": "Syntamark-only",
+      "Stage": "additional-preparsed-substring-map",
+      "OperationsPerSample": 10000,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 95.91,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 96.88,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 110.59,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 103.5,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 96.58,
+          "AllocatedBytesPerOperation": 320,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    }
+  ],
+  "retained": [
+    {
+      "fixture": "small",
+      "engine": "Syntamark",
+      "stage": "representation-unequal-work",
+      "outputs": 8,
+      "retainedBytes": 70464,
+      "bytesPerOutput": 8808
+    },
+    {
+      "fixture": "small",
+      "engine": "Markdig",
+      "stage": "representation-unequal-work",
+      "outputs": 8,
+      "retainedBytes": 27880,
+      "bytesPerOutput": 3485
+    },
+    {
+      "fixture": "small",
+      "engine": "Syntamark",
+      "stage": "common-facts",
+      "outputs": 8,
+      "retainedBytes": 7776,
+      "bytesPerOutput": 972
+    },
+    {
+      "fixture": "small",
+      "engine": "Markdig",
+      "stage": "common-facts",
+      "outputs": 8,
+      "retainedBytes": 7264,
+      "bytesPerOutput": 908
+    },
+    {
+      "fixture": "small",
+      "engine": "Syntamark",
+      "stage": "snapshot-to-locations",
+      "outputs": 8,
+      "retainedBytes": 12832,
+      "bytesPerOutput": 1604
+    },
+    {
+      "fixture": "small",
+      "engine": "Markdig",
+      "stage": "snapshot-to-locations",
+      "outputs": 8,
+      "retainedBytes": 12224,
+      "bytesPerOutput": 1528
+    },
+    {
+      "fixture": "medium",
+      "engine": "Syntamark",
+      "stage": "representation-unequal-work",
+      "outputs": 8,
+      "retainedBytes": 1438848,
+      "bytesPerOutput": 179856
+    },
+    {
+      "fixture": "medium",
+      "engine": "Markdig",
+      "stage": "representation-unequal-work",
+      "outputs": 8,
+      "retainedBytes": 575744,
+      "bytesPerOutput": 71968
+    },
+    {
+      "fixture": "medium",
+      "engine": "Syntamark",
+      "stage": "common-facts",
+      "outputs": 8,
+      "retainedBytes": 168224,
+      "bytesPerOutput": 21028
+    },
+    {
+      "fixture": "medium",
+      "engine": "Markdig",
+      "stage": "common-facts",
+      "outputs": 8,
+      "retainedBytes": 160544,
+      "bytesPerOutput": 20068
+    },
+    {
+      "fixture": "medium",
+      "engine": "Syntamark",
+      "stage": "snapshot-to-locations",
+      "outputs": 8,
+      "retainedBytes": 279264,
+      "bytesPerOutput": 34908
+    },
+    {
+      "fixture": "medium",
+      "engine": "Markdig",
+      "stage": "snapshot-to-locations",
+      "outputs": 8,
+      "retainedBytes": 271584,
+      "bytesPerOutput": 33948
+    },
+    {
+      "fixture": "larger",
+      "engine": "Syntamark",
+      "stage": "representation-unequal-work",
+      "outputs": 8,
+      "retainedBytes": 5725824,
+      "bytesPerOutput": 715728
+    },
+    {
+      "fixture": "larger",
+      "engine": "Markdig",
+      "stage": "representation-unequal-work",
+      "outputs": 8,
+      "retainedBytes": 2323520,
+      "bytesPerOutput": 290440
+    },
+    {
+      "fixture": "larger",
+      "engine": "Syntamark",
+      "stage": "common-facts",
+      "outputs": 8,
+      "retainedBytes": 670496,
+      "bytesPerOutput": 83812
+    },
+    {
+      "fixture": "larger",
+      "engine": "Markdig",
+      "stage": "common-facts",
+      "outputs": 8,
+      "retainedBytes": 639776,
+      "bytesPerOutput": 79972
+    },
+    {
+      "fixture": "larger",
+      "engine": "Syntamark",
+      "stage": "snapshot-to-locations",
+      "outputs": 8,
+      "retainedBytes": 1113312,
+      "bytesPerOutput": 139164
+    },
+    {
+      "fixture": "larger",
+      "engine": "Markdig",
+      "stage": "snapshot-to-locations",
+      "outputs": 8,
+      "retainedBytes": 1082592,
+      "bytesPerOutput": 135324
+    }
+  ]
+}

@@ -3,5 +3,5 @@ namespace Syntamark.Compilation;
 
 internal static class MdParserVersion
 {
-    internal const string Value = "1/7ad649d73f2b10840a51f38462d2948723608e0baa3c9a4a2814155d341cbb5a";
+    internal const string Value = "1/bdfeafae73da63bdc3720d48b7d56d8466daadf7b8171ec93a87fee9f02991ba";
 }

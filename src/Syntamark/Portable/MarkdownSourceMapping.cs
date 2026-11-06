@@ -4,20 +4,43 @@ using System.Linq;
 
 namespace Syntamark.Compilation;
 
+internal readonly record struct MdMappingSegment(MdRawRange DecodedSpan, MdRawRange? RawSpan, MdSegmentKind Kind);
+
+internal interface IMdMappingSegments
+{
+    int Count { get; }
+    MdMappingSegment Get(int index);
+}
+
 internal static class MdSourceMapping
 {
-    internal static MdMappingResult Map(MdTextProjection text, MdRawRange query)
+    private readonly struct CoreSegments(IReadOnlyList<MdSourceSegment> segments) : IMdMappingSegments
     {
-        if (text.Text is null)
+        public int Count => segments.Count;
+        public MdMappingSegment Get(int index)
+        {
+            var segment = segments[index];
+            return new(segment.DecodedSpan, segment.RawSpan, segment.Kind);
+        }
+    }
+
+    internal static MdMappingResult Map(MdTextProjection text, MdRawRange query) =>
+        MapSegments(text.Text, new CoreSegments(text.SourceSegments), query);
+
+    internal static MdMappingResult MapSegments<TSegments>(string? text, TSegments segments, MdRawRange query)
+        where TSegments : struct, IMdMappingSegments
+    {
+        if (text is null)
             return new MdMappingResult(MdFreeze.Empty<MdRawRange>(), MdMappingPrecision.Unknown);
-        if (query.End > text.Text.Length)
+        if (query.End > text.Length)
             throw new ArgumentOutOfRangeException(nameof(query));
         if (query.Length == 0)
         {
             var boundaries = new HashSet<int>();
             var unknown = false;
-            foreach (var s in text.SourceSegments)
+            for (var index = 0; index < segments.Count; index++)
             {
+                var s = segments.Get(index);
                 if (query.Start < s.DecodedSpan.Start || query.Start > s.DecodedSpan.End)
                     continue;
                 if (s.Kind == MdSegmentKind.Unknown)
@@ -42,8 +65,9 @@ internal static class MdSourceMapping
         var fragments = new List<MdRawRange>();
         var hasUnknown = false;
         var atomic = false;
-        foreach (var s in text.SourceSegments)
+        for (var index = 0; index < segments.Count; index++)
         {
+            var s = segments.Get(index);
             var from = Math.Max(s.DecodedSpan.Start, query.Start);
             var end = Math.Min(s.DecodedSpan.End, query.End);
             if (from >= end)

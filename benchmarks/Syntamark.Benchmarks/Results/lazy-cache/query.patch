@@ -1,0 +1,72 @@
+diff --git a/src/Syntamark/Public/Markdown.cs b/src/Syntamark/Public/Markdown.cs
+index 8e055dc..ee4b2b8 100644
+--- a/src/Syntamark/Public/Markdown.cs
++++ b/src/Syntamark/Public/Markdown.cs
+@@ -65,6 +65,8 @@ public sealed class MarkdownMappingResult
+ /// <summary>Immutable parse-only TextProjection facts; positions refer to the original UTF-16 input.</summary>
+ public sealed class MarkdownTextProjection
+ {
++    private MdTextProjection? core;
++
+     internal MarkdownTextProjection(MdTextProjection facts)
+     {
+         Text = facts.Text;
+@@ -74,11 +76,16 @@ public sealed class MarkdownTextProjection
+     public IReadOnlyList<MarkdownSourceSegment> SourceSegments { get; }
+     public MarkdownMappingResult Map(RawSpan decodedSpan)
+     {
+-        var core = new MdTextProjection(Text, SourceSegments.Select(s => new MdSourceSegment(
+-            new MdRawRange(s.DecodedSpan.Start, s.DecodedSpan.Length),
+-            s.RawSpan.HasValue ? new MdRawRange(s.RawSpan.Value.Start, s.RawSpan.Value.Length) : null,
+-            (MdSegmentKind)s.Kind)).ToArray());
+-        return new MarkdownMappingResult(MdSourceMapping.Map(core, new MdRawRange(decodedSpan.Start, decodedSpan.Length)));
++        var cached = Volatile.Read(ref core);
++        if (cached is null)
++        {
++            var created = new MdTextProjection(Text, SourceSegments.Select(s => new MdSourceSegment(
++                new MdRawRange(s.DecodedSpan.Start, s.DecodedSpan.Length),
++                s.RawSpan.HasValue ? new MdRawRange(s.RawSpan.Value.Start, s.RawSpan.Value.Length) : null,
++                (MdSegmentKind)s.Kind)).ToArray());
++            cached = Interlocked.CompareExchange(ref core, created, null) ?? created;
++        }
++        return new MarkdownMappingResult(MdSourceMapping.Map(cached, new MdRawRange(decodedSpan.Start, decodedSpan.Length)));
+     }
+ }
+ 
+@@ -269,6 +276,9 @@ public sealed class MarkdownCoverage
+ /// <summary>Immutable parse-only DocumentFacts facts; positions refer to the original UTF-16 input.</summary>
+ public sealed class MarkdownDocument
+ {
++    private SourceText? lineSource;
++    private int linePositionRequested;
++
+     internal MarkdownDocument(MdDocumentFacts facts)
+     {
+         RawText = facts.RawText;
+@@ -314,6 +324,26 @@ public sealed class MarkdownDocument
+     {
+         if (rawOffset < 0 || rawOffset > RawText.Length)
+             throw new ArgumentOutOfRangeException(nameof(rawOffset));
++        if (rawOffset == 0)
++            return new MarkdownLinePosition(1, 1);
++        var indexed = Volatile.Read(ref lineSource);
++        if (indexed is null)
++        {
++            // A single query does not need to retain a document-wide index.
++            if (Interlocked.Exchange(ref linePositionRequested, 1) == 0)
++                return ScanLinePosition(rawOffset);
++            var created = new SourceText(RawText);
++            indexed = Interlocked.CompareExchange(ref lineSource, created, null) ?? created;
++        }
++        // The public contract locates the LF of CRLF at the next line's first column.
++        var offset = rawOffset < RawText.Length && RawText[rawOffset] == '\n' && RawText[rawOffset - 1] == '\r'
++            ? rawOffset + 1 : rawOffset;
++        var position = indexed.GetLineAndColumn(offset);
++        return new MarkdownLinePosition(position.Line, position.Column);
++    }
++
++    private MarkdownLinePosition ScanLinePosition(int rawOffset)
++    {
+         var line = 1;
+         var column = 1;
+         for (var i = 0; i < rawOffset; i++)

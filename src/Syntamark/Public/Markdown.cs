@@ -275,6 +275,8 @@ public sealed class MarkdownDocument
         ScopeId = facts.ScopeId;
         SourceId = facts.SourceId;
         SourceVersion = facts.SourceVersion;
+        ContractVersion = facts.ContractVersion;
+        ProfileId = facts.ProfileId;
         ParserVersion = facts.ParserVersion;
         OptionsHash = facts.OptionsHash;
         TextHash = facts.TextHash;
@@ -308,8 +310,8 @@ public sealed class MarkdownDocument
     public IReadOnlyList<MarkdownDiagnostic> Diagnostics { get; }
     public IReadOnlyList<MarkdownCapability> Capabilities { get; }
     public MarkdownCoverage Coverage { get; }
-    public string ContractVersion => "1.0";
-    public string ProfileId => "lithosharp-markdown/1";
+    public string ContractVersion { get; }
+    public string ProfileId { get; }
     public MarkdownLinePosition GetLinePosition(int rawOffset)
     {
         if (rawOffset < 0 || rawOffset > RawText.Length)

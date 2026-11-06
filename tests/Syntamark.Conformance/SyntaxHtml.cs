@@ -6,31 +6,32 @@ using System.Text;
 // Test-only observation of the internal AST. No HTML renderer is shipped in the product.
 internal static class SyntaxHtml
 {
-    internal static string Render(IEnumerable blocks) => string.Concat(blocks.Cast<object>().Select(Block));
+    internal static string Render(IEnumerable blocks, bool decodedInfo = false) => string.Concat(blocks.Cast<object>().Select(node => Block(node, decodedInfo)));
 
-    private static string Block(object node) => node.GetType().Name switch
+    private static string Block(object node, bool decodedInfo) => node.GetType().Name switch
     {
         "LithoParagraph" => "<p>" + Inlines(Get<IEnumerable>(node, "Inlines")) + "</p>\n",
         "LithoHeading" => "<h" + Get<int>(node, "Level") + ">" + Inlines(Get<IEnumerable>(node, "Inlines"))
             + "</h" + Get<int>(node, "Level") + ">\n",
         "LithoBreak" => "<hr />\n",
-        "LithoCode" => Code(node),
-        "LithoQuote" => "<blockquote>\n" + Render(Get<IEnumerable>(node, "Children")) + "</blockquote>\n",
-        "LithoList" => List(node),
+        "LithoCode" => Code(node, decodedInfo),
+        "LithoQuote" => "<blockquote>\n" + Render(Get<IEnumerable>(node, "Children"), decodedInfo) + "</blockquote>\n",
+        "LithoHtmlBlock" => Get<string>(node, "Text"),
+        "LithoList" => List(node, decodedInfo),
         _ => throw new NotSupportedException("AST node not supported by test renderer: " + node.GetType().Name),
     };
 
-    private static string Code(object node)
+    private static string Code(object node, bool decodedInfo)
     {
         var info = Get<string?>(node, "Info");
-        if (info is not null && (info.Contains('\\') || info.Contains('&')))
+        if (!decodedInfo && info is not null && (info.Contains('\\') || info.Contains('&')))
             throw new NotSupportedException("Test renderer does not interpret raw info-string escape/entity semantics.");
         var language = info?.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
         return "<pre><code" + (language is null ? "" : " class=\"language-" + Escape(language) + "\"") + ">"
             + Escape(Get<string>(node, "Text")) + "</code></pre>\n";
     }
 
-    private static string List(object node)
+    private static string List(object node, bool decodedInfo)
     {
         var ordered = Get<bool>(node, "Ordered");
         var tag = ordered ? "ol" : "ul";
@@ -55,7 +56,7 @@ internal static class SyntaxHtml
                 {
                     if (i == 0)
                         output.Append('\n');
-                    output.Append(Block(child));
+                    output.Append(Block(child, decodedInfo));
                 }
             }
             output.Append("</li>\n");
@@ -73,6 +74,7 @@ internal static class SyntaxHtml
         "LithoEmphasis" => Emphasis(node),
         "LithoLink" => Link(node),
         "LithoAutolink" => "<a href=\"" + Escape(Href(Get<string>(node, "Href"))) + "\">" + Escape(Get<string>(node, "Text")) + "</a>",
+        "LithoHtmlInline" => Get<string>(node, "Text"),
         _ => throw new NotSupportedException("AST inline not supported by test renderer: " + node.GetType().Name),
     };
 
@@ -99,6 +101,7 @@ internal static class SyntaxHtml
         "LithoCodeSpan" => Get<string>(node, "Code"),
         "LithoAutolink" => Get<string>(node, "Text"),
         "LithoLineBreak" => "\n",
+        "LithoHtmlInline" => "",
         "LithoEmphasis" => Plain(Get<IEnumerable>(node, "Children")),
         "LithoLink" => Plain(Get<IEnumerable>(node, "Label")),
         _ => throw new NotSupportedException("Image label node not supported by test renderer: " + node.GetType().Name),
@@ -132,13 +135,19 @@ internal static class SyntaxHtml
             new LithoList(true, 3, true, [new LithoItem([new LithoParagraph([new LithoText("item")])], null)]),
             new LithoQuote([new LithoParagraph([new LithoText("q")])]),
             new LithoParagraph([new LithoLink(label, "/i", null, true), new LithoAutolink("mailto:x@y", "x@y")]),
+            new LithoHtmlBlock("<div>\nraw\n</div>\n"),
+            new LithoParagraph([new LithoHtmlInline("<span>"), new LithoText("<&"), new LithoHtmlInline("</span>")]),
         };
         const string expected = "<h2>a&lt;&amp;&quot;<em>b</em></h2>\n<hr />\n<pre><code class=\"language-c#\">x&lt;&amp;\n</code></pre>\n"
             + "<p><a href=\"/%E6%97%A5%E6%9C%AC%20a%5B%5D\" title=\"t&amp;&quot;\">a&lt;&amp;&quot;<em>b</em></a><br />\n<code>x&amp;</code></p>\n"
             + "<ol start=\"3\">\n<li>item</li>\n</ol>\n<blockquote>\n<p>q</p>\n</blockquote>\n"
-            + "<p><img src=\"/i\" alt=\"a&lt;&amp;&quot;b\" /><a href=\"mailto:x@y\">x@y</a></p>\n";
+            + "<p><img src=\"/i\" alt=\"a&lt;&amp;&quot;b\" /><a href=\"mailto:x@y\">x@y</a></p>\n"
+            + "<div>\nraw\n</div>\n<p><span>&lt;&amp;</span></p>\n";
         if (Render(blocks) != expected)
             throw new InvalidOperationException("Test renderer golden failed.");
+        if (Render(new object[] { new LithoCode("x\n", "c&") }, decodedInfo: true)
+            != "<pre><code class=\"language-c&amp;\">x\n</code></pre>\n")
+            throw new InvalidOperationException("Decoded info renderer golden failed.");
         try
         {
             Render(new object[] { new object() });
@@ -160,4 +169,6 @@ internal static class SyntaxHtml
     private sealed record LithoList(bool Ordered, int Start, bool Tight, object[] Items);
     private sealed record LithoItem(object[] Children, bool? Checked);
     private sealed record LithoQuote(object[] Children);
+    private sealed record LithoHtmlBlock(string Text);
+    private sealed record LithoHtmlInline(string Text);
 }

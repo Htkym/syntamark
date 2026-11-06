@@ -84,6 +84,7 @@ internal static class MdParser
         private readonly HashSet<string> reasons = new(StringComparer.Ordinal);
         private LithoAnchorIds? anchorIds;
         private MdRawRange[] opaqueRanges = new MdRawRange[0];
+        private List<(string Kind, SourceSpan Span)>? htmlTokens;
         private bool unknownMapping;
         private bool incompleteRaw;
 
@@ -127,8 +128,16 @@ internal static class MdParser
                     PrepareOpaque(parsed.Blocks);
                     foreach (var block in Walk(parsed.Blocks))
                         Project(block);
-                    foreach (var opaque in opaqueRanges)
-                        Opaque("rawHtmlOrMdx", Range(new SourceSpan(opaque.Start, opaque.Length)));
+                    if (options.IsCommonMark && htmlTokens is not null)
+                    {
+                        foreach (var token in htmlTokens.OrderBy(token => token.Span.Start))
+                            Opaque(token.Kind, Range(token.Span));
+                    }
+                    else if (!options.IsCommonMark)
+                    {
+                        foreach (var opaque in opaqueRanges)
+                            Opaque("rawHtmlOrMdx", Range(new SourceSpan(opaque.Start, opaque.Length)));
+                    }
                     MakeSections();
                 }
                 else
@@ -142,7 +151,10 @@ internal static class MdParser
                     context.Emit();
                     diagnostics.Add(new MdDiagnostic("LMD006", MdDiagnosticSeverity.Information,
                         "Some decoded text cannot be mapped to raw tokens.", null, "mapping", "decodedMapping"));
-                    Partial("decodedMapping");
+                    if (options.IsCommonMark)
+                        reasons.Add("decodedMapping");
+                    else
+                        Partial("decodedMapping");
                 }
             }
             catch (MdResourceLimit limit)
@@ -326,14 +338,37 @@ internal static class MdParser
 
         private void PrepareOpaque(IReadOnlyList<LithoBlock> blocks)
         {
-            var candidates = new List<MdRawRange>(context.OpaqueTokens);
+            var candidates = options.IsCommonMark ? new List<MdRawRange>() : new List<MdRawRange>(context.OpaqueTokens);
             foreach (var block in Walk(blocks))
-                if (block is LithoParagraph { RawContent: { } content }
+            {
+                if (options.IsCommonMark)
+                {
+                    if (block is LithoHtmlBlock html)
+                        AddHtml("rawHtmlBlock", html.Span);
+                    var inlines = block switch
+                    {
+                        LithoParagraph paragraph => paragraph.Inlines,
+                        LithoHeading heading => heading.Inlines,
+                        _ => null,
+                    };
+                    if (inlines is not null)
+                        foreach (var (inline, exit) in LithoInline.Walk(inlines, cancellationToken: cancellationToken))
+                            if (!exit && inline is LithoHtmlInline token)
+                                AddHtml("rawHtmlInline", token.Span);
+                }
+                else if (block is LithoParagraph { RawContent: { } content }
                     && MdOpaqueSyntax.TryEsm(content.Text, context, out var end) && end != 0)
                 {
                     var start = content.Map.Global(0);
                     candidates.Add(new MdRawRange(start, content.Map.Global(end - 1) + 1 - start));
                 }
+            }
+            void AddHtml(string kind, SourceSpan span)
+            {
+                context.Scan();
+                (htmlTokens ??= new List<(string Kind, SourceSpan Span)>()).Add((kind, span));
+                candidates.Add(new MdRawRange(span.Start, span.Length));
+            }
             var merged = new List<MdRawRange>();
             foreach (var span in candidates.OrderBy(s => s.Start))
             {
@@ -425,7 +460,10 @@ internal static class MdParser
             regions.Add(region);
             unprojected.Add(region);
             unknownMapping = true;
-            Partial(kind);
+            if (options.IsCommonMark)
+                reasons.Add(kind);
+            else
+                Partial(kind);
         }
 
         private MdLink ShiftLink(MdLink link, bool maskLabel = false)
@@ -438,9 +476,30 @@ internal static class MdParser
                 if (label.SourceSegments.Any(segment => segment.Kind == MdSegmentKind.Unknown))
                     unknownMapping = true;
             }
+            label = MdSourceMapping.Shift(label, body!.Value.Start);
+            MdSourceSegment[]? corrected = null;
+            for (var index = 0; index < label.SourceSegments.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var segment = label.SourceSegments[index];
+                if (segment.Kind != MdSegmentKind.Linear || !segment.RawSpan.HasValue)
+                    continue;
+                var span = segment.RawSpan.Value;
+                if (span.End > raw.Length || label.Text is null || segment.DecodedSpan.End > label.Text.Length)
+                    throw new InvalidOperationException("Link label mapping is outside its source.");
+                if (span.Length != segment.DecodedSpan.Length
+                    || string.CompareOrdinal(raw, span.Start, label.Text, segment.DecodedSpan.Start, span.Length) != 0)
+                {
+                    // These segments were already charged before reference resolution or resource-stop retention.
+                    corrected ??= label.SourceSegments.ToArray();
+                    corrected[index] = new MdSourceSegment(segment.DecodedSpan, span, MdSegmentKind.Atomic);
+                }
+            }
+            if (corrected is not null)
+                label = new MdTextProjection(label.Text, corrected);
             return new MdLink(link.Kind, link.Resolution, link.Image,
                 new MdRawRange(link.RawSpan.Start + body!.Value.Start, link.RawSpan.Length),
-                MdSourceMapping.Shift(label, body.Value.Start), link.Target, link.Title,
+                label, link.Target, link.Title,
                 link.TargetRawSpan.HasValue ? new MdRawRange(link.TargetRawSpan.Value.Start + body.Value.Start, link.TargetRawSpan.Value.Length) : null,
                 link.ReferenceLabel);
         }
@@ -537,12 +596,12 @@ internal static class MdParser
             return new MdDocumentFacts(raw, scopeId, sourceId, sourceVersion, MdParserVersion.Value, options.Hash, textHash,
                 status, body, frontmatter, headings, sections, links.OrderBy(link => link.RawSpan.Start).ToArray(), fences, regions, diagnostics,
                 new[] {
-                    new MdCapability("markdownSyntax", MdFeatureState.Supported),
-                    new MdCapability("frontmatterSyntax", MdFeatureState.Supported),
+                    new MdCapability("markdownSyntax", options.IsCommonMark ? MdFeatureState.Partial : MdFeatureState.Supported),
+                    new MdCapability("frontmatterSyntax", options.IsCommonMark ? MdFeatureState.Unsupported : MdFeatureState.Supported),
                     new MdCapability("decodedSourceMapping", MdFeatureState.Partial),
                     new MdCapability("rawHtmlMdxProjection", MdFeatureState.Unsupported),
                     new MdCapability("siteResolution", MdFeatureState.Unsupported),
-                }, coverage);
+                }, coverage, "1.0", options.ProfileId);
         }
     }
 }

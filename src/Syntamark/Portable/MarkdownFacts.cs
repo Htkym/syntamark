@@ -248,6 +248,13 @@ internal sealed class MdCoverage
 internal sealed class MdDocumentFacts
 {
     internal MdDocumentFacts(string rawText, string scopeId, string sourceId, string? sourceVersion, string parserVersion, string optionsHash, string? textHash, MdParseStatus status, MdRawRange? bodySpan, MdFrontMatter frontMatter, IReadOnlyList<MdHeading> headings, IReadOnlyList<MdSection> sections, IReadOnlyList<MdLink> links, IReadOnlyList<MdFence> fences, IReadOnlyList<MdTextRegion> textRegions, IReadOnlyList<MdDiagnostic> diagnostics, IReadOnlyList<MdCapability> capabilities, MdCoverage coverage)
+        : this(rawText, scopeId, sourceId, sourceVersion, parserVersion, optionsHash, textHash, status, bodySpan,
+            frontMatter, headings, sections, links, fences, textRegions, diagnostics, capabilities, coverage,
+            "1.0", "lithosharp-markdown/1")
+    {
+    }
+
+    internal MdDocumentFacts(string rawText, string scopeId, string sourceId, string? sourceVersion, string parserVersion, string optionsHash, string? textHash, MdParseStatus status, MdRawRange? bodySpan, MdFrontMatter frontMatter, IReadOnlyList<MdHeading> headings, IReadOnlyList<MdSection> sections, IReadOnlyList<MdLink> links, IReadOnlyList<MdFence> fences, IReadOnlyList<MdTextRegion> textRegions, IReadOnlyList<MdDiagnostic> diagnostics, IReadOnlyList<MdCapability> capabilities, MdCoverage coverage, string contractVersion, string profileId)
     {
         RawText = rawText;
         ScopeId = scopeId;
@@ -267,11 +274,15 @@ internal sealed class MdDocumentFacts
         Diagnostics = MdFreeze.Copy(diagnostics);
         Capabilities = MdFreeze.Copy(capabilities);
         Coverage = coverage;
+        ContractVersion = contractVersion;
+        ProfileId = profileId;
     }
     internal string RawText { get; }
     internal string ScopeId { get; }
     internal string SourceId { get; }
     internal string? SourceVersion { get; }
+    internal string ContractVersion { get; }
+    internal string ProfileId { get; }
     internal string ParserVersion { get; }
     internal string OptionsHash { get; }
     internal string? TextHash { get; }

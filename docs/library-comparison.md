@@ -38,3 +38,21 @@ Markdig は NuGet **1.5.1** を exact range と lock file で固定した。実�
 source payload の互換性も別問題となる。Markdig 1.5.1 の [build 設定](https://github.com/xoofx/markdig/blob/1.5.1/src/Markdig/Markdig.targets) は netstandard2.0 を含むが、その target では System.Memory を参照し、source 自体は preview 言語と unsafe を使用する。現行の C# 13 portable source にそのまま取り込めるとは判断しない。採用時には BSD-2-Clause の通知と依存 closure を確認する。
 
 資料は [固定 NuGet 版](https://www.nuget.org/packages/Markdig/1.5.1)、[位置 API](https://github.com/xoofx/markdig/blob/1.5.1/src/Markdig/Syntax/SourceSpan.cs)、[LinkInline](https://github.com/xoofx/markdig/blob/1.5.1/src/Markdig/Syntax/Inlines/LinkInline.cs)、[HtmlEntityInline](https://github.com/xoofx/markdig/blob/1.5.1/src/Markdig/Syntax/Inlines/HtmlEntityInline.cs)。静的確認と上記の実測結果を区別する。Markdig の全機能、IDE host、敵対入力、性能は未検証。
+
+## CommonMark 全公式例の比較
+
+比較 runner には、両実装を同じ版固定の公式652例で観測する専用モードもある。既存の共通5文書の gate はそのまま残す。
+
+```powershell
+dotnet run --project tests/Syntamark.Comparison -c Release --no-restore -- --commonmark-output .local/comparison/commonmark
+```
+
+Markdig 1.5.1 は精密 source location だけを有効にし、拡張を使わない。Syntamark は opt-in の `commonmark/0.31.2` と十分な明示 budget を使い、Conformance runner と同じテスト専用 `SyntaxHtml` で内部構文を観測する。各実装の HTML は、他方の出力を正解にせず公式 fixture の期待値とそれぞれ比較する。fixture の原本 checksum と例番号1–652を起動時に検証し、実行中に外部取得しない。
+
+`results.json` は全例と章別の一致・差分・観測不可・実行エラーを保存する。raw 入力、期待 HTML、実際の HTML、入力 checksum、実ロード assembly、parser stamp、options hash、runtime/OS、両実装の設定も含む。Markdig の package version と informational version を分け、source commit を含む実際の identity を残す。Syntamark の assembly SHA-256 も保存するため、未コミット候補を generated parser stamp だけで識別しない。
+
+Syntamark の公開 facts は同じ raw 入力から別途解析し、parse status、raw/mapping coverage、unprojected 件数、diagnostic の理由を構文の一致と別欄に残す。Complete でない結果や resource 停止は、HTML が一致していても構文合格数へ入れない。coverage が Complete であることを、期待 facts の完全性や正しい意味の証明とは扱わない。raw/decoded 位置は独立した Portability の oracle と併せて検証する。
+
+この専用モードは棚卸し用であり、構文の差分や adapter の観測不可だけでは exit 1 にしない。fixture/adapter 自己検査の失敗と実行エラーは失敗終了する。従って exit 0 を全例準拠と読み替えない。性能は測定せず、二つの構文観測と facts 解析の仕事量が同じとも主張しない。Markdig の compiler-host/source 消費、同等の resource contract、任意 decoded substring の mapping はこのモードの検証範囲外である。
+
+HTML の比較は空白を正規化しない ordinal の全文比較である。初回の Markdig 実行では619例が完全一致し、33例にリストの `<li>` 直後の改行差があった。公式出力の `<li>\n<p>` 等に対し Markdig は `<li><p>` 等を出したもので、保存した33例はいずれもこの位置の改行だけを除くと一致した。raw HTML や code 内の空白まで一括で除去する処理は追加していない。この33例を Markdig の文法不具合と断定せず、renderer の出力形式の差として説明する。

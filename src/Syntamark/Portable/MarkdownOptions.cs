@@ -14,8 +14,8 @@ internal sealed class MdOptions
     {
         if (maxInputUtf16 < 1 || maxOutputItems < 1 || maxNestingDepth < 1 || maxScanUnits < 1)
             throw new ArgumentOutOfRangeException(nameof(maxInputUtf16), "Resource limits must be positive integers.");
-        if (profileId != "lithosharp-markdown/1" || optionsSchemaVersion != 1)
-            throw new ArgumentException("Only the contract-v1 profile and options schema are supported.");
+        if ((profileId != "lithosharp-markdown/1" && profileId != "commonmark/0.31.2") || optionsSchemaVersion != 1)
+            throw new ArgumentException("Unknown Markdown profile or options schema.");
         MaxInputUtf16 = maxInputUtf16;
         MaxOutputItems = maxOutputItems;
         MaxNestingDepth = maxNestingDepth;
@@ -28,12 +28,14 @@ internal sealed class MdOptions
     internal int MaxNestingDepth { get; }
     internal int MaxScanUnits { get; }
     internal string ProfileId { get; }
+    internal bool IsCommonMark => ProfileId == "commonmark/0.31.2";
     internal int OptionsSchemaVersion { get; }
     internal string Hash => MdHash.Compute("{\"maxInputUtf16\":" + MaxInputUtf16.ToString(CultureInfo.InvariantCulture)
         + ",\"maxNestingDepth\":" + MaxNestingDepth.ToString(CultureInfo.InvariantCulture)
         + ",\"maxOutputItems\":" + MaxOutputItems.ToString(CultureInfo.InvariantCulture)
         + ",\"maxScanUnits\":" + MaxScanUnits.ToString(CultureInfo.InvariantCulture)
-        + ",\"optionsSchemaVersion\":1,\"profileId\":\"lithosharp-markdown/1\"}");
+        + ",\"optionsSchemaVersion\":" + OptionsSchemaVersion.ToString(CultureInfo.InvariantCulture)
+        + ",\"profileId\":\"" + ProfileId + "\"}");
 }
 
 internal static class MdHash

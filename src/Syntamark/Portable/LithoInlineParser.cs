@@ -8,7 +8,7 @@ using System.Text;
 namespace Syntamark.Compilation;
 
 /// <summary>
-/// Inline parser for the Litho subset: text, escapes, entities, code spans,
+/// Inline parser for the legacy Litho subset and the opt-in CommonMark profile: text, escapes, entities, code spans,
 /// emphasis/strong (delimiter algorithm with nesting), strikethrough, links
 /// (inline, full/collapsed/shortcut reference), images, autolinks (including
 /// www/http extended forms), and hard/soft breaks. Bare emails stay literal,
@@ -36,6 +36,15 @@ internal static class LithoInlineParser
 
     internal static string DecodeEscapesAndEntities(string value) => EscapesAndEntities.Replace(value,
         match => match.Groups[1].Success ? match.Groups[1].Value : System.Net.WebUtility.HtmlDecode(match.Value));
+
+    internal static string DecodeEscapesAndEntities(string value, MdParseContext? context)
+    {
+        if (context?.Options.IsCommonMark != true)
+            return DecodeEscapesAndEntities(value);
+        context.Scan(value.Length);
+        return EscapesAndEntities.Replace(value,
+            match => match.Groups[1].Success ? match.Groups[1].Value : CommonMarkEntities.Decode(match.Value));
+    }
 
     private static readonly System.Text.RegularExpressions.Regex EscapesAndEntities = new(
         """\\([!"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])|&(?:\#[xX][0-9a-fA-F]{1,6}|\#[0-9]{1,7}|[a-zA-Z][a-zA-Z0-9]{1,31});""");
@@ -68,8 +77,9 @@ internal static class LithoInlineParser
         private SourceSpan? _targetSpan;
         private int _referenceTailEnd;
         private int _opaqueUntil;
+        private bool IsCommonMark => context?.Options.IsCommonMark == true;
         private LithoText TextNode(string value, int local, int length, SourceSpan legacySpan, bool atomic = false) =>
-            new(value, legacySpan)
+            new(value, IsCommonMark ? Glob(new SourceSpan(local, length)) : legacySpan)
             {
                 Projection = context is null ? null
                 : MdSourceMapping.Local(value, text, map, local, length, atomic)
@@ -166,7 +176,15 @@ internal static class LithoInlineParser
                     case '<':
                         if (!ScanAutolink())
                         {
+                            if (IsCommonMark && CommonMarkHtml.TryReadInline(text, _position, out var htmlLength, context))
+                            {
+                                FlushText();
+                                Current.Add(new LithoHtmlInline(text.Substring(_position, htmlLength), SpanAt(_position, htmlLength)));
+                                _position += htmlLength;
+                                break;
+                            }
                             if (context is not null && _position >= _opaqueUntil
+                                && !IsCommonMark
                                 && MdOpaqueSyntax.TryTag(text, _position, context, out var opaqueEnd))
                             {
                                 var span = Glob(new SourceSpan(_position, opaqueEnd - _position));
@@ -200,17 +218,20 @@ internal static class LithoInlineParser
                     case ']':
                         ScanCloseBracket();
                         break;
-                    case '*' or '_' or '~':
+                    case '*' or '_':
                         ScanDelimiterRun();
                         break;
-                    case '$':
+                    case '~' when !IsCommonMark:
+                        ScanDelimiterRun();
+                        break;
+                    case '$' when !IsCommonMark:
                         ScanMath();
                         break;
-                    case 'w' when MatchAt("www.")
+                    case 'w' when !IsCommonMark && MatchAt("www.")
                         && IsExtendedAutolinkStart(_position):
                         ScanExtendedAutolink();
                         break;
-                    case 'h' when (MatchAt("http://") || MatchAt("https://"))
+                    case 'h' when !IsCommonMark && (MatchAt("http://") || MatchAt("https://"))
                         && IsExtendedAutolinkStart(_position):
                         ScanExtendedAutolink();
                         break;
@@ -221,6 +242,18 @@ internal static class LithoInlineParser
             }
 
             FlushText();
+            if (IsCommonMark)
+            {
+                for (var i = _stack.Count - 1; i > 0; i--)
+                {
+                    context?.Scan(8);
+                    if (_stack[i] is BracketFrame)
+                    {
+                        DissolveCommonMarkBracket(i, null);
+                        i = _stack.Count;
+                    }
+                }
+            }
             UnwindTo(0);
             context?.Depth(MaxInlineDepth(((FrameList)_stack[0]).Children));
             return ((FrameList)_stack[0]).Children;
@@ -251,15 +284,17 @@ internal static class LithoInlineParser
                 _textStart = -1;
             }
 
-            if (spaces == _position - pendingStart && Current.Count == 0)
+            if (spaces == _position - pendingStart && Current.Count == 0 && (!IsCommonMark || _stack.Count == 1))
             {
                 // Whitespace-only content: no break node.
                 _position += breakLength;
                 return;
             }
 
-            Current.Add(new LithoLineBreak(spaces >= 2, SpanAt(_position, breakLength))
-            { Projection = Project("\n", _position, breakLength, atomic: breakLength != 1) });
+            var breakStart = IsCommonMark && spaces >= 2 ? _position - spaces : _position;
+            var rawLength = _position + breakLength - breakStart;
+            Current.Add(new LithoLineBreak(spaces >= 2, SpanAt(breakStart, rawLength))
+            { Projection = Project("\n", breakStart, rawLength, atomic: rawLength != 1) });
             _position += breakLength;
         }
 
@@ -424,7 +459,8 @@ internal static class LithoInlineParser
                 }
 
                 var digits = 0;
-                while (end < text.Length && IsHexDigit(text[end]) && digits < 8)
+                while (end < text.Length && (!IsCommonMark || hex ? IsHexDigit(text[end]) : text[end] is >= '0' and <= '9')
+                    && digits < (IsCommonMark ? (hex ? 6 : 7) : 8))
                 {
                     context?.Scan(8);
                     end++;
@@ -460,7 +496,7 @@ internal static class LithoInlineParser
         private void EmitDecodedEntity(int end)
         {
             var candidate = text[_position..end];
-            var decoded = System.Net.WebUtility.HtmlDecode(candidate);
+            var decoded = IsCommonMark ? CommonMarkEntities.Decode(candidate) : System.Net.WebUtility.HtmlDecode(candidate);
             FlushText();
             context?.Scan(candidate.Length);
             Current.Add(TextNode(string.Equals(decoded, candidate, StringComparison.Ordinal) ? candidate : decoded,
@@ -487,12 +523,15 @@ internal static class LithoInlineParser
                 return false;
             }
 
+            if (IsCommonMark && inner.Any(ch => ch <= ' ' || ch == '\u007F'))
+                return false;
+
             string? href = null;
             if (IsSchemeLink(inner))
             {
                 href = inner;
             }
-            else if (IsEmailLink(inner))
+            else if (IsCommonMark ? IsCommonMarkEmail(inner) : IsEmailLink(inner))
             {
                 href = "mailto:" + inner;
             }
@@ -505,6 +544,8 @@ internal static class LithoInlineParser
             FlushText();
             Current.Add(new LithoAutolink(href, inner, SpanAt(_position, (close + 1) - _position))
             { Projection = Project(inner, _position + 1, inner.Length) });
+            if (IsCommonMark)
+                DeactivateBrackets();
             _position = close + 1;
             return true;
         }
@@ -538,6 +579,36 @@ internal static class LithoInlineParser
         {
             var at = inner.IndexOf('@');
             return at > 0 && inner.IndexOf('@', at + 1) < 0 && inner[(at + 1)..].Contains('.');
+        }
+
+        private bool IsCommonMarkEmail(string inner)
+        {
+            var at = inner.IndexOf('@');
+            if (at <= 0 || at == inner.Length - 1)
+                return false;
+            for (var i = 0; i < at; i++)
+            {
+                context?.Scan(8);
+                if (!LithoCharacters.IsAsciiLetterOrDigit(inner[i]) && !".!#$%&'*+/=?^_`{|}~-".Contains(inner[i]))
+                    return false;
+            }
+            var partStart = at + 1;
+            for (var i = partStart; i <= inner.Length; i++)
+            {
+                context?.Scan(8);
+                if (i < inner.Length && inner[i] != '.')
+                {
+                    if (!LithoCharacters.IsAsciiLetterOrDigit(inner[i]) && inner[i] != '-')
+                        return false;
+                    continue;
+                }
+                var length = i - partStart;
+                if (length is < 1 or > 63 || !LithoCharacters.IsAsciiLetterOrDigit(inner[partStart])
+                    || !LithoCharacters.IsAsciiLetterOrDigit(inner[i - 1]))
+                    return false;
+                partStart = i + 1;
+            }
+            return true;
         }
 
         private bool IsExtendedAutolinkStart(int local)
@@ -614,6 +685,11 @@ internal static class LithoInlineParser
 
         private void ScanCloseBracket()
         {
+            if (IsCommonMark)
+            {
+                ScanCommonMarkCloseBracket();
+                return;
+            }
             var opener = -1;
             for (var i = _stack.Count - 1; i >= 1; i--)
             {
@@ -715,6 +791,154 @@ internal static class LithoInlineParser
             _position++;
         }
 
+        private void ScanCommonMarkCloseBracket()
+        {
+            var opener = -1;
+            for (var i = _stack.Count - 1; i >= 1; i--)
+            {
+                context?.Scan(8);
+                if (_stack[i] is BracketFrame)
+                {
+                    opener = i;
+                    break;
+                }
+            }
+            if (opener < 0)
+            {
+                AppendTextChar();
+                return;
+            }
+
+            FlushText();
+            var frame = (BracketFrame)_stack[opener];
+            if (!frame.Active)
+            {
+                DissolveCommonMarkBracket(opener, null);
+                Current.Add(TextNode("]", _position, 1, SpanAt(_position, 1)));
+                _position++;
+                return;
+            }
+
+            if (TryParseInlineTarget(out var url, out var title, out var end))
+            {
+                FlattenAbove(opener);
+                var parent = ParentOf(opener);
+                _stack.RemoveAt(opener);
+                parent.Add(new LithoLink(frame.Children, url!, title, frame.Image, SpanAt(frame.Span.Start, end - frame.Span.Start))
+                { LinkSyntax = new MdLinkSyntax(MdLinkKind.Inline, null, _targetSpan) });
+                if (!frame.Image)
+                    DeactivateBrackets();
+                _position = end;
+                return;
+            }
+
+            var label = text.Substring(frame.Span.End, _position - frame.Span.End);
+            string? reference = null;
+            var after = _position + 1;
+            if (after < text.Length && text[after] == '[')
+            {
+                var labelEnd = FindLabelEnd(after);
+                if (labelEnd >= 0)
+                {
+                    var name = text.Substring(after + 1, labelEnd - after - 1);
+                    reference = name.Length == 0 ? label : name;
+                    after = labelEnd + 1;
+                }
+            }
+            else
+                reference = label;
+            if (reference is not null && !IsReferenceLabel(reference))
+                reference = null;
+
+            if (reference is not null
+                && references.TryGetValue(LithoBlockParser.NormalizeLabel(reference, context), out var definition))
+            {
+                FlattenAbove(opener);
+                var parent = ParentOf(opener);
+                _stack.RemoveAt(opener);
+                parent.Add(new LithoLink(frame.Children, definition.Url, definition.Title, frame.Image,
+                    SpanAt(frame.Span.Start, after - frame.Span.Start))
+                { LinkSyntax = new MdLinkSyntax(MdLinkKind.ReferenceUse, reference, null) });
+                if (!frame.Image)
+                    DeactivateBrackets();
+                _position = after;
+                return;
+            }
+
+            MdLink? unresolved = null;
+            if (reference is not null && frame.Span.Start >= _referenceTailEnd)
+            {
+                var labelNodes = new List<LithoInline>(frame.Children);
+                for (var i = opener + 1; i < _stack.Count; i++)
+                {
+                    context?.Scan(8);
+                    var delimiter = (DelimiterFrame)_stack[i];
+                    labelNodes.Add(TextNode(new string(delimiter.Marker, delimiter.Length), delimiter.Span.Start,
+                        delimiter.Length, SpanAt(delimiter.Span.Start, delimiter.Length)));
+                    labelNodes.AddRange(delimiter.Children);
+                }
+                var projection = MdInlineFacts.Text(labelNodes, cancellationToken);
+                if (after > _position + 1)
+                    _referenceTailEnd = after;
+                context!.Emit(1 + projection.SourceSegments.Count);
+                var span = SpanAt(frame.Span.Start, after - frame.Span.Start);
+                unresolved = new MdLink(MdLinkKind.ReferenceUse, MdLinkResolution.UnresolvedReference, frame.Image,
+                    new MdRawRange(span.Start, span.Length), projection, null, null, null, reference);
+            }
+            DissolveCommonMarkBracket(opener, unresolved);
+            Current.Add(TextNode("]", _position, 1, SpanAt(_position, 1)));
+            _position++;
+        }
+
+        private void DissolveCommonMarkBracket(int opener, MdLink? unresolved)
+        {
+            var bracket = (BracketFrame)_stack[opener];
+            var pending = _stack.GetRange(opener + 1, _stack.Count - opener - 1);
+            _stack.RemoveRange(opener, _stack.Count - opener);
+            Current.Add(TextNode(bracket.Image ? "![" : "[", bracket.Span.Start, bracket.Image ? 2 : 1, Glob(bracket.Span)) with
+            { UnresolvedReference = unresolved });
+            Current.AddRange(bracket.Children);
+            foreach (DelimiterFrame delimiter in pending)
+            {
+                context?.Scan(8);
+                var length = delimiter.CanClose
+                    ? MatchCloser(delimiter.Marker, delimiter.Length, delimiter.CanOpen, delimiter.Span.Start)
+                    : delimiter.Length;
+                if (length > 0 && (delimiter.CanOpen || delimiter.CanClose && CanDeferCloser(delimiter.Marker)))
+                {
+                    context?.Depth(_stack.Count);
+                    _stack.Add(new DelimiterFrame
+                    {
+                        Marker = delimiter.Marker,
+                        Length = length,
+                        CanOpen = delimiter.CanOpen,
+                        CanClose = delimiter.CanClose,
+                        Span = SpanLocal(delimiter.Span.Start + delimiter.Length - length, length),
+                    });
+                }
+                else if (length > 0)
+                {
+                    var start = delimiter.Span.Start + delimiter.Length - length;
+                    Current.Add(TextNode(new string(delimiter.Marker, length), start, length, SpanAt(start, length)));
+                }
+                Current.AddRange(delimiter.Children);
+            }
+        }
+
+        private bool CanDeferCloser(char marker)
+        {
+            var bracket = false;
+            for (var i = _stack.Count - 1; i > 0; i--)
+            {
+                context?.Scan(8);
+                if (_stack[i] is BracketFrame)
+                    bracket = true;
+                else if (bracket && _stack[i] is DelimiterFrame delimiter && delimiter.CanOpen && delimiter.Marker == marker)
+                    return true;
+            }
+            return false;
+        }
+
         private void DeactivateBrackets()
         {
             foreach (var entry in _stack)
@@ -782,6 +1006,8 @@ internal static class LithoInlineParser
                 }
                 else if (text[i] == '[')
                 {
+                    if (IsCommonMark && i != open)
+                        return -1;
                     depth++;
                 }
                 else if (text[i] == ']')
@@ -796,6 +1022,8 @@ internal static class LithoInlineParser
 
             return -1;
         }
+
+        private bool IsReferenceLabel(string label) => LithoCharacters.IsCommonMarkReferenceLabel(label, context);
 
         private bool TryParseInlineTarget(out string? url, out string? title, out int end)
         {
@@ -830,10 +1058,13 @@ internal static class LithoInlineParser
                 while (close < text.Length && text[close] != '>')
                 {
                     context?.Scan(8);
-                    if (text[close] is '\n' or '\r')
+                    if (text[close] is '\n' or '\r' || IsCommonMark && text[close] == '<')
                     {
                         return false;
                     }
+
+                    if (IsCommonMark && text[close] == '\\' && close + 1 < text.Length && IsAsciiPunctuation(text[close + 1]))
+                        close++;
 
                     close++;
                 }
@@ -851,7 +1082,8 @@ internal static class LithoInlineParser
             {
                 var start = cursor;
                 var depth = 0;
-                while (cursor < text.Length && text[cursor] is not (' ' or '\t' or '\n' or '\r'))
+                while (cursor < text.Length && text[cursor] is not (' ' or '\t' or '\n' or '\r')
+                    && (!IsCommonMark || text[cursor] > '\u0020' && text[cursor] != '\u007F'))
                 {
                     context?.Scan(8);
                     cancellationToken.ThrowIfCancellationRequested();
@@ -865,7 +1097,8 @@ internal static class LithoInlineParser
                             break;
                         depth--;
                     }
-                    else if (text[cursor] == '\\' && cursor + 1 < text.Length)
+                    else if (text[cursor] == '\\' && cursor + 1 < text.Length
+                        && (!IsCommonMark || IsAsciiPunctuation(text[cursor + 1])))
                     {
                         cursor++;
                     }
@@ -881,7 +1114,7 @@ internal static class LithoInlineParser
                 }
             }
 
-            url = DecodeEscapesAndEntities(parsed);
+            url = DecodeEscapesAndEntities(parsed, context);
             var afterSpaces = cursor;
             while (afterSpaces < text.Length && text[afterSpaces] is ' ' or '\t' or '\n' or '\r')
             {
@@ -895,7 +1128,7 @@ internal static class LithoInlineParser
                 return true;
             }
 
-            if (!TryParseInlineTitle(text, afterSpaces, out title, out var titleEnd))
+            if (IsCommonMark && afterSpaces == cursor || !TryParseInlineTitle(text, afterSpaces, out title, out var titleEnd))
             {
                 return false;
             }
@@ -946,6 +1179,8 @@ internal static class LithoInlineParser
                 {
                     cursor++;
                 }
+                else if (IsCommonMark && closer == ')' && full[cursor] == '(')
+                    return false;
 
                 cursor++;
             }
@@ -955,7 +1190,7 @@ internal static class LithoInlineParser
                 return false;
             }
 
-            title = DecodeEscapesAndEntities(full[(pos + 1)..cursor]);
+            title = DecodeEscapesAndEntities(full[(pos + 1)..cursor], context);
             end = cursor + 1;
             return true;
         }
@@ -1092,7 +1327,9 @@ internal static class LithoInlineParser
 
             var before = _position == 0 ? '\n' : text[_position - 1];
             var after = _position + length >= text.Length ? '\n' : text[_position + length];
-            var (canOpen, canClose) = Flanking(marker, before, after);
+            var (canOpen, canClose) = IsCommonMark
+                ? CommonMarkFlanking(marker, _position, _position + length)
+                : Flanking(marker, before, after);
             var runStart = _position;
             if (_textStart >= 0)
             {
@@ -1112,7 +1349,7 @@ internal static class LithoInlineParser
                 length = MatchCloser(marker, length, canOpen, runStart);
             }
 
-            if (length > 0 && canOpen)
+            if (length > 0 && (canOpen || IsCommonMark && canClose && CanDeferCloser(marker)))
             {
                 FlushText();
                 context?.Depth(_stack.Count);
@@ -1120,20 +1357,22 @@ internal static class LithoInlineParser
                 {
                     Marker = marker,
                     Length = length,
-                    CanOpen = true,
+                    CanOpen = canOpen,
                     CanClose = canClose,
-                    Span = SpanLocal(runStart, _position - runStart),
+                    Span = IsCommonMark ? SpanLocal(_position - length, length) : SpanLocal(runStart, _position - runStart),
                 });
             }
             else if (length > 0)
             {
                 FlushText();
-                Current.Add(TextNode(new string(marker, length), runStart, length, SpanAt(runStart, length)));
+                var remainingStart = IsCommonMark ? _position - length : runStart;
+                Current.Add(TextNode(new string(marker, length), remainingStart, length, SpanAt(remainingStart, length)));
             }
         }
 
         private int MatchCloser(char marker, int length, bool canOpen, int runStart)
         {
+            var closerLength = length;
             while (length > 0)
             {
                 context?.Scan(8);
@@ -1149,6 +1388,7 @@ internal static class LithoInlineParser
 
                     if (_stack[i] is DelimiterFrame candidate
                         && candidate.Marker == marker
+                        && (!IsCommonMark || candidate.CanOpen)
                         && candidate.Length > 0)
                     {
                         if (marker != '~' && (canOpen || candidate.CanClose)
@@ -1190,9 +1430,11 @@ internal static class LithoInlineParser
                 var parent = ParentOf(opener);
                 var children = match.Children;
                 _stack.RemoveAt(opener);
+                var nodeStart = IsCommonMark ? match.Span.Start + match.Length - use : match.Span.Start;
+                var nodeEnd = IsCommonMark ? runStart + closerLength - length + use : runStart + length;
                 LithoInline node = marker == '~'
-                    ? new LithoStrike(children, SpanAt(match.Span.Start, (runStart + length) - match.Span.Start))
-                    : new LithoEmphasis(use, children, SpanAt(match.Span.Start, (runStart + length) - match.Span.Start));
+                    ? new LithoStrike(children, SpanAt(nodeStart, nodeEnd - nodeStart))
+                    : new LithoEmphasis(use, children, SpanAt(nodeStart, nodeEnd - nodeStart));
                 parent.Add(node);
                 frame.Length -= use;
                 length -= use;
@@ -1240,6 +1482,20 @@ internal static class LithoInlineParser
             }
 
             return (leftFlanking, rightFlanking);
+        }
+
+        private (bool CanOpen, bool CanClose) CommonMarkFlanking(char marker, int start, int end)
+        {
+            var beforeWs = start == 0 || LithoCharacters.IsCommonMarkWhitespace(text[start - 1]);
+            var afterWs = end == text.Length || LithoCharacters.IsCommonMarkWhitespace(text[end]);
+            var beforePunct = start != 0 && LithoCharacters.IsCommonMarkPunctuation(text,
+                start > 1 && char.IsLowSurrogate(text[start - 1]) && char.IsHighSurrogate(text[start - 2]) ? start - 2 : start - 1);
+            var afterPunct = end != text.Length && LithoCharacters.IsCommonMarkPunctuation(text, end);
+            var leftFlanking = !afterWs && (!afterPunct || beforeWs || beforePunct);
+            var rightFlanking = !beforeWs && (!beforePunct || afterWs || afterPunct);
+            return marker == '_'
+                ? (leftFlanking && (!rightFlanking || beforePunct), rightFlanking && (!leftFlanking || afterPunct))
+                : (leftFlanking, rightFlanking);
         }
 
         private static bool IsBlankChar(char ch) => ch is ' ' or '\t' or '\n' or '\r' or '\0';

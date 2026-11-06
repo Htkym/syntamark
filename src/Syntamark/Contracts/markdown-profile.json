@@ -15,5 +15,23 @@
     "rawHtml",
     "MDX"
   ],
-  "legacyEntry": "separate compatibility policy"
+  "legacyEntry": "separate compatibility policy",
+  "defaultProfileId": "lithosharp-markdown/1",
+  "availableProfiles": [
+    {
+      "profileId": "lithosharp-markdown/1",
+      "role": "legacy compatibility profile; unchanged default"
+    },
+    {
+      "profileId": "commonmark/0.31.2",
+      "contractVersion": "1.0",
+      "commonMark": "0.31.2",
+      "status": "opt-in implementation; see versioned official-example inventory for remaining differences",
+      "frontMatter": false,
+      "extensions": [],
+      "html": "native block and inline recognition, raw UTF16 spans; no HTML rendering, DOM, or MDX execution",
+      "slug": "derived Litho slug policy; not a CommonMark requirement",
+      "mapping": ["Linear", "Atomic", "Unknown"]
+    }
+  ]
 }

@@ -70,6 +70,13 @@ internal static class FactsSnapshotChecks
             if (JsonSerializer.Serialize(runtimeSnapshot) != JsonSerializer.Serialize(sourceSnapshot))
                 throw new InvalidOperationException(id + ": runtime/portable full facts mismatch.");
             var facade = ParseFacade(runtime, raw);
+            foreach (var identity in new[] { "ContractVersion", "ProfileId" })
+            {
+                var property = core.GetType().GetProperty(identity, Instance);
+                if (property is not null && (!Equals(property.GetValue(core), Get(source, identity))
+                    || !Equals(property.GetValue(core), Get(facade, identity))))
+                    throw new InvalidOperationException(id + ": runtime/source/facade " + identity + " mismatch.");
+            }
             var lineMethod = facade.GetType().GetMethod("GetLinePosition")!;
             var positions = Enumerable.Range(0, raw.Length + 1).Select(i => Snapshot(lineMethod.Invoke(facade, new object[] { i }))).ToArray();
             fixtures.Add(new
@@ -117,6 +124,9 @@ internal static class FactsSnapshotChecks
         foreach (var property in type.GetProperties(Instance))
         {
             if (property.GetIndexParameters().Length != 0 || property.Name is "ParserVersion" or "EqualityContract")
+                continue;
+            // The v1 core had no identity properties; the same values are already hashed on its public facade.
+            if (type.Name == "MdDocumentFacts" && (property.Name is "ContractVersion" or "ProfileId"))
                 continue;
             result[property.Name] = Snapshot(property.GetValue(value));
         }

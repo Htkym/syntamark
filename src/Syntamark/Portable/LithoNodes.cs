@@ -74,6 +74,9 @@ internal sealed record LithoTable(
 /// <summary>A thematic break.</summary>
 internal sealed record LithoBreak(SourceSpan Span) : LithoBlock(Span);
 
+/// <summary>A CommonMark HTML block, recognized without rendering or evaluating it.</summary>
+internal sealed record LithoHtmlBlock(string Text, SourceSpan Span) : LithoBlock(Span);
+
 /// <summary>An inline node.</summary>
 internal abstract record LithoInline(SourceSpan Span) : LithoNode(Span)
 {
@@ -199,3 +202,6 @@ internal sealed record LithoMathInline(string Content, SourceSpan Span) : LithoI
 
 /// <summary>A line break.</summary>
 internal sealed record LithoLineBreak(bool Hard, SourceSpan Span) : LithoInline(Span);
+
+/// <summary>A CommonMark inline HTML token; Markdown between tags remains separate syntax.</summary>
+internal sealed record LithoHtmlInline(string Text, SourceSpan Span) : LithoInline(Span);

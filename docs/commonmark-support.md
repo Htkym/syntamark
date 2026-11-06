@@ -1,14 +1,66 @@
 # CommonMark 0.31.2 の現状
 
-2026-11-06 に、基準 commit `6120fc0f231c952cdf01ed77784bb0f2e4a898d4` の runtime DLL と今回の位置修正候補で、公式の全 652 例を実行した。両者の各例の構文出力・分類・facts invariant 結果は一致した。実行環境は Windows 11、.NET SDK 10.0.403、Release である。
+## 現行の二つの profile
 
-対象は現在の `lithosharp-markdown/1`。CommonMark 専用プロファイルはまだない。521 例がテスト用 HTML と一致し、129 例に差分があり、2 例は adapter の制約で観測できなかった。skip と未実行は 0。これは互換プロファイルの棚卸しであり、CommonMark 準拠率や確定不具合の件数として扱わない。
+2026-11-06、Windows build 26300 / .NET SDK 10.0.403 / runtime 10.0.14 / Release の作業ツリーで、固定した公式全 652 例を profile ごとに実行した。`commonmark/0.31.2` は opt-in であり、既定値は引き続き `lithosharp-markdown/1` である。[profile の契約](profile-design.md)を参照。
+
+| Profile | HTML 一致 | HTML 差分 | 観測不可 | facts invariant 違反 |
+|---|---:|---:|---:|---:|
+| `commonmark/0.31.2` | 652 | 0 | 0 | 0 |
+| `lithosharp-markdown/1` | 521 | 129 | 2 | 0 |
+
+両 profile とも skip・未実行は 0。標準 profile は `--strict` を付けて成功した。legacy の HTML 結果は初回の棚卸しから変わっていない。公開構文 view とその親子位置の全例検証は、後続の独立した変更で追加する。
+
+現在の標準 profile の章別結果は次のとおり。すべての章で差分・観測不可・skip・未実行は 0 である。
+
+| 章 | HTML 一致 / 全例 |
+|---|---:|
+| Tabs | 11 / 11 |
+| Backslash escapes | 13 / 13 |
+| Entity and numeric character references | 17 / 17 |
+| Precedence | 1 / 1 |
+| Thematic breaks | 19 / 19 |
+| ATX headings | 18 / 18 |
+| Setext headings | 27 / 27 |
+| Indented code blocks | 12 / 12 |
+| Fenced code blocks | 29 / 29 |
+| HTML blocks | 44 / 44 |
+| Link reference definitions | 27 / 27 |
+| Paragraphs | 8 / 8 |
+| Blank lines | 1 / 1 |
+| Block quotes | 25 / 25 |
+| List items | 48 / 48 |
+| Lists | 26 / 26 |
+| Inlines | 1 / 1 |
+| Code spans | 22 / 22 |
+| Emphasis and strong emphasis | 132 / 132 |
+| Links | 90 / 90 |
+| Images | 22 / 22 |
+| Autolinks | 19 / 19 |
+| Raw HTML | 20 / 20 |
+| Hard line breaks | 15 / 15 |
+| Soft line breaks | 2 / 2 |
+| Textual content | 3 / 3 |
+| 合計 | 652 / 652 |
+
+実行結果は `.local/commonmark-verified/` と `.local/commonmark-legacy-verified/` に保存した。これは parser stamp の最終生成と package 発行を済ませたことを示す記録ではない。確認した source と最終 commit/artifact の対応は、生成 stamp と package canary の記録で別途照合する。
+
+## 検証方法と結果の限界
 
 [公式 fixture](../tests/Fixtures/CommonMark/0.31.2/README.md) は版、原本 SHA-256、著作者とライセンスを固定した。実行時のネットワーク取得はない。[runner の実行手順](../tests/Syntamark.Conformance/README.md)には例番号での再実行、基準 DLL の指定、終了コードを記載した。
 
 文法は internal AST をテスト専用 renderer で観測する。公開 API の front matter 切り出しと予算停止も別途確認し、それらを構文合格にしない。renderer は HTML 構文を捏造せず、未知の node を捨てない。独立した手製 DTO で escaping・リンク・画像・list・quote などを先に検証する。HTML の差分は adapter の不備も含み得るため、原文と保存した expected/actual を確認してから parser の修正を決める。
 
 raw range の範囲、decoded segment の連続性、Linear segment の原文一致は全例で通った。これは facts の完全性や正しい意味を保証しない。独立した位置期待値と mapping の検証は Portability の回帰テストで行う。HTML の一致と facts の正しさは別の結果である。
+
+
+公式 652 例が通ったことは、あらゆる入力の完全準拠や facts の欠落・位置精度を証明しない。test renderer とその観測可能性にも限界がある。`markdownSyntax` capability は新 profile でも `Partial` を維持し、parse の終了状態 `Complete` と標準全体への適合を同一視しない。HTML renderer、DOM、MDX 実行、incremental parsing、全 consumer の採用互換性は、この結果で検証したものではない。
+
+追加の位置回帰では、未解決参照 label の CR/CRLF/NUL 変換が raw と同じ値の `Linear` segment として残らないことを確認した。値が変わる token は `Atomic` として返し、resource catch 内の保持済み定義に再度の出力課金をしない。また、quote/list の lazy-continuation 構造 probe が参照定義を重複・移動させないことを両 profile で検査した。これらは facts の修正であり、legacy の文法を標準動作へ切り替える変更ではない。
+
+## 初回の legacy 棚卸し
+
+以下は初期段階の記録として保持する。基準 commit `6120fc0f231c952cdf01ed77784bb0f2e4a898d4` の runtime DLL と位置修正候補で全 652 例を実行し、各例の構文出力・分類・facts invariant 結果が一致した。当時は CommonMark 専用 profile の追加前で、legacy は 521 一致・129 差分・2 観測不可だった。この表の残例と担当単位は当初の調査分類であり、現在の opt-in profile の未対応一覧ではない。差分の件数を確定不具合の件数とは扱わない。
 
 | 章 | 一致 | 差分 | 観測不可 | 全例 | 残る例番号 | 影響・担当単位 |
 |---|---:|---:|---:|---:|---|---|
@@ -40,8 +92,8 @@ raw range の範囲、decoded segment の連続性、Linear segment の原文一
 | Textual content | 3 | 0 | 0 | 3 | — | SM04 A |
 | 合計 | 521 | 129 | 2 | 652 | | |
 
-観測不可の 24/34 は、AST が保持する raw info string をこの renderer が解釈していないためである。parser の未対応とは断定しない。front matter を除く既知差分の多くは互換プロファイルの現行方針と一致する。今回これらの文法を変更していない。
+legacy で観測不可の 24/34 は、AST が保持する raw info string をこの renderer が解釈していないためである。parser の未対応とは断定しない。front matter を除く既知差分の多くは互換プロファイルの現行方針と一致する。legacy の文法は変更していない。標準 profile では parser が decoded info を返し、この二例も観測して一致した。
 
-実行すると `.local/commonmark-original/results.json` と `.local/commonmark-candidate/results.json` に、例番号、章、分類、理由、expected/actual HTML、facade status、facts invariant を保存できる。章別の JSON と Markdown も生成する。未選択例も分母に残り `not-run` となる。inventory mode は既知の構文差分を許すが、fixture/adapter 自己検証、実行例外、facts invariant の失敗は終了コードを失敗にする。全例準拠を要求する場合は `--strict` を使う。
+初期記録の `.local/commonmark-original/results.json` と `.local/commonmark-candidate/results.json` は保持する。runner は指定した出力先に、例番号、章、分類、理由、expected/actual HTML、facade status、facts/syntax invariant を保存し、章別の JSON と Markdown も生成する。未選択例も分母に残り `not-run` となる。inventory mode は既知の構文差分を許すが、fixture/adapter 自己検証、実行例外、facts/syntax invariant の失敗は終了コードを失敗にする。公式全例の一致を gate にする場合は `--strict` を使う。
 
-次は HTML blocks が最大の独立した不足カテゴリであることを踏まえ、SM12 の Markdig adapter と compiler-host 制約を比較して、独自 parser を継続する範囲を決める。その判断後に SM03 の opt-in profile を導入し、SM04 A の文字・entity・heading、B の code/list/quote、C/D の inline、E の HTML を章別に進める。HTML を後回しに固定せず、backend 判断は profile 実装の前に行う。
+初回は HTML blocks が最大の独立した不足カテゴリだった。[backend の判断](backend-decision.md)で配布・位置・予算の制約を比較し、opt-in profile の章別改善を進めた。現在は公式例の残差が 0 でも、位置 oracle の拡充、consumer の要求確認、compiler host・配布の実証と安全性の検証を別々に進める。

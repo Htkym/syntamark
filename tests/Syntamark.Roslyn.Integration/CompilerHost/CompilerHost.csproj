@@ -10,5 +10,6 @@
     <Analyzer Include="../../../samples/Syntamark.Roslyn/bin/Release/netstandard2.0/YamlDotNet.dll" />
     <AdditionalFiles Include="$(CanaryMarkdown)" Condition="'$(CanaryMarkdown)' != ''" />
     <CompilerVisibleProperty Include="SyntamarkMaxScanUnits" />
+    <CompilerVisibleProperty Include="SyntamarkMaxOutputItems" />
   </ItemGroup>
 </Project>

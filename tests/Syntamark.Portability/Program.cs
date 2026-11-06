@@ -75,6 +75,7 @@ MarkdownFactsChecks.Run();
 Md02ReviewFixChecks.Run(runtime, portable);
 ProfileChecks.Run(runtime, portable);
 CommonMarkBlockChecks.Run(runtime, portable);
+MarkdownSyntaxChecks.Run(portable);
 MappingRegressionChecks.Run(portable);
 CommonMarkInlineChecks.Run(portable);
 

@@ -50,6 +50,7 @@ jobs:
             .local/comparison/
             .local/roslyn-canary/
             .local/safety.log
+            .local/prose.log
           include-hidden-files: true
           if-no-files-found: warn
       - name: Refuse repeated formal issuance

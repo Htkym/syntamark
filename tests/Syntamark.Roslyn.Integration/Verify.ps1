@@ -63,13 +63,18 @@ function Build([string[]] $DotnetArguments) {
 Build (@($integration, '-c', 'Release', '--no-restore') + $properties)
 $runArguments = @('--project', $integration, '-c', 'Release', '--no-restore', '--no-build') + $properties
 if ($CandidateVersion) { $runArguments += @('--', '--candidate') }
-& dotnet run @runArguments
+$mode = if ($CandidateVersion) { 'candidate' } else { 'published' }
+& dotnet run @runArguments | Tee-Object -FilePath (Join-Path $output "driver-$mode.jsonl")
 if ($LASTEXITCODE -ne 0) { throw 'Analyzer driver integration failed.' }
 
 $markdown = Join-Path $output 'snapshot.md'
 $sarif = Join-Path $output 'compiler.sarif'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
-[System.IO.File]::WriteAllText($markdown, "`u{FEFF}---`r`ntitle: 😀`r`n---`r`n# TODO &amp;😀`r`n[x]()`r`n", $utf8)
+$snapshot = "`u{FEFF}---`r`ntitle: 😀`r`n---`r`n# TODO &amp;😀`r`n[x]()`r`n"
+if ($CandidateVersion) {
+    $snapshot += "`r`n<div>`r`n# TODO Hidden`r`n[bad](/wrong)`r`n</div>`r`n`r`ntext <span>**bold** [x](/u)</span>`r`n"
+}
+[System.IO.File]::WriteAllText($markdown, $snapshot, $utf8)
 Build @($compiler, '-c', 'Release', '--no-restore', '-t:Rebuild', "-p:CanaryMarkdown=$markdown", "-p:CanaryErrorLog=$sarif")
 $results = (Get-Content -LiteralPath $sarif -Raw | ConvertFrom-Json).runs[0].results
 $todo = @($results | Where-Object ruleId -eq 'SMC001')
@@ -80,12 +85,19 @@ if ($todo.Count -ne 1 -or $identity.Count -ne 1 -or $identity[0].message.text -n
 if ($ExpectedParserVersion -and !$identity[0].message.text.EndsWith("parser=$ExpectedParserVersion", [StringComparison]::Ordinal)) {
     throw 'Actual compiler loaded parser stamp differs from the prepared candidate.'
 }
+if ($CandidateVersion -and $identity[0].message.text -notmatch 'profile=commonmark/0\.31\.2; syntax=Document; nodes=[1-9][0-9]*; HTML=3; YAMLstate=Parsed;') {
+    throw 'Actual compiler did not execute the candidate standard syntax path and separate legacy YAML probe.'
+}
+if (!$CandidateVersion -and $identity[0].message.text -notmatch 'profile=lithosharp-markdown/1; syntax=not-requested; nodes=0; HTML=0; YAMLstate=Parsed;') {
+    throw 'Published 1.0.1 baseline did not retain its original facts-only profile.'
+}
 $region = $todo[0].locations[0].physicalLocation.region
 if ($region.startLine -ne 4 -or $region.startColumn -ne 3 -or $region.endColumn -ne 15) {
     throw "Compiler diagnostic UTF-16 region differs: $($region | ConvertTo-Json -Compress)"
 }
 $initial = @{ startLine = $region.startLine; startColumn = $region.startColumn; endColumn = $region.endColumn }
 Copy-Item -LiteralPath $sarif -Destination (Join-Path $output 'compiler-original.sarif') -Force
+Copy-Item -LiteralPath $sarif -Destination (Join-Path $output "compiler-$mode-original.sarif") -Force
 [System.IO.File]::WriteAllText($markdown, "# Done`r`n", $utf8)
 Build @($compiler, '-c', 'Release', '--no-restore', '-t:Rebuild', "-p:CanaryMarkdown=$markdown", "-p:CanaryErrorLog=$sarif")
 $edited = (Get-Content -LiteralPath $sarif -Raw | ConvertFrom-Json).runs[0].results
@@ -96,8 +108,8 @@ $sdk = & dotnet --version
 @{
     status = 'PASS'; sdk = $sdk; sourcePackageVersion = $(if ($CandidateVersion) { $CandidateVersion } else { '1.0.1' })
     compilerIdentityDiagnostic = $identity[0].message.text; originalRegion = $initial
+    profileId = $(if ($CandidateVersion) { 'commonmark/0.31.2' } else { 'lithosharp-markdown/1' })
+    syntaxRequested = [bool]$CandidateVersion; yamlProbeProfileId = 'lithosharp-markdown/1'
     driverRoslynVersion = '4.14.0'; host = 'dotnet build (UseSharedCompilation=false)'; ide = 'unverified'
 } | ConvertTo-Json | Tee-Object -FilePath (Join-Path $output 'result.json')
-if (!$CandidateVersion) {
-    Copy-Item -LiteralPath (Join-Path $output 'result.json') -Destination (Join-Path $output 'published-result.json') -Force
-}
+Copy-Item -LiteralPath (Join-Path $output 'result.json') -Destination (Join-Path $output "$mode-result.json") -Force

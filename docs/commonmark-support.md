@@ -4,12 +4,12 @@
 
 2026-11-06、Windows build 26300 / .NET SDK 10.0.403 / runtime 10.0.14 / Release の作業ツリーで、固定した公式全 652 例を profile ごとに実行した。`commonmark/0.31.2` は opt-in であり、既定値は引き続き `lithosharp-markdown/1` である。[profile の契約](profile-design.md)を参照。
 
-| Profile | HTML 一致 | HTML 差分 | 観測不可 | facts invariant 違反 |
-|---|---:|---:|---:|---:|
-| `commonmark/0.31.2` | 652 | 0 | 0 | 0 |
-| `lithosharp-markdown/1` | 521 | 129 | 2 | 0 |
+| Profile | HTML 一致 | HTML 差分 | 観測不可 | facts invariant 違反 | syntax invariant 違反 | syntax の不明 raw range |
+|---|---:|---:|---:|---:|---:|---:|
+| `commonmark/0.31.2` | 652 | 0 | 0 | 0 | 0 | 0 |
+| `lithosharp-markdown/1` | 521 | 129 | 2 | 0 | 0 | 25 |
 
-両 profile とも skip・未実行は 0。標準 profile は `--strict` を付けて成功した。legacy の HTML 結果は初回の棚卸しから変わっていない。公開構文 view とその親子位置の全例検証は、後続の独立した変更で追加する。
+両 profile とも skip・未実行は 0。標準 profile は `--syntax --strict` を付けて成功した。legacy の HTML 結果は初回の棚卸しから変わっていない。25 の不明 range は、legacy の内部 emphasis span に包含・順序の矛盾がある場合、新しい構文 view が `RawSpan: null` として示すものである。旧 AST/facts の文法を変更したり、推測した位置を Exact として返したりしていない。
 
 現在の標準 profile の章別結果は次のとおり。すべての章で差分・観測不可・skip・未実行は 0 である。
 
@@ -53,6 +53,7 @@
 
 raw range の範囲、decoded segment の連続性、Linear segment の原文一致は全例で通った。これは facts の完全性や正しい意味を保証しない。独立した位置期待値と mapping の検証は Portability の回帰テストで行う。HTML の一致と facts の正しさは別の結果である。
 
+`--syntax` は公開 `ParseWithSyntax` の既知 raw range が入力内にあり、child が既知の parent の範囲内にあり、兄弟の順序・非重複を保つことを別欄で検証する。参照定義への `TargetRawSpan` は構文 child ではない。不明な range の件数も残すため、nullable の位置を合格率へ隠さない。
 
 公式 652 例が通ったことは、あらゆる入力の完全準拠や facts の欠落・位置精度を証明しない。test renderer とその観測可能性にも限界がある。`markdownSyntax` capability は新 profile でも `Partial` を維持し、parse の終了状態 `Complete` と標準全体への適合を同一視しない。HTML renderer、DOM、MDX 実行、incremental parsing、全 consumer の採用互換性は、この結果で検証したものではない。
 

@@ -40,6 +40,17 @@ internal static class MdParser
 {
     internal static MdDocumentFacts Parse(string raw, string scopeId, string sourceId, string? sourceVersion,
         MdOptions options, CancellationToken cancellationToken)
+        => ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, false, out _);
+
+    internal static MdSyntaxDocument ParseWithSyntax(string raw, string scopeId, string sourceId, string? sourceVersion,
+        MdOptions options, CancellationToken cancellationToken)
+    {
+        var facts = ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, true, out var root);
+        return new MdSyntaxDocument(facts, root);
+    }
+
+    private static MdDocumentFacts ParseCore(string raw, string scopeId, string sourceId, string? sourceVersion,
+        MdOptions options, CancellationToken cancellationToken, bool includeSyntax, out MdSyntaxNode? syntaxRoot)
     {
         if (raw is null)
             throw new ArgumentNullException(nameof(raw));
@@ -48,15 +59,21 @@ internal static class MdParser
         if (sourceVersion is not null && MdHash.InvalidUnicode(sourceVersion, cancellationToken) >= 0)
             throw new ArgumentException("SourceVersion must be well-formed Unicode.", nameof(sourceVersion));
         cancellationToken.ThrowIfCancellationRequested();
-        var builder = new FactsBuilder(raw, scopeId, sourceId, sourceVersion, options, cancellationToken);
+        var builder = new FactsBuilder(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, includeSyntax);
+        MdDocumentFacts facts;
         if (raw.Length > options.MaxInputUtf16)
-            return builder.Failed(new MdDiagnostic("LMD002", MdDiagnosticSeverity.Error,
+            facts = builder.Failed(new MdDiagnostic("LMD002", MdDiagnosticSeverity.Error,
                 "Input exceeds maxInputUtf16.", null, "input", "input"));
-        var invalid = MdHash.InvalidUnicode(raw, cancellationToken);
-        if (invalid >= 0)
-            return builder.Failed(new MdDiagnostic("LMD001", MdDiagnosticSeverity.Error,
-                "Input contains an unpaired surrogate.", new MdRawRange(invalid, 1), "input", "invalidUnicode"));
-        return builder.Parse();
+        else
+        {
+            var invalid = MdHash.InvalidUnicode(raw, cancellationToken);
+            facts = invalid >= 0
+                ? builder.Failed(new MdDiagnostic("LMD001", MdDiagnosticSeverity.Error,
+                    "Input contains an unpaired surrogate.", new MdRawRange(invalid, 1), "input", "invalidUnicode"))
+                : builder.Parse();
+        }
+        syntaxRoot = builder.SyntaxRoot;
+        return facts;
     }
 
     private static void ValidateId(string value, string name)
@@ -66,8 +83,10 @@ internal static class MdParser
     }
 
     private sealed class FactsBuilder(string raw, string scopeId, string sourceId, string? sourceVersion,
-        MdOptions options, CancellationToken cancellationToken)
+        MdOptions options, CancellationToken cancellationToken, bool includeSyntax)
     {
+        internal MdSyntaxNode? SyntaxRoot { get; private set; }
+        private IReadOnlyList<LithoBlock>? syntaxBlocks;
         private readonly MdParseContext context = new(options, cancellationToken);
         private MdFrontMatter frontmatter = new(MdFrontMatterState.Unknown, null, null, null, null);
         private MdRawRange? body;
@@ -117,6 +136,8 @@ internal static class MdParser
                 {
                     var bodyText = raw.Substring(body.Value.Start, body.Value.Length);
                     var parsed = LithoBlockParser.ParseFactsBlocks(bodyText, context);
+                    if (includeSyntax)
+                        syntaxBlocks = parsed.Blocks;
                     foreach (var definition in context.Definitions)
                     {
                         var shifted = ShiftLink(definition);
@@ -156,6 +177,8 @@ internal static class MdParser
                     else
                         Partial("decodedMapping");
                 }
+                if (syntaxBlocks is not null)
+                    SyntaxRoot = MdSyntaxFactory.Create(syntaxBlocks, raw.Length, body!.Value.Start, cancellationToken, links, context, raw);
             }
             catch (MdResourceLimit limit)
             {

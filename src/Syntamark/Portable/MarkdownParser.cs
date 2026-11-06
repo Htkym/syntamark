@@ -21,6 +21,15 @@ internal static class MdInlineFacts
 
     internal static MdTextProjection Text(IReadOnlyList<LithoInline> inlines, CancellationToken cancellationToken, bool includeImageLabels = true)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (inlines.Count == 1 && LeafText(inlines[0]) is { } leafText)
+        {
+            var projection = inlines[0].Projection ?? MdSourceMapping.Unknown(leafText);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (projection.Text is null)
+                throw new InvalidOperationException("Cannot concatenate an unprojected region.");
+            return projection;
+        }
         var pieces = new List<MdTextProjection>();
         foreach (var (node, exit) in LithoInline.Walk(inlines, includeImageLabels, cancellationToken))
         {

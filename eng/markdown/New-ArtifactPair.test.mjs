@@ -15,7 +15,7 @@ const readJson = file => JSON.parse(fs.readFileSync(file, 'utf8'));
 
 // Keep the real pair for a subsequent authorized source-host check. Nothing here
 // dispatches a producer workflow, records an immutable issuance, or publishes.
-test('release version policy and one private 1.1.0 artifact pair', {timeout: 300_000}, async t => {
+test('release version policy and one private artifact pair', {timeout: 300_000}, async t => {
   const temporaryBase = process.env.SYNTAMARK_TEST_ROOT || os.tmpdir();
   fs.mkdirSync(temporaryBase, {recursive: true});
   const output = fs.mkdtempSync(path.join(temporaryBase, 'syntamark-artifact-tests-'));
@@ -41,17 +41,28 @@ test('release version policy and one private 1.1.0 artifact pair', {timeout: 300
   const cli = (...args) => run(process.execPath, [producer, ...args]);
   const sourceCommit = success(run('git', ['rev-parse', 'HEAD']));
   assert.match(sourceCommit, /^[0-9a-f]{40}$/);
-  const stage = path.join(output, 'private-1.1.0-pair');
+  const recorded = new Set(readJson(path.join(root, 'eng/markdown/immutable-versions.json')).map(item => item.componentVersion));
+  let previewNumber = 4;
+  while (recorded.has('2.0.0-preview.' + previewNumber)) previewNumber++;
+  const unusedPreview = '2.0.0-preview.' + previewNumber;
+  // After production records 1.1.0, private CI must respect its immutable status.
+  const pairVersion = recorded.has('1.1.0') ? unusedPreview : '1.1.0';
+  const stage = path.join(output, 'private-pair');
 
-  // This is intentionally first: the old allowlist fails before any pack work.
-  const prepared = JSON.parse(success(cli('prepare', sourceCommit, '1.1.0', stage)));
+  // An unissued 1.1.0 fails on the old allowlist before any pack work.
+  const prepared = JSON.parse(success(cli('prepare', sourceCommit, pairVersion, stage)));
   assert.equal(prepared.state, 'PREPARED_NOT_PACKED');
-  assert.equal(prepared.componentVersion, '1.1.0');
+  assert.equal(prepared.componentVersion, pairVersion);
   assert.equal(readJson(path.join(stage, 'prepared.json')).metadata.sourceCommit, sourceCommit);
 
   await t.test('prepare keeps supported versions and refuses unsupported boundaries and immutable stages', () => {
-    for (const version of ['1.0.0', '1.0.1', '2.0.0-preview.4', '2.0.0-preview.20261106']) {
+    for (const version of ['1.0.0', '1.0.1', '1.1.0', unusedPreview, '2.0.0-preview.20261106']) {
       const candidate = path.join(output, 'accepted-' + version);
+      if (recorded.has(version)) {
+        failure(cli('prepare', sourceCommit, version, candidate), /Version is already immutable/);
+        assert.equal(fs.existsSync(candidate), false);
+        continue;
+      }
       const accepted = JSON.parse(success(cli('prepare', sourceCommit, version, candidate)));
       assert.equal(accepted.componentVersion, version);
       assert.equal(readJson(path.join(candidate, 'prepared.json')).metadata.sourceCommit, sourceCommit);
@@ -66,7 +77,7 @@ test('release version policy and one private 1.1.0 artifact pair', {timeout: 300
     failure(cli('prepare', sourceCommit, '2.0.0-preview.3', immutableStage), /Version is already immutable/);
     assert.equal(fs.existsSync(immutableStage), false);
     const before = fs.readFileSync(path.join(stage, 'prepared.json'));
-    failure(cli('prepare', sourceCommit, '1.1.0', stage), /Never overwrite an artifact stage/);
+    failure(cli('prepare', sourceCommit, pairVersion, stage), /Never overwrite an artifact stage/);
     assert.deepEqual(fs.readFileSync(path.join(stage, 'prepared.json')), before);
     assert.equal(JSON.parse(success(cli('check-stage', stage))).state, 'STAGE_BYTES_PASS');
   });
@@ -109,7 +120,7 @@ test('release version policy and one private 1.1.0 artifact pair', {timeout: 300
     }
     for (const kind of ['runtime', 'source']) {
       const actual = fs.readFileSync(path.join(stage, kind, 'README.md'), 'utf8');
-      installSelections(actual, '1.1.0');
+      installSelections(actual, pairVersion);
       assert.ok(actual.includes('公開済み1.0.1'), 'Keep the actual historical release statement');
     }
     const fixture = path.join(output, 'readme-fixture');
@@ -118,7 +129,7 @@ test('release version policy and one private 1.1.0 artifact pair', {timeout: 300
     const fixtureProducer = path.join(fixture, 'eng/markdown/New-ArtifactPair.mjs');
     fs.copyFileSync(producer, fixtureProducer);
     for (const legacy of ['1.0.0', '1.0.1', '1.1.0', '2.0.0-preview.20261106']) {
-      const selected = legacy === '1.1.0' ? '2.0.0-preview.20261106' : '1.1.0';
+      const selected = legacy === pairVersion ? unusedPreview : pairVersion;
       const changed = originalReadme.toString()
         .replace(/(dotnet add package Syntamark --version )\S+/, (_, prefix) => prefix + legacy)
         .replace(/(<SyntamarkSourceVersion>)[^<]+/, (_, prefix) => prefix + legacy)
@@ -162,7 +173,7 @@ test('release version policy and one private 1.1.0 artifact pair', {timeout: 300
     const manifestSha256 = hash(manifestBytes);
     const manifest = JSON.parse(manifestBytes);
     assert.equal(manifest.sourceCommit, sourceCommit);
-    assert.equal(manifest.componentVersion, '1.1.0');
+    assert.equal(manifest.componentVersion, pairVersion);
     const checked = JSON.parse(success(cli('check-pair', stage, manifestSha256)));
     assert.equal(checked.state, 'SEALED_PAIR_BYTES_PASS');
     assert.equal(checked.hostVerificationIncluded, false);
@@ -194,7 +205,7 @@ test('release version policy and one private 1.1.0 artifact pair', {timeout: 300
 
     const receipt = {scope: 'PRIVATE_LOCAL_TEST_PAIR_NOT_FORMAL_ISSUANCE',
       producerWorkflowDispatched: false, published: false, hostVerificationIncluded: false,
-      stage, feed, packages, sourceCommit, componentVersion: '1.1.0', manifestSha256,
+      stage, feed, packages, sourceCommit, componentVersion: pairVersion, manifestSha256,
       canonicalSourceHash: manifest.canonicalSourceHash, parserVersion: manifest.parserVersion,
       producerSha256: hash(fs.readFileSync(producer)), workflowSha256: hash(fs.readFileSync(workflow)),
       artifacts: manifest.artifacts, commands};

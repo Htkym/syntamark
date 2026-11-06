@@ -103,7 +103,8 @@ internal static class FactsSnapshotChecks
     private static object Parse(Assembly assembly, string raw)
     {
         var options = assembly.GetType("Syntamark.Compilation.MdOptions", true)!;
-        var value = options.GetConstructors(Instance).Single().Invoke(new object[] { 1048576, 131072, 200, 16777216, "lithosharp-markdown/1", 1 });
+        var value = options.GetConstructors(Instance).Single(ctor => ctor.GetParameters().Length == 6)
+            .Invoke(new object[] { 1048576, 131072, 200, 16777216, "lithosharp-markdown/1", 1 });
         return assembly.GetType("Syntamark.Compilation.MdParser", true)!.GetMethod("Parse", BindingFlags.Static | BindingFlags.NonPublic)!
             .Invoke(null, new object?[] { raw, "pair-scope", "same.md", null, value, CancellationToken.None })!;
     }
@@ -127,6 +128,9 @@ internal static class FactsSnapshotChecks
                 continue;
             // The v1 core had no identity properties; the same values are already hashed on its public facade.
             if (type.Name == "MdDocumentFacts" && (property.Name is "ContractVersion" or "ProfileId"))
+                continue;
+            // Recovery metadata is additive and checked independently from the historical facts baseline.
+            if (type.Name is "MdFrontMatter" or "MarkdownFrontMatter" && property.Name is "FailureSpan" or "FailureLine")
                 continue;
             result[property.Name] = Snapshot(property.GetValue(value));
         }

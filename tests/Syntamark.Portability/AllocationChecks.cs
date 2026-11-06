@@ -21,7 +21,7 @@ internal static class AllocationChecks
     private static void Options(Assembly assembly)
     {
         var type = assembly.GetType("Syntamark.Compilation.MdOptions", true)!;
-        var constructor = type.GetConstructors(Instance).Single();
+        var constructor = type.GetConstructors(Instance).Single(ctor => ctor.GetParameters().Length == 6);
         var hash = type.GetProperty("Hash", Instance)!;
         var values = new[]
         {

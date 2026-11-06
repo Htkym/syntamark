@@ -30,6 +30,7 @@ public enum MarkdownFeatureState { Supported, Unsupported, Partial }
 public enum MarkdownSegmentKind { Linear, Atomic, Unknown }
 public enum MarkdownMappingPrecision { Exact, CoveringTokens, Partial, Unknown }
 public enum MarkdownFrontMatterState { Absent, Parsed, Empty, Invalid, Unterminated, Unknown }
+public enum MarkdownFrontMatterRecovery { None, TreatAsBody }
 public enum MarkdownYamlKind { Mapping, Sequence, Scalar }
 public enum MarkdownLinkKind { Inline, Autolink, ReferenceUse, ReferenceDefinition }
 public enum MarkdownLinkResolution { Inline, ResolvedReference, UnresolvedReference }
@@ -135,12 +136,18 @@ public sealed class MarkdownFrontMatter
         YamlSpan = global::Syntamark.RawSpan.From(facts.YamlSpan);
         ClosingSpan = global::Syntamark.RawSpan.From(facts.ClosingSpan);
         Root = facts.Root is null ? null : new MarkdownYamlNode(facts.Root);
+        FailureSpan = global::Syntamark.RawSpan.From(facts.FailureSpan);
+        FailureLine = facts.FailureLine;
     }
     public MarkdownFrontMatterState State { get; }
     public RawSpan? OpeningSpan { get; }
     public RawSpan? YamlSpan { get; }
     public RawSpan? ClosingSpan { get; }
     public MarkdownYamlNode? Root { get; }
+    /// <summary>The known EOF position of a missing closing delimiter; null when not applicable.</summary>
+    public RawSpan? FailureSpan { get; }
+    /// <summary>The one-based line where delimiter scanning expected another line, including an unterminated final line.</summary>
+    public int? FailureLine { get; }
 }
 
 /// <summary>Immutable parse-only Heading facts; positions refer to the original UTF-16 input.</summary>
@@ -390,7 +397,7 @@ public sealed class MarkdownDocument
     }
 }
 
-/// <summary>The six contract-v1 options, with defaults expanded before hashing.</summary>
+/// <summary>Resource limits, profile and explicit editor recovery. Default option hashes retain contract-v1 identity.</summary>
 public sealed class MarkdownParseOptions
 {
     public MarkdownParseOptions(int maxInputUtf16 = 1048576, int maxOutputItems = 131072,
@@ -399,6 +406,14 @@ public sealed class MarkdownParseOptions
     {
         Core = new MdOptions(maxInputUtf16, maxOutputItems, maxNestingDepth, maxScanUnits, profileId, optionsSchemaVersion);
     }
+
+    public MarkdownParseOptions(MarkdownFrontMatterRecovery frontMatterRecovery, int maxInputUtf16 = 1048576, int maxOutputItems = 131072,
+        int maxNestingDepth = 200, int maxScanUnits = 16777216,
+        string profileId = "lithosharp-markdown/1", int optionsSchemaVersion = 1)
+    {
+        Core = new MdOptions((MdFrontMatterRecovery)frontMatterRecovery, maxInputUtf16, maxOutputItems,
+            maxNestingDepth, maxScanUnits, profileId, optionsSchemaVersion);
+    }
     internal MdOptions Core { get; }
     public int MaxInputUtf16 => Core.MaxInputUtf16;
     public int MaxOutputItems => Core.MaxOutputItems;
@@ -406,6 +421,7 @@ public sealed class MarkdownParseOptions
     public int MaxScanUnits => Core.MaxScanUnits;
     public string ProfileId => Core.ProfileId;
     public int OptionsSchemaVersion => Core.OptionsSchemaVersion;
+    public MarkdownFrontMatterRecovery FrontMatterRecovery => (MarkdownFrontMatterRecovery)Core.FrontMatterRecovery;
 }
 
 /// <summary>Parses owned text without rendering, site resolution, file access or user code.</summary>

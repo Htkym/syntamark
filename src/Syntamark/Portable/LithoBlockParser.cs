@@ -1711,7 +1711,7 @@ internal static partial class LithoBlockParser
             foreach (var cell in cells)
             {
                 context?.Scan(8);
-                var trimmed = cell.Trim();
+                var trimmed = cell.Text.Trim();
                 if (trimmed.Length == 0)
                 {
                     return false;
@@ -1727,7 +1727,9 @@ internal static partial class LithoBlockParser
             return SplitRow(acc[^1].Text)?.Count == cells.Count;
         }
 
-        private List<string>? SplitRow(string text)
+        private sealed record TableCell(string Text, int RawStart, int[] EscapedPipes);
+
+        private List<TableCell>? SplitRow(string text)
         {
             context?.Scan(text.Length);
             var indent = CountIndent(text, 0, context);
@@ -1742,23 +1744,28 @@ internal static partial class LithoBlockParser
                 return null;
             }
 
-            var cells = new List<string>();
+            var cells = new List<TableCell>();
             var current = new System.Text.StringBuilder();
+            var escapedPipes = new List<int>();
             var index = 0;
+            var cellStart = 0;
             while (index < content.Length)
             {
                 context?.Scan(8);
                 var ch = content[index];
                 if (ch == '\\' && index + 1 < content.Length && content[index + 1] == '|')
                 {
+                    escapedPipes.Add(current.Length);
                     current.Append('|');
                     index += 2;
                 }
                 else if (ch == '|')
                 {
-                    cells.Add(current.ToString());
+                    cells.Add(new TableCell(current.ToString(), indent.Chars + cellStart, escapedPipes.ToArray()));
                     current.Clear();
+                    escapedPipes.Clear();
                     index++;
+                    cellStart = index;
                 }
                 else
                 {
@@ -1767,13 +1774,13 @@ internal static partial class LithoBlockParser
                 }
             }
 
-            cells.Add(current.ToString());
-            if (cells.Count > 0 && cells[0].Trim().Length == 0)
+            cells.Add(new TableCell(current.ToString(), indent.Chars + cellStart, escapedPipes.ToArray()));
+            if (cells.Count > 0 && cells[0].Text.Trim().Length == 0)
             {
                 cells.RemoveAt(0);
             }
 
-            if (cells.Count > 0 && cells[^1].Trim().Length == 0)
+            if (cells.Count > 0 && cells[^1].Text.Trim().Length == 0)
             {
                 cells.RemoveAt(cells.Count - 1);
             }
@@ -1799,7 +1806,7 @@ internal static partial class LithoBlockParser
 
             var align = delimiterCells.Select(static cell =>
             {
-                var trimmed = cell.Trim();
+                var trimmed = cell.Text.Trim();
                 var left = trimmed.StartsWith(':');
                 var right = trimmed.EndsWith(':');
                 return (left, right) switch
@@ -1813,7 +1820,7 @@ internal static partial class LithoBlockParser
 
             var rows = new List<IReadOnlyList<IReadOnlyList<LithoInline>>>
             {
-                ParseRowCells(headerCells, headerLines[^1].Offset, headerLines[^1].Text),
+                ParseRowCells(headerCells, headerLines[^1].Offset),
             };
             var cursor = delimiterIndex + 1;
             while (cursor < to)
@@ -1836,7 +1843,7 @@ internal static partial class LithoBlockParser
                 while (cells.Count < headerCells.Count)
                 {
                     context?.Scan(8);
-                    cells.Add(string.Empty);
+                    cells.Add(new TableCell(string.Empty, line.Text.Length, []));
                 }
 
                 if (cells.Count > headerCells.Count)
@@ -1844,7 +1851,7 @@ internal static partial class LithoBlockParser
                     cells.RemoveRange(headerCells.Count, cells.Count - headerCells.Count);
                 }
 
-                rows.Add(ParseRowCells(cells, line.Offset, line.Text));
+                rows.Add(ParseRowCells(cells, line.Offset));
                 cursor++;
             }
 
@@ -1855,23 +1862,37 @@ internal static partial class LithoBlockParser
             return true;
         }
 
-        private List<IReadOnlyList<LithoInline>> ParseRowCells(List<string> cells, int lineOffset, string lineText)
+        private List<IReadOnlyList<LithoInline>> ParseRowCells(List<TableCell> cells, int lineOffset)
         {
             var result = new List<IReadOnlyList<LithoInline>>(cells.Count);
-            var search = 0;
             foreach (var cell in cells)
             {
                 context?.Scan(8);
-                var trimmed = cell.Trim();
-                var relative = trimmed.Length == 0
-                    ? -1
-                    : lineText.IndexOf(trimmed, search, StringComparison.Ordinal);
-                var offset = relative < 0 ? lineOffset : lineOffset + relative;
-                result.Add(Resolve ? [new LithoRawText(trimmed, LithoLineMap.Contiguous(offset, trimmed.Length))] : []);
-                if (relative >= 0)
+                var trimmed = cell.Text.Trim();
+                var trimStart = 0;
+                while (trimStart < cell.Text.Length && char.IsWhiteSpace(cell.Text[trimStart]))
                 {
-                    search = relative + trimmed.Length;
+                    context?.Scan(8);
+                    trimStart++;
                 }
+                var offset = lineOffset + cell.RawStart + trimStart;
+                var localStarts = new List<int> { 0 };
+                var bodyStarts = new List<int> { offset };
+                var escapedPipes = cell.EscapedPipes.Select(local => local - trimStart).ToArray();
+                for (var escaped = 0; escaped < escapedPipes.Length; escaped++)
+                {
+                    context?.Scan(8);
+                    var after = escapedPipes[escaped] + 1;
+                    if (after < trimmed.Length)
+                    {
+                        localStarts.Add(after);
+                        bodyStarts.Add(offset + after + escaped + 1);
+                    }
+                }
+                var map = new LithoLineMap(localStarts.ToArray(), bodyStarts.ToArray(), trimmed.Length,
+                    offset + trimmed.Length + escapedPipes.Length)
+                { EscapedPipes = escapedPipes };
+                result.Add(Resolve ? [new LithoRawText(trimmed, map)] : []);
             }
 
             return result;

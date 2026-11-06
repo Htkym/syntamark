@@ -87,11 +87,11 @@ internal static class LithoInlineParser
         {
             if (local.IsEmpty)
             {
-                return SourceSpan.Empty;
+                return new SourceSpan(map.Global(local.Start), 0);
             }
 
             var start = map.Global(local.Start);
-            var end = map.Global(local.End - 1) + 1;
+            var end = map.GlobalEnd(local.End);
             return end <= start ? new SourceSpan(start, 0) : new SourceSpan(start, end - start);
         }
 

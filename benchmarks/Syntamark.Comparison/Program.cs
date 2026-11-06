@@ -13,8 +13,13 @@ using Microsoft.CodeAnalysis.Text;
 using Syntamark;
 using SyntaDocument = Syntamark.MarkdownDocument;
 
-if (args.Length != 3 || args[0] is not ("A" or "B"))
-    throw new ArgumentException("Usage: <A|B engine order> <run label> <new-results.json>");
+if (args.Length is not (3 or 4) || args[0] is not ("A" or "B") || args.Length == 4 && args[3] != "--requested-common")
+    throw new ArgumentException("Usage: <A|B engine order> <run label> <new-results.json> [--requested-common]");
+var requestedMode = args.Length == 4;
+#if !SYNTAMARK_ANALYSIS
+if (requestedMode)
+    throw new InvalidOperationException("Requested mode requires a compatible candidate DLL and -p:SyntamarkAnalysis=true.");
+#endif
 if (Environment.GetEnvironmentVariable("DOTNET_TieredCompilation") != "0")
     throw new InvalidOperationException("Run independent Release processes with DOTNET_TieredCompilation=0.");
 var order = args[0] == "A" ? new[] { "Syntamark", "Markdig" } : new[] { "Markdig", "Syntamark" };
@@ -40,6 +45,19 @@ foreach (var fixture in fixtures)
     foreach (var facts in new[] { actualSynta, actualMarkdig })
         Check(JsonSerializer.Serialize(Locations(fixture.Snapshot, facts).Select(LocationFact.From).ToArray()) == JsonSerializer.Serialize(expectedLocations),
             fixture.Id + ": independent UTF-16 line/column oracle differs.");
+    object? selectedAnalysis = null;
+#if SYNTAMARK_ANALYSIS
+    if (requestedMode)
+    {
+        var analyzed = ParseRequested(fixture.Raw);
+        ValidateRequested(analyzed, synta);
+        var selected = FromRequested(analyzed);
+        Check(JsonSerializer.Serialize(selected) == expected, fixture.Id + ": requested common facts differ.");
+        Check(JsonSerializer.Serialize(Locations(fixture.Snapshot, selected).Select(LocationFact.From).ToArray()) == JsonSerializer.Serialize(expectedLocations),
+            fixture.Id + ": requested UTF-16 location oracle differs.");
+        selectedAnalysis = DescribeRequested(analyzed);
+    }
+#endif
     validation.Add(new
     {
         fixture.Id,
@@ -57,13 +75,21 @@ foreach (var fixture in fixtures)
         mappingCoverage = synta.Coverage.DecodedMapping.ToString(),
         synta.ParserVersion,
         synta.OptionsHash,
-        extraSyntamarkFacts = new
+        selectedAnalysis,
+        extraSyntamarkFacts = requestedMode ? null : new
         {
             sections = synta.Sections.Count,
             textRegions = synta.TextRegions.Count,
             referenceDefinitions = synta.Links.Count(l => l.Kind == MarkdownLinkKind.ReferenceDefinition),
             sourceSegments = synta.Headings.Sum(h => h.Text.SourceSegments.Count)
         },
+        fullReferenceExtrasOutsideTiming = requestedMode ? new
+        {
+            sections = synta.Sections.Count,
+            textRegions = synta.TextRegions.Count,
+            referenceDefinitions = synta.Links.Count(l => l.Kind == MarkdownLinkKind.ReferenceDefinition),
+            sourceSegments = synta.Headings.Sum(h => h.Text.SourceSegments.Count)
+        } : null,
         snapshotType = fixture.Snapshot.GetType().FullName,
         snapshotToStringReusesOriginal = ReferenceEquals(fixture.Raw, fixture.Snapshot.ToString()),
         independentOracles = "Constructed from unique raw tokens, explicit decoded values, and a separate raw UTF-16 CR/LF scanner before any timing.",
@@ -74,7 +100,8 @@ var results = new List<Measurement>();
 var retained = new List<object>();
 foreach (var fixture in fixtures)
 {
-    foreach (var stage in new[] { "representation-unequal-work", "common-facts", "snapshot-to-locations" })
+    foreach (var stage in requestedMode ? new[] { "common-facts", "snapshot-to-locations" }
+        : new[] { "representation-unequal-work", "common-facts", "snapshot-to-locations" })
         foreach (var engine in order)
         {
             Func<object> operation = stage switch
@@ -87,22 +114,26 @@ foreach (var fixture in fixtures)
             Measure(fixture.Id, engine, stage, fixture.Operations, operation);
             retained.Add(Retained(fixture.Id, engine, stage, operation));
         }
-    // This feature has no Markdig adapter and never appears in the common contract timings.
-    var projection = ParseFacts(fixture.Raw).Headings[0].Text;
-    var entityAt = projection.Text!.IndexOf('&');
-    var mapped = projection.Map(new RawSpan(entityAt, 1));
-    var entityRaw = fixture.Raw.IndexOf("&amp;", StringComparison.Ordinal);
-    Check(mapped.Precision == MarkdownMappingPrecision.CoveringTokens && mapped.RawFragments.Single() == new RawSpan(entityRaw, 5),
-        "Separate decoded substring Map oracle.");
-    Measure(fixture.Id, "Syntamark-only", "additional-preparsed-substring-map", 10000,
-        () => projection.Map(new RawSpan(entityAt, 1)));
+    if (!requestedMode)
+    {
+        // This feature has no Markdig adapter and never appears in the common contract timings.
+        var projection = ParseFacts(fixture.Raw).Headings[0].Text;
+        var entityAt = projection.Text!.IndexOf('&');
+        var mapped = projection.Map(new RawSpan(entityAt, 1));
+        var entityRaw = fixture.Raw.IndexOf("&amp;", StringComparison.Ordinal);
+        Check(mapped.Precision == MarkdownMappingPrecision.CoveringTokens && mapped.RawFragments.Single() == new RawSpan(entityRaw, 5),
+            "Separate decoded substring Map oracle.");
+        Measure(fixture.Id, "Syntamark-only", "additional-preparsed-substring-map", 10000,
+            () => projection.Map(new RawSpan(entityAt, 1)));
+    }
 }
 
 Sink.Value = null;
 var identity = ParseFacts(fixtures[0].Raw);
 var output = new
 {
-    contract = "bounded-common-facts-and-roslyn-locations/1",
+    contract = requestedMode ? "bounded-requested-common-facts-and-roslyn-locations/1" : "bounded-common-facts-and-roslyn-locations/1",
+    requestedCommon = requestedMode,
     label = args[1],
     processOrder = args[0],
     engineOrder = order,
@@ -123,9 +154,9 @@ var output = new
     stages = new[]
     {
         new { id = "representation-unequal-work", syntamark = "ParseWithSyntax: all facts + immutable syntax view", markdig = "Parse: AST + precise raw positions", comparison = "Unequal work; cannot rank as equivalent parse-only throughput." },
-        new { id = "common-facts", syntamark = "Parse all facts, select common heading/link/fenced-code output", markdig = "Parse AST, traverse/decode/copy common output", comparison = "Same validated output; adapter costs included. Syntamark still computes extra facts/mapping/diagnostics/budget checks; no claim of identical internal work." },
-        new { id = "snapshot-to-locations", syntamark = "SourceText.ToString -> common-facts -> Location[]", markdig = "SourceText.ToString -> common-facts -> Location[]", comparison = "Same snapshot, output ranges and Roslyn UTF-16 line spans; SourceText constructed outside timed scope." },
-    },
+        new { id = "common-facts", syntamark = requestedMode ? "Analyze Headings|Links|Fences (26), project common records" : "Parse all facts, select common heading/link/fenced-code output", markdig = "Parse AST, traverse/decode/copy common output", comparison = requestedMode ? "Same validated common output and adapter costs. Reduced requested-output work compared with full Parse; diagnostics/mapping/resource contracts still differ from Markdig." : "Same validated output; adapter costs included. Syntamark still computes extra facts/mapping/diagnostics/budget checks; no claim of identical internal work." },
+        new { id = "snapshot-to-locations", syntamark = requestedMode ? "SourceText.ToString -> requested common records -> Location[]" : "SourceText.ToString -> common-facts -> Location[]", markdig = "SourceText.ToString -> common-facts -> Location[]", comparison = "Same snapshot, output ranges and Roslyn UTF-16 line spans; SourceText constructed outside timed scope." },
+    }.Where(stage => !requestedMode || stage.id != "representation-unequal-work"),
     decodedSubset = "Heading text and link labels/targets/titles; fenced code logical content with exactly one terminal line separator excluded. CRLF is normalized to LF in code only. No arbitrary decoded-substring mapping in either common stage.",
     syntamark = new { profile = options.ProfileId, identity.ParserVersion, identity.OptionsHash, assembly = AssemblyIdentity(typeof(Syntamark.MarkdownParser).Assembly), options },
     markdig = new
@@ -161,8 +192,65 @@ MarkdownSyntaxDocument ParseSyntax(string raw)
     Check(result.Root is not null, "Complete syntax parse must have a root.");
     return result;
 }
-CommonFacts Common(string engine, string raw) => engine == "Syntamark" ? FromSyntamark(ParseFacts(raw))
-    : FromMarkdig(Markdig.Markdown.Parse(raw, pipeline));
+CommonFacts Common(string engine, string raw)
+{
+    if (engine != "Syntamark")
+        return FromMarkdig(Markdig.Markdown.Parse(raw, pipeline));
+#if SYNTAMARK_ANALYSIS
+    if (requestedMode)
+        return FromRequested(ParseRequested(raw));
+#endif
+    return FromSyntamark(ParseFacts(raw));
+}
+#if SYNTAMARK_ANALYSIS
+MarkdownAnalysisResult ParseRequested(string raw)
+{
+    var result = Syntamark.MarkdownParser.Analyze(raw,
+        MarkdownAnalysisParts.Headings | MarkdownAnalysisParts.Links | MarkdownAnalysisParts.Fences,
+        "comparison-benchmark", "fixed.md", options: options);
+    Check(result.Status == MarkdownParseStatus.Complete && result.Diagnostics.All(d => d.Origin != "resource"),
+        "Partial/resource-stopped requested parses cannot be benchmark results.");
+    return result;
+}
+static void ValidateRequested(MarkdownAnalysisResult result, SyntaDocument full)
+{
+    Check(result.RequestedParts == (MarkdownAnalysisParts.Headings | MarkdownAnalysisParts.Links | MarkdownAnalysisParts.Fences)
+        && (int)result.RequestedParts == 26 && result.AnalysisSchemaVersion == 1, "Requested analysis identity differs.");
+    Check(result.OptionsHash == full.OptionsHash && result.ProfileId == full.ProfileId && result.ScopeId == full.ScopeId
+        && result.SourceId == full.SourceId && result.SourceVersion == full.SourceVersion && result.TextHash == full.TextHash,
+        "Requested/full input and options identities differ.");
+    Check(result.AnalysisHash.Length == 64 && result.AnalysisHash.All(Uri.IsHexDigit), "Missing request hash.");
+    foreach (var part in new[] { MarkdownAnalysisParts.Headings, MarkdownAnalysisParts.Links, MarkdownAnalysisParts.Fences })
+        Check(result.GetAvailability(part) == MarkdownAnalysisAvailability.Complete, "Requested category is not complete.");
+    foreach (var part in new[] { MarkdownAnalysisParts.FrontMatter, MarkdownAnalysisParts.Sections, MarkdownAnalysisParts.TextRegions, MarkdownAnalysisParts.Syntax })
+        Check(result.GetAvailability(part) == MarkdownAnalysisAvailability.NotRequested, "Unrequested availability differs.");
+    Check(result.Headings is not null && result.Links is not null && result.Fences is not null
+        && result.FrontMatter is null && result.Sections is null && result.TextRegions is null && result.Root is null,
+        "Unrequested outputs must be null; selected outputs must be available.");
+}
+static object DescribeRequested(MarkdownAnalysisResult result) => new
+{
+    requestedParts = (int)result.RequestedParts,
+    result.AnalysisSchemaVersion,
+    result.AnalysisHash,
+    result.OptionsHash,
+    status = result.Status.ToString(),
+    availability = Enum.GetValues<MarkdownAnalysisParts>().Where(part => (int)part is 1 or 2 or 4 or 8 or 16 or 32 or 64)
+        .ToDictionary(part => part.ToString(), part => result.GetAvailability(part).ToString()),
+    selectedCounts = new
+    {
+        headings = result.Headings!.Count,
+        links = result.Links!.Count,
+        fences = result.Fences!.Count,
+        referenceDefinitions = result.Links!.Count(link => link.Kind == MarkdownLinkKind.ReferenceDefinition),
+        headingSourceSegments = result.Headings!.Sum(heading => heading.Text.SourceSegments.Count)
+    },
+    unrequested = new { frontMatter = (string?)null, sections = (int?)null, textRegions = (int?)null, syntax = (string?)null },
+    result.Coverage,
+    resourceDiagnostics = result.Diagnostics.Count(diagnostic => diagnostic.Origin == "resource"),
+    workDifference = "Only Headings, Links and Fences are published; null unrequested groups do not assert absence. Recognition and required dependency work, diagnostics and resource accounting remain.",
+};
+#endif
 EndToEndResult EndToEnd(string engine, SourceText snapshot)
 {
     var facts = Common(engine, snapshot.ToString());
@@ -210,11 +298,18 @@ static object Retained(string fixture, string engine, string stage, Func<object>
 static void Complete(SyntaDocument document) => Check(document.Status == MarkdownParseStatus.Complete
     && document.Diagnostics.All(d => d.Origin != "resource"), "Partial/resource-stopped parses cannot be benchmark results.");
 
-static CommonFacts FromSyntamark(SyntaDocument document) => new(
-    document.Headings.Select(h => new HeadingFact(h.RawLevel, h.Text.Text!, RangeFact.From(h.RawSpan))).ToArray(),
-    document.Links.Where(l => l.Kind != MarkdownLinkKind.ReferenceDefinition && l.Resolution != MarkdownLinkResolution.UnresolvedReference)
+static CommonFacts FromSyntamark(SyntaDocument document) => FromSyntamarkParts(document.Headings, document.Links, document.Fences);
+#if SYNTAMARK_ANALYSIS
+static CommonFacts FromRequested(MarkdownAnalysisResult result) => FromSyntamarkParts(
+    result.Headings ?? throw new InvalidOperationException("Requested headings unavailable."),
+    result.Links ?? throw new InvalidOperationException("Requested links unavailable."),
+    result.Fences ?? throw new InvalidOperationException("Requested fences unavailable."));
+#endif
+static CommonFacts FromSyntamarkParts(IReadOnlyList<MarkdownHeading> headings, IReadOnlyList<MarkdownLink> links, IReadOnlyList<MarkdownFence> fences) => new(
+    headings.Select(h => new HeadingFact(h.RawLevel, h.Text.Text!, RangeFact.From(h.RawSpan))).ToArray(),
+    links.Where(l => l.Kind != MarkdownLinkKind.ReferenceDefinition && l.Resolution != MarkdownLinkResolution.UnresolvedReference)
         .Select(l => new LinkFact(l.Image, l.Label.Text!, l.Target!, l.Title, RangeFact.From(l.RawSpan), RangeFact.From(l.TargetRawSpan!.Value))).ToArray(),
-    document.Fences.Select(f => new CodeFact(f.Info!, CodeContent(f.Content.Text!), RangeFact.From(f.RawSpan))).ToArray());
+    fences.Select(f => new CodeFact(f.Info!, CodeContent(f.Content.Text!), RangeFact.From(f.RawSpan))).ToArray());
 static CommonFacts FromMarkdig(Markdig.Syntax.MarkdownDocument document)
 {
     var headings = new List<HeadingFact>();

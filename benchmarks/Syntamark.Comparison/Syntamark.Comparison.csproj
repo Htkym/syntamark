@@ -7,6 +7,9 @@
     <IsPackable>false</IsPackable>
     <SyntamarkAssembly Condition="'$(SyntamarkAssembly)' == ''">../../.local/comparison-benchmark-current/Syntamark.dll</SyntamarkAssembly>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(SyntamarkAnalysis)' == 'true'">
+    <DefineConstants>$(DefineConstants);SYNTAMARK_ANALYSIS</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Syntamark" HintPath="$(SyntamarkAssembly)" />
     <PackageReference Include="YamlDotNet" Version="[18.1.0]" />

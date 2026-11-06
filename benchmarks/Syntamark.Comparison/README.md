@@ -18,6 +18,16 @@ pwsh -NoProfile -File benchmarks/Syntamark.Comparison/Summarize.ps1 -ResultsDire
 
 Use the repository's applicable build wrapper when required by local instructions. `SyntamarkAssembly` can override the HintPath. The default copy is intentional: rebuilding another project cannot silently change the benchmark input after copying. Each result records actual assembly hashes and informational versions, so a stale generated parser stamp cannot identify a modified candidate alone.
 
+To compare `Analyze(Headings | Links | Fences)` with the same bounded Markdig records, use a DLL with the analysis API and enable its optional benchmark code:
+
+```powershell
+dotnet build benchmarks/Syntamark.Comparison -c Release --no-restore -p:SyntamarkAnalysis=true
+$env:DOTNET_TieredCompilation = '0'
+dotnet benchmarks/Syntamark.Comparison/bin/Release/net10.0/Syntamark.Comparison.dll A requested-a .local/comparison-benchmark-results/requested-a.json --requested-common
+```
+
+Run separate A/B processes with fresh output paths and the same pinned assemblies. Requested mode validates the request identity, availability, common facts and locations before timing. It measures common facts and locations only; representation and preparsed substring mapping are excluded. Full and requested modes perform different work. Default builds retain the original three-argument full mode and can reference older DLLs; they reject `--requested-common` rather than substituting a full parse.
+
 `Run.ps1` starts four independent processes in A/B/B/A order, where A measures Syntamark first and B measures Markdig first within each stage/fixture. Each workload gets one complete untimed batch and five measured batches. Tiered compilation is disabled. Validation and JIT happen before measurement; no result is called cold-start latency. Files are created once, never overwritten, and no completion polling is used.
 
 The three stages are deliberately distinct:

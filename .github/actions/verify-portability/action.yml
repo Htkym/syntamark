@@ -30,6 +30,7 @@ runs:
     - name: Build reproducible benchmarks without timing gates
       shell: bash
       run: |
+        export SyntamarkAnalysis=true
         for project in benchmarks/Syntamark.Benchmarks benchmarks/Syntamark.Comparison; do
           dotnet restore "$project" --locked-mode
           dotnet build "$project" -c Release --no-restore -p:SyntamarkAssembly="$GITHUB_WORKSPACE/src/Syntamark/bin/Release/net10.0/Syntamark.dll"
@@ -37,6 +38,7 @@ runs:
     - name: Verify formatting
       shell: bash
       run: |
+        export SyntamarkAnalysis=true
         export SyntamarkAssembly="$GITHUB_WORKSPACE/src/Syntamark/bin/Release/net10.0/Syntamark.dll"
         for project in src/Syntamark/Syntamark.csproj tests/Syntamark.Portability/Syntamark.Portability.csproj tests/Syntamark.Conformance/Syntamark.Conformance.csproj tests/Syntamark.Comparison/Syntamark.Comparison.csproj tests/Syntamark.Roslyn.Integration/Syntamark.Roslyn.Integration.csproj tests/Syntamark.Safety/Syntamark.Safety.csproj samples/Syntamark.Prose/Syntamark.Prose.csproj benchmarks/Syntamark.Benchmarks/Syntamark.Benchmarks.csproj benchmarks/Syntamark.Comparison/Syntamark.Comparison.csproj; do
           dotnet format style "$project" --diagnostics IDE2001 --exclude src/Syntamark/Portable/MarkdownParserVersion.g.cs --no-restore --verify-no-changes

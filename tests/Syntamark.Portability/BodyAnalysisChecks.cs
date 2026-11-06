@@ -31,7 +31,7 @@ internal static class BodyAnalysisChecks
                 Check(body.Root!.Children[0].Kind == MarkdownSyntaxKind.ThematicBreak
                     && body.Root.Children[0].RawSpan == new RawSpan(0, 3)
                     && body.Headings!.Select(heading => heading.RawLevel).SequenceEqual(new[] { 2, 1 })
-                    && body.Headings[0].RawSpan == At(raw, "Title 😀\r\n---"),
+                    && body.Headings![0].RawSpan == At(raw, "Title 😀\r\n---"),
                     "Leading delimiter lines must remain Markdown thematic and setext syntax in Body mode.");
             }
             else
@@ -39,9 +39,9 @@ internal static class BodyAnalysisChecks
                 Check(body.Root!.Children[0].Kind == MarkdownSyntaxKind.Paragraph
                     && body.Root.Children[0].RawSpan == new RawSpan(0, 4)
                     && body.Headings!.Single().RawSpan == At(raw, "# Tail &amp; \\*😀")
-                    && body.Headings.Single().Text.Text == "Tail & *😀"
+                    && body.Headings!.Single().Text.Text == "Tail & *😀"
                     && body.Links!.Single().TargetRawSpan == At(raw, "doc😀.md")
-                    && body.GetLinePosition(body.Links.Single().RawSpan.Start) == new MarkdownLinePosition(5, 1),
+                    && body.GetLinePosition(body.Links!.Single().RawSpan.Start) == new MarkdownLinePosition(5, 1),
                     "A leading BOM, CRLF and surrogate pairs must keep their original UTF-16 positions.");
             }
         }

@@ -42,14 +42,28 @@ foreach (var fixture in fixtures)
             fixture.Id + ": independent UTF-16 line/column oracle differs.");
     validation.Add(new
     {
-        fixture.Id, utf16Length = fixture.Raw.Length, inputSha256 = Hash(Encoding.UTF8.GetBytes(fixture.Raw)),
+        fixture.Id,
+        utf16Length = fixture.Raw.Length,
+        inputSha256 = Hash(Encoding.UTF8.GetBytes(fixture.Raw)),
         expectedCommonFactsSha256 = Hash(Encoding.UTF8.GetBytes(expected)),
         expectedLocationsSha256 = Hash(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(expectedLocations))),
-        headings = fixture.Expected.Headings.Length, links = fixture.Expected.Links.Length, fencedCode = fixture.Expected.Code.Length,
-        locations = expectedLocations.Length, status = synta.Status.ToString(), resourceDiagnostics = synta.Diagnostics.Count(d => d.Origin == "resource"),
-        rawCoverage = synta.Coverage.RawPositions.ToString(), mappingCoverage = synta.Coverage.DecodedMapping.ToString(),
-        synta.ParserVersion, synta.OptionsHash, extraSyntamarkFacts = new { sections = synta.Sections.Count, textRegions = synta.TextRegions.Count,
-            referenceDefinitions = synta.Links.Count(l => l.Kind == MarkdownLinkKind.ReferenceDefinition), sourceSegments = synta.Headings.Sum(h => h.Text.SourceSegments.Count) },
+        headings = fixture.Expected.Headings.Length,
+        links = fixture.Expected.Links.Length,
+        fencedCode = fixture.Expected.Code.Length,
+        locations = expectedLocations.Length,
+        status = synta.Status.ToString(),
+        resourceDiagnostics = synta.Diagnostics.Count(d => d.Origin == "resource"),
+        rawCoverage = synta.Coverage.RawPositions.ToString(),
+        mappingCoverage = synta.Coverage.DecodedMapping.ToString(),
+        synta.ParserVersion,
+        synta.OptionsHash,
+        extraSyntamarkFacts = new
+        {
+            sections = synta.Sections.Count,
+            textRegions = synta.TextRegions.Count,
+            referenceDefinitions = synta.Links.Count(l => l.Kind == MarkdownLinkKind.ReferenceDefinition),
+            sourceSegments = synta.Headings.Sum(h => h.Text.SourceSegments.Count)
+        },
         snapshotType = fixture.Snapshot.GetType().FullName,
         snapshotToStringReusesOriginal = ReferenceEquals(fixture.Raw, fixture.Snapshot.ToString()),
         independentOracles = "Constructed from unique raw tokens, explicit decoded values, and a separate raw UTF-16 CR/LF scanner before any timing.",
@@ -88,13 +102,22 @@ Sink.Value = null;
 var identity = ParseFacts(fixtures[0].Raw);
 var output = new
 {
-    contract = "bounded-common-facts-and-roslyn-locations/1", label = args[1], processOrder = args[0], engineOrder = order,
-    timestampUtc = DateTime.UtcNow, processId = Environment.ProcessId,
-    framework = RuntimeInformation.FrameworkDescription, os = RuntimeInformation.OSDescription,
-    cpu = Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER"), processors = Environment.ProcessorCount,
-    tieredCompilation = Environment.GetEnvironmentVariable("DOTNET_TieredCompilation"), serverGc = System.Runtime.GCSettings.IsServerGC,
+    contract = "bounded-common-facts-and-roslyn-locations/1",
+    label = args[1],
+    processOrder = args[0],
+    engineOrder = order,
+    timestampUtc = DateTime.UtcNow,
+    processId = Environment.ProcessId,
+    framework = RuntimeInformation.FrameworkDescription,
+    os = RuntimeInformation.OSDescription,
+    cpu = Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER"),
+    processors = Environment.ProcessorCount,
+    tieredCompilation = Environment.GetEnvironmentVariable("DOTNET_TieredCompilation"),
+    serverGc = System.Runtime.GCSettings.IsServerGC,
     loadContext = "Non-dedicated workstation; other agent/build activity and OS scheduling are uncontrolled. No wall-clock CI gate.",
-    samplesPerWorkload = 5, warmupBatches = 1, coldMeasurements = "None. All reported timings follow validation and a complete untimed workload batch; not process-start or JIT latency.",
+    samplesPerWorkload = 5,
+    warmupBatches = 1,
+    coldMeasurements = "None. All reported timings follow validation and a complete untimed workload batch; not process-start or JIT latency.",
     snapshotLineIndex = "Shared immutable SourceText snapshots and their line indexes are warmed by preflight. Timed ToString materializes the genuine SubText; Location objects are new per operation.",
     memoryContract = "Retained managed heap delta after full collection, eight simultaneous outputs. Input/snapshot and shared pipelines are pre-existing roots. No native memory/RSS claim; small deltas are noisy.",
     stages = new[]
@@ -105,12 +128,20 @@ var output = new
     },
     decodedSubset = "Heading text and link labels/targets/titles; fenced code logical content with exactly one terminal line separator excluded. CRLF is normalized to LF in code only. No arbitrary decoded-substring mapping in either common stage.",
     syntamark = new { profile = options.ProfileId, identity.ParserVersion, identity.OptionsHash, assembly = AssemblyIdentity(typeof(Syntamark.MarkdownParser).Assembly), options },
-    markdig = new { packageVersion = "1.5.1", assembly = AssemblyIdentity(typeof(Markdig.Markdown).Assembly), preciseSourceLocation = builder.PreciseSourceLocation,
-        extensions = pipeline.Extensions.Select(e => e.GetType().FullName).ToArray(), pipeline.MaximumNestingDepth,
-        resourceStatus = "No equivalent accounting/cancellation adapter. Fixed bounded fixtures validate normally; not an adversarial resource-contract test." },
+    markdig = new
+    {
+        packageVersion = "1.5.1",
+        assembly = AssemblyIdentity(typeof(Markdig.Markdown).Assembly),
+        preciseSourceLocation = builder.PreciseSourceLocation,
+        extensions = pipeline.Extensions.Select(e => e.GetType().FullName).ToArray(),
+        pipeline.MaximumNestingDepth,
+        resourceStatus = "No equivalent accounting/cancellation adapter. Fixed bounded fixtures validate normally; not an adversarial resource-contract test."
+    },
     roslyn = new { packageVersion = "4.14.0", assembly = AssemblyIdentity(typeof(SourceText).Assembly), compilerHost = "Not measured. This is .NET 10 CLI application use of SourceText/Location." },
     yamlRuntimeDependency = new { packageVersion = "18.1.0", usedByFixtures = false },
-    validation, results, retained,
+    validation,
+    results,
+    retained,
 };
 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(args[2]))!);
 using (var stream = new FileStream(args[2], FileMode.CreateNew))
@@ -144,9 +175,13 @@ void Measure(string fixture, string engine, string stage, int operations, Func<o
     for (var i = 0; i < 5; i++)
     {
         Sink.Value = null;
-        GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
         var bytes = GC.GetAllocatedBytesForCurrentThread();
-        var gen0 = GC.CollectionCount(0); var gen1 = GC.CollectionCount(1); var gen2 = GC.CollectionCount(2);
+        var gen0 = GC.CollectionCount(0);
+        var gen1 = GC.CollectionCount(1);
+        var gen2 = GC.CollectionCount(2);
         var start = Stopwatch.GetTimestamp();
         Batch(operations, operation);
         var ns = Stopwatch.GetElapsedTime(start).TotalNanoseconds;
@@ -157,7 +192,8 @@ void Measure(string fixture, string engine, string stage, int operations, Func<o
 }
 static void Batch(int count, Func<object> operation)
 {
-    for (var i = 0; i < count; i++) Sink.Value = operation();
+    for (var i = 0; i < count; i++)
+        Sink.Value = operation();
 }
 [MethodImpl(MethodImplOptions.NoInlining)]
 static object Retained(string fixture, string engine, string stage, Func<object> operation)
@@ -165,7 +201,8 @@ static object Retained(string fixture, string engine, string stage, Func<object>
     Sink.Value = null;
     var cohort = new object[8];
     var before = GC.GetTotalMemory(true);
-    for (var i = 0; i < cohort.Length; i++) cohort[i] = operation();
+    for (var i = 0; i < cohort.Length; i++)
+        cohort[i] = operation();
     var after = GC.GetTotalMemory(true);
     GC.KeepAlive(cohort);
     return new { fixture, engine, stage, outputs = cohort.Length, retainedBytes = after - before, bytesPerOutput = (after - before) / (double)cohort.Length };
@@ -180,15 +217,22 @@ static CommonFacts FromSyntamark(SyntaDocument document) => new(
     document.Fences.Select(f => new CodeFact(f.Info!, CodeContent(f.Content.Text!), RangeFact.From(f.RawSpan))).ToArray());
 static CommonFacts FromMarkdig(Markdig.Syntax.MarkdownDocument document)
 {
-    var headings = new List<HeadingFact>(); var links = new List<LinkFact>(); var code = new List<CodeFact>();
+    var headings = new List<HeadingFact>();
+    var links = new List<LinkFact>();
+    var code = new List<CodeFact>();
     foreach (var node in document.Descendants())
         switch (node)
         {
-            case HeadingBlock h: headings.Add(new(h.Level, InlineText(h.Inline!), RangeFact.From(h.Span))); break;
-            case LinkInline l: links.Add(new(l.IsImage, InlineText(l), l.Url!, l.Title, RangeFact.From(l.Span), RangeFact.From(l.UrlSpan))); break;
+            case HeadingBlock h:
+                headings.Add(new(h.Level, InlineText(h.Inline!), RangeFact.From(h.Span)));
+                break;
+            case LinkInline l:
+                links.Add(new(l.IsImage, InlineText(l), l.Url!, l.Title, RangeFact.From(l.Span), RangeFact.From(l.UrlSpan)));
+                break;
             case FencedCodeBlock f:
                 var content = new StringBuilder();
-                for (var i = 0; i < f.Lines.Count; i++) content.Append(f.Lines.Lines[i].Slice).Append('\n');
+                for (var i = 0; i < f.Lines.Count; i++)
+                    content.Append(f.Lines.Lines[i].Slice).Append('\n');
                 code.Add(new(f.Info!, CodeContent(content.ToString()), RangeFact.From(f.Span)));
                 break;
         }
@@ -200,12 +244,23 @@ static string InlineText(ContainerInline container)
     foreach (var child in container)
         switch (child)
         {
-            case LiteralInline literal: text.Append(literal.Content); break;
-            case HtmlEntityInline entity: text.Append(entity.Transcoded); break;
-            case CodeInline code: text.Append(code.Content); break;
-            case LineBreakInline: text.Append('\n'); break;
-            case ContainerInline nested: text.Append(InlineText(nested)); break;
-            default: throw new NotSupportedException("Not part of the validated common subset: " + child.GetType().Name);
+            case LiteralInline literal:
+                text.Append(literal.Content);
+                break;
+            case HtmlEntityInline entity:
+                text.Append(entity.Transcoded);
+                break;
+            case CodeInline code:
+                text.Append(code.Content);
+                break;
+            case LineBreakInline:
+                text.Append('\n');
+                break;
+            case ContainerInline nested:
+                text.Append(InlineText(nested));
+                break;
+            default:
+                throw new NotSupportedException("Not part of the validated common subset: " + child.GetType().Name);
         }
     return text.ToString();
 }
@@ -223,18 +278,33 @@ static LocationFact ExpectedLocation(string raw, RangeFact range) => new(range.S
 
 static LineFact PositionAt(string raw, int offset)
 {
-    var line = 0; var column = 0;
+    var line = 0;
+    var column = 0;
     for (var i = 0; i < offset; i++)
     {
-        if (raw[i] == '\r') { if (i + 1 < offset && raw[i + 1] == '\n') i++; line++; column = 0; }
-        else if (raw[i] == '\n') { line++; column = 0; }
-        else column++;
+        if (raw[i] == '\r')
+        {
+            if (i + 1 < offset && raw[i + 1] == '\n')
+                i++;
+            line++;
+            column = 0;
+        }
+        else if (raw[i] == '\n')
+        {
+            line++;
+            column = 0;
+        }
+        else
+            column++;
     }
     return new(line, column);
 }
 static Fixture CreateFixture(string id, int units, int operations)
 {
-    var raw = new StringBuilder(); var headings = new List<HeadingFact>(); var links = new List<LinkFact>(); var code = new List<CodeFact>();
+    var raw = new StringBuilder();
+    var headings = new List<HeadingFact>();
+    var links = new List<LinkFact>();
+    var code = new List<CodeFact>();
     for (var i = 0; i < units; i++)
     {
         var n = i.ToString("D3", System.Globalization.CultureInfo.InvariantCulture);
@@ -267,18 +337,26 @@ static Fixture CreateFixture(string id, int units, int operations)
     Check(snapshot.ToString() == input, "Snapshot must contain exactly the same raw fixture.");
     return new(id, input, new(headings.ToArray(), links.ToArray(), code.ToArray()), snapshot, operations);
 }
-static object AssemblyIdentity(Assembly assembly) => new { name = assembly.FullName,
+static object AssemblyIdentity(Assembly assembly) => new
+{
+    name = assembly.FullName,
     informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion,
-    sha256 = Hash(File.ReadAllBytes(assembly.Location)) };
+    sha256 = Hash(File.ReadAllBytes(assembly.Location))
+};
 static string Hash(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
-static void Check(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
+static void Check(bool condition, string message)
+{
+    if (!condition)
+        throw new InvalidOperationException(message);
+}
 
 internal sealed record RangeFact(int Start, int Length)
 {
     internal static RangeFact From(RawSpan span) => new(span.Start, span.Length);
     internal static RangeFact From(SourceSpan span)
     {
-        if (span == SourceSpan.Empty || span.Start < 0 || span.End < span.Start) throw new InvalidOperationException("Common subset requires known nonempty ranges.");
+        if (span == SourceSpan.Empty || span.Start < 0 || span.End < span.Start)
+            throw new InvalidOperationException("Common subset requires known nonempty ranges.");
         return new(span.Start, checked(span.End - span.Start + 1));
     }
 }
@@ -296,7 +374,8 @@ internal sealed record LocationFact(int Start, int Length, LineFact StartLine, L
 {
     internal static LocationFact From(Location location)
     {
-        var span = location.SourceSpan; var line = location.GetLineSpan();
+        var span = location.SourceSpan;
+        var line = location.GetLineSpan();
         return new(span.Start, span.Length, new(line.StartLinePosition.Line, line.StartLinePosition.Character), new(line.EndLinePosition.Line, line.EndLinePosition.Character));
     }
 }

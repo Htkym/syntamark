@@ -45,6 +45,6 @@ var standard = MarkdownParser.Parse(raw, "example", "input.md", options: options
 
 開発版の `MarkdownParser.ParseWithSyntax` は、一回の解析から既存 facts と読み取り専用の構文 view を返します。構造が必要な caller だけが明示的に使用します。[構文 API](docs/syntax-design.md)、[prose の利用例](docs/prose-consumer.md)、[Roslyn/source package の統合例](docs/roslyn-integration.md)に使い方と位置情報の限界を記載しています。
 
-改善の履歴は[初回の記録](docs/foundation-progress.md)、標準対応は[対応表](docs/commonmark-support.md)、時間・割当て・保持メモリの観測は[性能改善](docs/performance.md)と[Markdig との比較](docs/library-comparison.md)を参照してください。現在の互換プロファイルは CommonMark の完全準拠を表しません。
+改善の全体は[実装・検証記録](docs/implementation-progress.md)、履歴は[初回の記録](docs/foundation-progress.md)、標準対応は[対応表](docs/commonmark-support.md)、時間・割当て・保持メモリの観測は[性能改善](docs/performance.md)と[Markdig との比較](docs/library-comparison.md)を参照してください。現在の互換プロファイルは CommonMark の完全準拠を表しません。
 
 プロジェクトのライセンスはMITです。著作権、第三者データと依存ライブラリの通知はLICENSE、THIRD-PARTY-NOTICES.md、licenses/に記載しています。eng/markdown/source-history.jsonは移管元の履歴対応を保持します。

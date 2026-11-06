@@ -75,15 +75,22 @@ internal static class MdSyntaxFactory
         CancellationToken cancellationToken, IReadOnlyList<MdLink>? links = null, MdParseContext? context = null,
         string? rawText = null)
     {
-        var linkFacts = new Dictionary<MdRawRange, MdLink>();
+        var linkTargets = new Dictionary<MdRawRange, MdRawRange?>();
         if (links is not null)
             foreach (var link in links)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 context?.Scan();
                 if (link.Kind != MdLinkKind.ReferenceDefinition)
-                    linkFacts[link.RawSpan] = link;
+                    linkTargets[link.RawSpan] = link.TargetRawSpan;
             }
+        return CreateWithTargets(blocks, rawLength, bodyStart, cancellationToken, linkTargets, context, rawText);
+    }
+
+    internal static MdSyntaxNode CreateWithTargets(IReadOnlyList<LithoBlock> blocks, int rawLength, int bodyStart,
+        CancellationToken cancellationToken, IReadOnlyDictionary<MdRawRange, MdRawRange?> linkTargets,
+        MdParseContext? context = null, string? rawText = null)
+    {
         var pending = new Stack<Frame>();
         pending.Push(new Frame(null, blocks));
         while (pending.Count != 0)
@@ -101,7 +108,7 @@ internal static class MdSyntaxFactory
             context?.Emit();
             var node = frame.Source is null
                 ? new MdSyntaxNode(MdSyntaxKind.Document, new MdRawRange(0, rawLength), frame.Children)
-                : Convert(frame.Source, frame.Children, bodyStart, rawLength, linkFacts, cancellationToken, context, rawText);
+                : Convert(frame.Source, frame.Children, bodyStart, rawLength, linkTargets, cancellationToken, context, rawText);
             if (pending.Count == 0)
                 return node;
             pending.Peek().Children.Add(node);
@@ -148,7 +155,7 @@ internal static class MdSyntaxFactory
     }
 
     private static MdSyntaxNode Convert(LithoNode node, List<MdSyntaxNode> children,
-        int bodyStart, int rawLength, IReadOnlyDictionary<MdRawRange, MdLink> links,
+        int bodyStart, int rawLength, IReadOnlyDictionary<MdRawRange, MdRawRange?> links,
         CancellationToken cancellationToken, MdParseContext? context, string? rawText)
     {
         MdRawRange? Range(SourceSpan? span)
@@ -216,12 +223,12 @@ internal static class MdSyntaxFactory
                     raw, children, code.Text, codeInfo: code.Info);
             case LithoLink link:
                 var target = raw.HasValue && links.TryGetValue(raw.Value, out var fact)
-                    ? fact.TargetRawSpan : Range(link.LinkSyntax?.Target);
+                    ? fact : Range(link.LinkSyntax?.Target);
                 return new(link.Image ? MdSyntaxKind.Image : MdSyntaxKind.Link, raw, children,
                     target: link.Url, targetRawSpan: target, title: link.Title, referenceLabel: link.LinkSyntax?.ReferenceLabel);
             case LithoAutolink autolink:
                 var autolinkTarget = raw.HasValue && links.TryGetValue(raw.Value, out var autolinkFact)
-                    ? autolinkFact.TargetRawSpan : null;
+                    ? autolinkFact : null;
                 return new(MdSyntaxKind.Autolink, raw, children, autolink.Text,
                     target: autolink.Href, targetRawSpan: autolinkTarget);
             case LithoParagraph:

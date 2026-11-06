@@ -85,6 +85,7 @@ QueryChecks.Run();
 AllocationChecks.Run(runtime, portable);
 PublicAllocationChecks.Run();
 MappingFusionChecks.Run(runtime, portable);
+AnalysisChecks.Run(portable);
 MappingRegressionChecks.Run(portable);
 CommonMarkInlineChecks.Run(portable);
 ReviewFixChecks.Run(runtime, portable);

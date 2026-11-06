@@ -34,6 +34,8 @@ internal static class SyntaxAndListBenchmarks
             cpu = Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER"),
             processors = Environment.ProcessorCount,
             tieredCompilation = Environment.GetEnvironmentVariable("DOTNET_TieredCompilation"),
+            serverGc = System.Runtime.GCSettings.IsServerGC,
+            processId = Environment.ProcessId,
             assemblySha256 = Hash(File.ReadAllBytes(assembly.Location)),
             probe.ParserVersion,
             probe.ProfileId,

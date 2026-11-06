@@ -21,7 +21,25 @@ $properties = @()
 if ($CandidateVersion) {
     $properties = @("-p:SyntamarkSourceVersion=$CandidateVersion", '-p:SyntamarkCandidateMode=true',
         "-p:SyntamarkExpectedParserVersion=$ExpectedParserVersion")
-    & dotnet restore $integration @properties --source $CandidateFeed --source https://api.nuget.org/v3/index.json
+    $feedPath = (Resolve-Path -LiteralPath $CandidateFeed).Path
+    $escapedFeed = [System.Security.SecurityElement]::Escape($feedPath)
+    $candidateConfig = Join-Path $output 'NuGet.Config'
+    $configText = @"
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="candidate" value="$escapedFeed" />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+  </packageSources>
+  <packageSourceMapping>
+    <packageSource key="candidate"><package pattern="Syntamark.Source" /></packageSource>
+    <packageSource key="nuget.org"><package pattern="*" /></packageSource>
+  </packageSourceMapping>
+</configuration>
+"@
+    [System.IO.File]::WriteAllText($candidateConfig, $configText, [System.Text.UTF8Encoding]::new($false))
+    & dotnet restore $integration @properties --configfile $candidateConfig
 }
 else {
     & dotnet restore $integration --locked-mode

@@ -43,6 +43,8 @@ pwsh -File tests/Syntamark.Roslyn.Integration/Verify.ps1 `
 
 2026-11-06、Windows / SDK 10.0.403 で公開済み source 1.0.1 の driver と実 compiler canary が通った。sample build は警告・エラーとも 0。compiler consumer の初回は意図した `SMC000` / `SMC001` の2警告、編集後は `SMC000` の1警告で、load failure / analyzer exception はなかった。
 
+commit `74ab02314e7d41ef0446ffe270d14e9062e36976` から作った未公開 source package も、同じ実 host と candidate mode で通った。実ロードした parser stamp は `1/a6a14ab542fa607d81208f8dcb67a4243b807ac744d5492cf4e067f872170b86`。candidate restore は XML escape した local feed と nuget.org を専用 NuGet.Config に置き、Syntamark.Source の取得を local feed に限定する。検証用番号の package を公開したことは意味しない。
+
 driver は BOM を含む snapshot の raw `[24,36)`、Roslyn の zero-based `(3,2)` を確認する。実 compiler の診断は1-based の4行3列から15列。file reader が BOM を encoding marker として消費する場合も、解析と診断が同じ snapshot を使う。raw はファイルの byte offset ではない。
 
 driver では編集・削除・rename・`.md` 対象外化・options 変更・読込不能・scan budget 停止・quote prefix をまたぐ複数位置・8並列解析・事前キャンセル・snapshot 読取時のキャンセルを確認した。`Syntamark.Compilation.SourceText` と Roslyn の `SourceText`、payload の `IsExternalInit` の一度だけの定義も確認する。

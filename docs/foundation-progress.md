@@ -43,6 +43,8 @@ LithoSharp は main `1c1b54c86ef75511f8af30d7f3d3fc445d084909` の [runtime comp
 
 通常 CI は同じ検証に加え、公開済み source package の canary と、対象 commit から作る未公開の source package を実 compiler host で検査する。`2.0.0-preview.20261106` は専用の一時 feed/cache で使う検証用番号であり、公開候補の発行や immutable registry の更新ではない。manifest の stamp、source target、実ロードした parser stamp を照合する。検証出力は workflow artifact として保持する。構文差分129件を許す inventory と、位置・mapping の invariant 失敗を許さない gate を区別する。
 
+ローカルでは source commit `74ab02314e7d41ef0446ffe270d14e9062e36976` の source package を実際に pack して消費した。package SHA-256 は `3a6ae840e103da88e8fef99406d3bfa0c8155e32329e77273fbad42a8b9514ba`。stage の22ファイルの byte 検査、manifest と実 compiler の stamp 照合、YamlDotNet 18.1.0 の実ロード、空 destination の `[42,42)`、診断の4行3〜15列、編集後の警告消去が通った。検証スクリプトの candidate restore は、Windows で URL が local path と解釈されたため、XML escape した専用 NuGet.Config に修正した。既存 lock と公開 package は変更していない。
+
 公式例の章別対応状況は [CommonMark 対応表](commonmark-support.md)、Markdig の共通出力と差分は [比較結果](library-comparison.md)、compiler host の条件は [Roslyn 統合](roslyn-integration.md)を参照する。
 
 Span 化や cache 最適化の効果は未測定。今回の位置修正を高速化として評価しない。次は公式例で最大の差分カテゴリを選び、現 parser の限定修正と backend adapter の制約を比較した上で、SM 03 の opt-in profile と SM 04 の章別対応量を決める。core への Roslyn/Markdig 依存追加、公開 AST、prose 契約、consumer の採用変更、Rust、merge/release は今回の範囲に含めない。

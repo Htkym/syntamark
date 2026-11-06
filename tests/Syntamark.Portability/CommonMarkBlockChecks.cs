@@ -123,9 +123,142 @@ internal static class CommonMarkBlockChecks
         Console.WriteLine("CommonMark block HTML, reference raw positions, and tab/fence checks PASS.");
     }
 
+    internal static void ReviewReferenceRanges(Assembly runtime, Assembly portable)
+    {
+        var cases = new[]
+        {
+            ("quote-tab-eof", ">\t[r]: /u", "[r]: /u", "r", "/u"),
+            ("quote-tab-use", ">\t[r]: /u\n>\t[r]\n", "[r]: /u", "r", "/u"),
+            ("nested-quote-tab", ">>\t[r]: /u\r\n>>\t[r]\r\n", "[r]: /u", "r", "/u"),
+            ("list-quote-tab", "1. >\t[r]: /u\n   >\t[r]\n", "[r]: /u", "r", "/u"),
+            ("continued-target", ">\t[r]:\n>\t /u\n>\t[r]\n", "[r]:\n>\t /u", "r", "/u"),
+            ("continued-label", "> [r\n>\tmore]: /u\n>\n> [r more]\n", "[r\n>\tmore]: /u", "r\n  more", "/u"),
+            ("empty-target", ">\t[r]: <>\r\n>\t[r]\r\n", "[r]: <>", "r", ""),
+            ("space-control", "  [r]: /u\n\n[r]\n", "  [r]: /u", "r", "/u"),
+        };
+        foreach (var assembly in new[] { runtime, portable })
+            foreach (var (name, input, expectedDefinition, expectedLabel, expectedTarget) in cases)
+            {
+                var facts = ReviewFacts(assembly, input);
+                Check(Get<object>(facts, "Status").ToString() == "Complete", name + ": reference parsing did not complete.");
+                var links = ((IEnumerable)Get<object>(facts, "Links")).Cast<object>().ToArray();
+                var definition = links.Single(link => Get<object>(link, "Kind").ToString() == "ReferenceDefinition");
+                var definitionSpan = ReviewSpan(Get<object>(definition, "RawSpan"), input, name + " definition");
+                Check(definitionSpan == new RawSpan(input.IndexOf(expectedDefinition, StringComparison.Ordinal), expectedDefinition.Length)
+                    && Slice(input, definitionSpan) == expectedDefinition,
+                    name + ": definition raw slice differs: " + Display(Slice(input, definitionSpan)));
+                Check(Get<string>(definition, "Target") == expectedTarget, name + ": destination value changed.");
+                var target = Get<object?>(definition, "TargetRawSpan");
+                Check(target is not null, name + ": destination range became unknown.");
+                var targetSpan = ReviewSpan(target!, input, name + " target");
+                var targetStart = expectedTarget.Length == 0 ? input.IndexOf("<>", StringComparison.Ordinal) + 1
+                    : input.IndexOf(expectedTarget, StringComparison.Ordinal);
+                Check(targetSpan == new RawSpan(targetStart, expectedTarget.Length) && Slice(input, targetSpan) == expectedTarget,
+                    name + ": destination raw slice differs at " + targetSpan.Start + ":" + targetSpan.Length);
+                var label = Get<object>(definition, "Label");
+                Check(Get<string>(label, "Text") == expectedLabel, name + ": label text differs.");
+                var segments = ((IEnumerable)Get<object>(label, "SourceSegments")).Cast<object>().ToArray();
+                Check(segments.Length != 0, name + ": label mapping is absent.");
+                var firstLabelSpan = ReviewSpan(Get<object>(segments[0], "RawSpan"), input, name + " label start");
+                Check(firstLabelSpan.Start == input.IndexOf("[r", StringComparison.Ordinal) + 1
+                    && Slice(input, firstLabelSpan).StartsWith('r'), name + ": label starts outside the original r token.");
+                var decodedCursor = 0;
+                foreach (var segment in segments)
+                {
+                    var kind = Get<object>(segment, "Kind").ToString();
+                    Check(kind is "Linear" or "Atomic", name + ": representable label mapping became unknown.");
+                    var rawSpan = ReviewSpan(Get<object>(segment, "RawSpan"), input, name + " label segment");
+                    var decodedSpan = ReviewSpan(Get<object>(segment, "DecodedSpan"), expectedLabel, name + " decoded label segment");
+                    Check(decodedSpan.Start == decodedCursor, name + ": label mapping has a decoded gap or overlap at " + decodedCursor);
+                    decodedCursor = decodedSpan.End;
+                    if (kind == "Linear")
+                        Check(Slice(input, rawSpan) == Slice(expectedLabel, decodedSpan), name + ": linear label mapping is not the original raw slice.");
+                }
+                Check(decodedCursor == expectedLabel.Length, name + ": label mapping dropped the decoded suffix at " + decodedCursor);
+                if (name == "continued-label")
+                {
+                    var padding = segments.Single(segment => Get<object>(segment, "Kind").ToString() == "Atomic");
+                    Check(Slice(input, ReviewSpan(Get<object>(padding, "RawSpan"), input, name)) == "\t"
+                        && Slice(expectedLabel, ReviewSpan(Get<object>(padding, "DecodedSpan"), expectedLabel, name)) == "  ",
+                        name + ": expanded label spaces lost the original tab mapping.");
+                }
+                var uses = links.Where(link => Get<object>(link, "Kind").ToString() == "ReferenceUse").ToArray();
+                Check(uses.Length == (name == "quote-tab-eof" ? 0 : 1), name + ": reference use count differs.");
+                foreach (var use in uses)
+                {
+                    ReviewSpan(Get<object>(use, "RawSpan"), input, name + " use");
+                    Check(Get<object>(use, "Resolution").ToString() == "ResolvedReference" && Get<string>(use, "Target") == expectedTarget,
+                        name + ": reference use no longer resolves to the original destination.");
+                }
+            }
+        foreach (var assembly in new[] { runtime, portable })
+        {
+            const string legacy = ">\t[r]: /u\n>\t[r]\n";
+            var links = ((IEnumerable)Get<object>(ReviewFacts(assembly, legacy, "lithosharp-markdown/1"), "Links")).Cast<object>().ToArray();
+            var definition = links.Single(link => Get<object>(link, "Kind").ToString() == "ReferenceDefinition");
+            Check(Slice(legacy, ReviewSpan(Get<object>(definition, "RawSpan"), legacy, "legacy control")) == "[r]: /u",
+                "Legacy quote-tab definition range changed.");
+        }
+        Console.WriteLine("Review reference container/tab raw ranges, targets and label mappings PASS.");
+    }
+
+    internal static void ReviewHtmlTabs(Assembly runtime, Assembly portable)
+    {
+        var cases = new[]
+        {
+            ("quoted-whole-tab", "> <pre>\n> \tx\n> </pre>\n", "<pre>\n\tx\n</pre>\n", "<pre>\n> \tx\n> </pre>\n"),
+            ("root-tab-control", "<pre>\n\tx\n</pre>\n", "<pre>\n\tx\n</pre>\n", "<pre>\n\tx\n</pre>\n"),
+            ("nested-quote-tab", "> > <pre>\r\n> > \tx\r\n> > </pre>\r\n", "<pre>\n\tx\n</pre>\n", "<pre>\r\n> > \tx\r\n> > </pre>\r\n"),
+            ("list-tab", "- <pre>\n  \tx\n  </pre>\n", "<pre>\n\tx\n</pre>\n", "<pre>\n  \tx\n  </pre>\n"),
+            ("list-quote-tab", "1. > <pre>\n   > \tx\n   > </pre>\n", "<pre>\n\tx\n</pre>\n", "<pre>\n   > \tx\n   > </pre>\n"),
+            ("partly-consumed-tab-control", ">\t<pre>\n>\tx\n>\t</pre>\n", "  <pre>\n  x\n  </pre>\n", "\t<pre>\n>\tx\n>\t</pre>\n"),
+        };
+        foreach (var assembly in new[] { runtime, portable })
+            foreach (var (name, input, expected, expectedRaw) in cases)
+            {
+                var html = Descendants(Blocks(assembly, input)).Single(node => node.GetType().Name == "LithoHtmlBlock");
+                var actual = Get<string>(html, "Text");
+                Check(actual == expected, name + ": HTML literal text expected " + Display(expected) + " but got " + Display(actual));
+                var nativeSpan = ReviewSpan(Get<object>(html, "Span"), input, name + " HTML block");
+                Check(Slice(input, nativeSpan) == expectedRaw, name + ": native HTML raw envelope differs.");
+                var facts = ReviewFacts(assembly, input);
+                Check(Get<object>(facts, "Status").ToString() == "Complete", name + ": HTML parsing did not complete.");
+                var coverage = Get<object>(facts, "Coverage");
+                var opaque = ((IEnumerable)Get<object>(coverage, "UnprojectedRegions")).Cast<object>()
+                    .Single(region => Get<string>(region, "Kind") == "rawHtmlBlock");
+                Check(Slice(input, ReviewSpan(Get<object>(opaque, "RawSpan"), input, name + " opaque HTML")) == expectedRaw,
+                    name + ": published HTML raw envelope differs.");
+            }
+        Console.WriteLine("Review HTML whole-tab preservation and partial-container-tab controls PASS.");
+    }
+
+    private static object ReviewFacts(Assembly assembly, string raw, string profile = "commonmark/0.31.2")
+    {
+        const BindingFlags instance = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+        var options = assembly.GetType("Syntamark.Compilation.MdOptions", true)!.GetConstructors(instance)
+            .Single(constructor => constructor.GetParameters().Length == 6)
+            .Invoke(new object[] { 1048576, 131072, 200, 16777216, profile, 1 });
+        return assembly.GetType("Syntamark.Compilation.MdParser", true)!.GetMethods(BindingFlags.Static | BindingFlags.NonPublic)
+            .Single(method => method.Name == "Parse" && method.GetParameters().Length == 6)
+            .Invoke(null, new object?[] { raw, "review-blocks", "container.md", null, options, CancellationToken.None })!;
+    }
+
+    private static RawSpan ReviewSpan(object range, string input, string subject)
+    {
+        var start = Get<int>(range, "Start");
+        var length = Get<int>(range, "Length");
+        Check(start >= 0 && length >= 0 && (long)start + length <= input.Length,
+            subject + ": raw range " + start + ":" + length + " exceeds input length " + input.Length);
+        return new RawSpan(start, length);
+    }
+
+    private static string Display(string value) => value.Replace("\r", "\\r", StringComparison.Ordinal)
+        .Replace("\n", "\\n", StringComparison.Ordinal).Replace("\t", "\\t", StringComparison.Ordinal);
+
     private static MarkdownDocument Parse(string raw) => MarkdownParser.Parse(raw, "block-checks", "input.md", options: Standard);
     private static string Slice(string raw, RawSpan span) => raw.Substring(span.Start, span.Length);
-    private static T Get<T>(object value, string name) => (T)value.GetType().GetProperty(name)!.GetValue(value)!;
+    private static T Get<T>(object value, string name) => (T)value.GetType()
+        .GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(value)!;
     private static object[] Blocks(Assembly assembly, string input)
     {
         const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;

@@ -586,7 +586,7 @@ internal static partial class LithoBlockParser
                 var line = Lines[cursor];
                 if (kind >= 6 && IsBlank(line.Text, context))
                     break;
-                text.Append(line.Text);
+                text.Append(CodeLineText(line));
                 if (line.Break.Length != 0)
                     text.Append('\n');
                 end = RawEnd(line) + line.Break.Length;

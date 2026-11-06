@@ -134,6 +134,85 @@ internal static class MarkdownSyntaxChecks
         Console.WriteLine("PASS syntax: public consumer, raw hierarchy/facts, semantic references, HTML, runtime/source, concurrency/cancel and budget.");
     }
 
+    internal static void ReviewStrikethroughRanges(Assembly portable)
+    {
+        var cases = new[]
+        {
+            (Raw: "a ~~~~x~~~~", Text: "a x", Strikes: new RawSpan?[] { null, null }, LiteralTilde: false),
+            (Raw: "a ~~~x~~", Text: "a ~x", Strikes: new RawSpan?[] { null }, LiteralTilde: true),
+            (Raw: "a ~~x~~", Text: "a x", Strikes: new RawSpan?[] { new(2, 5) }, LiteralTilde: false),
+            (Raw: "a ~x~", Text: "a ~x~", Strikes: Array.Empty<RawSpan?>(), LiteralTilde: false),
+        };
+        var failures = new List<string>();
+        foreach (var fixture in cases)
+        {
+            try
+            {
+                var legacy = MarkdownParser.ParseWithSyntax(fixture.Raw, "syntax-review", "strikethrough");
+                CheckPortable(fixture.Raw, "lithosharp-markdown/1", legacy);
+                var ordinary = MarkdownParser.Parse(fixture.Raw, "syntax-review", "strikethrough");
+                Check(JsonSerializer.Serialize(legacy.Facts) == JsonSerializer.Serialize(ordinary)
+                    && ordinary.Status == MarkdownParseStatus.Complete
+                    && ordinary.TextRegions.Single().Content.Text == fixture.Text,
+                    "Strikethrough review preserves legacy facts and decoded text: " + fixture.Raw);
+                var root = legacy.Root ?? throw new InvalidOperationException("Strikethrough review lost its syntax root.");
+                var strikes = root.DescendantsAndSelf().Where(node => node.Kind == MarkdownSyntaxKind.Strikethrough).ToArray();
+                Check(strikes.Select(node => node.RawSpan).SequenceEqual(fixture.Strikes),
+                    "Conflicting legacy strikethrough ranges must be unknown without hiding valid ranges: " + fixture.Raw);
+                if (strikes.Length != 0)
+                {
+                    Check(root.DescendantsAndSelf().Single(node => node.Kind == MarkdownSyntaxKind.Text && node.Text == "a ").RawSpan == new RawSpan(0, 2)
+                        && root.DescendantsAndSelf().Single(node => node.Kind == MarkdownSyntaxKind.Text && node.Text == "x").RawSpan
+                            == new RawSpan(fixture.Raw.IndexOf('x'), 1),
+                        "Strikethrough review retains exact prefix and content positions: " + fixture.Raw);
+                }
+                if (fixture.LiteralTilde)
+                    Check(root.DescendantsAndSelf().Single(node => node.Kind == MarkdownSyntaxKind.Text && node.Text == "~").RawSpan == new RawSpan(2, 1),
+                        "The literal sibling keeps its exact range when a strikethrough overlaps it.");
+                Invariants(root, fixture.Raw);
+
+                var standard = MarkdownParser.ParseWithSyntax(fixture.Raw, "syntax-review", "strikethrough",
+                    options: new MarkdownParseOptions(profileId: "commonmark/0.31.2"));
+                Check(standard.Root is { } literal && literal.DescendantsAndSelf().All(node => node.RawSpan is not null
+                        && node.Kind != MarkdownSyntaxKind.Strikethrough)
+                    && standard.Facts.TextRegions.Single().Content.Text == fixture.Raw,
+                    "CommonMark keeps inline tildes literal with known positions: " + fixture.Raw);
+                Invariants(standard.Root!, fixture.Raw);
+                CheckPortable(fixture.Raw, "commonmark/0.31.2", standard);
+            }
+            catch (InvalidOperationException failure)
+            {
+                failures.Add(fixture.Raw + ": " + failure.Message);
+            }
+        }
+        Check(failures.Count == 0, string.Join(Environment.NewLine, failures));
+        Console.WriteLine("PASS syntax review: legacy strikethrough parent/sibling conflicts, exact controls, unchanged facts and both TFMs.");
+
+        void CheckPortable(string raw, string profile, MarkdownSyntaxDocument expected)
+        {
+            var options = Activator.CreateInstance(portable.GetType("Syntamark.MarkdownParseOptions", true)!,
+                [1048576, 131072, 200, 16777216, profile, 1]);
+            var parser = portable.GetType("Syntamark.MarkdownParser", true)!;
+            var actual = parser.GetMethod("ParseWithSyntax")!
+                .Invoke(null, [raw, "syntax-review", "strikethrough", null, options, CancellationToken.None])!;
+            var facts = actual.GetType().GetProperty("Facts")!.GetValue(actual)!;
+            var ordinary = parser.GetMethod("Parse")!
+                .Invoke(null, [raw, "syntax-review", "strikethrough", null, options, CancellationToken.None])!;
+            var sameSyntax = JsonSerializer.Serialize(expected) == JsonSerializer.Serialize(actual, actual.GetType());
+            Console.WriteLine(JsonSerializer.Serialize(new
+            {
+                review = "strikethrough-ranges",
+                input = raw,
+                profile,
+                runtimePortableEqual = sameSyntax,
+                nodes = expected.Root?.DescendantsAndSelf().Select(node => new { kind = node.Kind.ToString(), node.RawSpan, node.Text }).ToArray(),
+            }));
+            Check(sameSyntax
+                && JsonSerializer.Serialize(facts, facts.GetType()) == JsonSerializer.Serialize(ordinary, ordinary.GetType()),
+                profile + ": strikethrough runtime/portable syntax and unchanged ordinary facts");
+        }
+    }
+
     private static void Invariants(MarkdownSyntaxNode root, string raw)
     {
         foreach (var node in root.DescendantsAndSelf())

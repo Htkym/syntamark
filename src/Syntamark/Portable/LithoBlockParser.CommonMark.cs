@@ -152,12 +152,11 @@ internal static partial class LithoBlockParser
             {
                 var last = Lines[index + consumed - 1];
                 var map = new LithoLineMap(localStarts.ToArray(), bodyStarts.ToArray(), text.Length,
-                    Lines[index + localStarts.Count - 1].Offset + Lines[index + localStarts.Count - 1].Text.Length
-                        + Lines[index + localStarts.Count - 1].Break.Length);
+                    RawEnd(Lines[index + localStarts.Count - 1]) + Lines[index + localStarts.Count - 1].Break.Length);
                 var label = DefinitionLabelProjection(rawLabel, labelEnd, index, localStarts, bodyStarts);
                 context.Emit(1 + label.SourceSegments.Count);
                 context.Definitions.Add(new MdLink(MdLinkKind.ReferenceDefinition, MdLinkResolution.Inline, false,
-                    new MdRawRange(first.Offset, last.Offset + last.Text.Length - first.Offset), label, normalizedUrl,
+                    new MdRawRange(first.Offset, RawEnd(last) - first.Offset), label, normalizedUrl,
                     normalizedTitle, new MdRawRange(map.Global(targetStart), url.Length), rawLabel));
             }
             next = index + consumed;

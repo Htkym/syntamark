@@ -200,7 +200,7 @@ internal static class MdSyntaxFactory
                 raw = new MdRawRange(start, hardBreakSpan.End - start);
         }
         if (context is { Options.IsCommonMark: false })
-            raw = CheckLegacyEmphasisRanges(node, raw, children, cancellationToken, context);
+            raw = CheckLegacyDelimiterRanges(node, raw, children, cancellationToken, context);
         MdSyntaxNode Plain(MdSyntaxKind kind, string? text = null) => new(kind, raw, children, text);
         switch (node)
         {
@@ -259,10 +259,10 @@ internal static class MdSyntaxFactory
         }
     }
 
-    private static MdRawRange? CheckLegacyEmphasisRanges(LithoNode source, MdRawRange? raw,
+    private static MdRawRange? CheckLegacyDelimiterRanges(LithoNode source, MdRawRange? raw,
         List<MdSyntaxNode> children, CancellationToken cancellationToken, MdParseContext context)
     {
-        // Legacy delimiter arithmetic can produce emphasis ranges that contradict the hierarchy.
+        // Legacy delimiter arithmetic can produce ranges that contradict the hierarchy.
         // Retain its grammar and facts; a new view must not assert those conflicting positions as exact.
         var known = new Stack<int>();
         for (var i = 0; i < children.Count; i++)
@@ -273,9 +273,17 @@ internal static class MdSyntaxFactory
                 continue;
             if (raw is { } parent && (current.Start < parent.Start || current.End > parent.End))
             {
-                if (source is LithoEmphasis)
+                if (source is LithoEmphasis or LithoStrike)
+                {
                     raw = null;
-                else if (IsEmphasis(children[i]))
+                    if (source is LithoStrike && children[i].Kind == MdSyntaxKind.Strikethrough)
+                    {
+                        // Both strike envelopes come from the same ambiguous marker run.
+                        Forget(i);
+                        continue;
+                    }
+                }
+                else if (IsDelimiter(children[i]))
                 {
                     Forget(i);
                     continue;
@@ -287,11 +295,11 @@ internal static class MdSyntaxFactory
                 cancellationToken.ThrowIfCancellationRequested();
                 context.Scan();
                 conflict = true;
-                if (!IsEmphasis(children[known.Peek()]))
+                if (!IsDelimiter(children[known.Peek()]))
                     break;
                 Forget(known.Pop());
             }
-            if (conflict && IsEmphasis(children[i]))
+            if (conflict && IsDelimiter(children[i]))
                 Forget(i);
             else
                 known.Push(i);
@@ -303,6 +311,7 @@ internal static class MdSyntaxFactory
             context.Scan(children[index].Children.Count);
             children[index] = children[index].WithoutRawSpan();
         }
-        static bool IsEmphasis(MdSyntaxNode node) => node.Kind is MdSyntaxKind.Emphasis or MdSyntaxKind.StrongEmphasis;
+        static bool IsDelimiter(MdSyntaxNode node) => node.Kind is MdSyntaxKind.Emphasis
+            or MdSyntaxKind.StrongEmphasis or MdSyntaxKind.Strikethrough;
     }
 }

@@ -91,6 +91,66 @@ internal static class CommonMarkInlineChecks
         Console.WriteLine(JsonSerializer.Serialize(new { task = "SM-04-inlines", status = "PASS", checks = "HTML precedence/raw spans/entities/Unicode references/profile compatibility" }));
     }
 
+    internal static void ReviewShortcutFallback(Assembly portable)
+    {
+        var cases = new (string Id, string Raw, string Token, string? Target, string ReferenceLabel, bool Image, string Text, string Literal)[]
+        {
+            ("unclosed-following-label", "[foo][\n\n[foo]: /u\n", "[foo]", "/u", "foo", false, "foo[", "["),
+            ("unclosed-image-label", "![foo][\n\n[foo]: /u\n", "![foo]", "/u", "foo", true, "foo[", "["),
+            ("invalid-following-label", "[foo][ ]\n\n[foo]: /u\n", "[foo]", "/u", "foo", false, "foo[ ]", "[ ]"),
+            ("full-precedence", "[foo][bar]\n\n[foo]: /shortcut\n[bar]: /full\n", "[foo][bar]", "/full", "bar", false, "foo", ""),
+            ("collapsed-precedence", "[foo][][\n\n[foo]: /u\n", "[foo][]", "/u", "foo", false, "foo[", "["),
+            ("unresolved-full", "[foo][missing]\n\n[foo]: /shortcut\n", "[foo][missing]", null, "missing", false, "[foo][missing]", ""),
+        };
+        var options = new MarkdownParseOptions(profileId: "commonmark/0.31.2");
+        var portableOptions = Activator.CreateInstance(portable.GetType("Syntamark.MarkdownParseOptions", true)!,
+            new object[] { 1048576, 131072, 200, 16777216, "commonmark/0.31.2", 1 });
+        var portableParse = portable.GetType("Syntamark.MarkdownParser", true)!.GetMethod("Parse")!;
+        foreach (var item in cases)
+        {
+            var document = MarkdownParser.Parse(item.Raw, "review-shortcut", item.Id, options: options);
+            var counterpart = portableParse.Invoke(null,
+                new object?[] { item.Raw, "review-shortcut", item.Id, null, portableOptions, CancellationToken.None })!;
+            Check(JsonSerializer.Serialize(document) == JsonSerializer.Serialize(counterpart, counterpart.GetType()),
+                item.Id + ": runtime/source facts differ.");
+            Check(document.Status == MarkdownParseStatus.Complete, item.Id + ": parsing must complete.");
+            var uses = document.Links.Where(link => link.Kind == MarkdownLinkKind.ReferenceUse).ToArray();
+            Check(uses.Length == 1, item.Id + ": exactly one reference use is expected.");
+            var use = uses[0];
+            Check(use.Target == item.Target && use.ReferenceLabel == item.ReferenceLabel && use.Image == item.Image
+                && use.Label.Text == "foo"
+                && use.Resolution == (item.Target is null ? MarkdownLinkResolution.UnresolvedReference : MarkdownLinkResolution.ResolvedReference),
+                item.Id + ": reference target, label or resolution differs.");
+            Check(use.RawSpan == new RawSpan(0, item.Token.Length) && Slice(item.Raw, use.RawSpan) == item.Token,
+                item.Id + ": the reference raw token must exclude trailing literal text.");
+            if (item.Target is not null)
+            {
+                var target = new RawSpan(item.Raw.LastIndexOf(item.Target, StringComparison.Ordinal), item.Target.Length);
+                Check(use.TargetRawSpan == target && Slice(item.Raw, target) == item.Target,
+                    item.Id + ": the target must point into its reference definition.");
+            }
+            else
+                Check(use.TargetRawSpan is null, item.Id + ": unresolved full references have no target position.");
+            var content = document.TextRegions.Single(region => region.Kind == "paragraph").Content;
+            Check(content.Text == item.Text, item.Id + ": trailing literal text changed.");
+            if (item.Literal.Length != 0)
+            {
+                var mapped = content.Map(new RawSpan(item.Text.Length - item.Literal.Length, item.Literal.Length));
+                Check(mapped.Precision == MarkdownMappingPrecision.Exact
+                    && string.Concat(mapped.RawFragments.Select(fragment => Slice(item.Raw, fragment))) == item.Literal,
+                    item.Id + ": trailing literal source mapping differs.");
+                var next = item.Token.Length;
+                foreach (var fragment in mapped.RawFragments)
+                {
+                    Check(fragment.Start == next, item.Id + ": trailing literal raw position differs.");
+                    next = fragment.End;
+                }
+                Check(next == item.Token.Length + item.Literal.Length, item.Id + ": trailing literal extent differs.");
+            }
+        }
+        Console.WriteLine("PASS review shortcut fallback: raw tokens, literal tails, images and full/collapsed precedence.");
+    }
+
     private static void AssertAtomic(string input, MarkdownTextProjection projection, string decoded, string token)
     {
         var at = projection.Text!.IndexOf(decoded, StringComparison.Ordinal);

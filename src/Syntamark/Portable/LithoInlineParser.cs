@@ -833,7 +833,8 @@ internal static class LithoInlineParser
             }
 
             var label = text.Substring(frame.Span.End, _position - frame.Span.End);
-            string? reference = null;
+            string? reference = label;
+            var referenceValidated = false;
             var after = _position + 1;
             if (after < text.Length && text[after] == '[')
             {
@@ -841,13 +842,15 @@ internal static class LithoInlineParser
                 if (labelEnd >= 0)
                 {
                     var name = text.Substring(after + 1, labelEnd - after - 1);
-                    reference = name.Length == 0 ? label : name;
-                    after = labelEnd + 1;
+                    if (name.Length == 0 || IsReferenceLabel(name))
+                    {
+                        reference = name.Length == 0 ? label : name;
+                        referenceValidated = name.Length != 0;
+                        after = labelEnd + 1;
+                    }
                 }
             }
-            else
-                reference = label;
-            if (reference is not null && !IsReferenceLabel(reference))
+            if (!referenceValidated && !IsReferenceLabel(reference))
                 reference = null;
 
             if (reference is not null

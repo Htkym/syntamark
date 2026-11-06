@@ -13,6 +13,11 @@ var portableContext = new AssemblyLoadContext("MD-03 portable canary", isCollect
 portableContext.Resolving += (_, name) => AssemblyLoadContext.Default.LoadFromAssemblyName(name);
 var portable = portableContext.LoadFromAssemblyPath(Path.Combine(AppContext.BaseDirectory, "Portable", "Syntamark.dll"));
 var portableTarget = portable.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName;
+if (args is ["--review-fixes"])
+{
+    ReviewFixChecks.Run(runtime, portable);
+    return;
+}
 FactsSnapshotChecks.Run(runtime, portable, args);
 if (args.Length != 0)
     return;
@@ -78,6 +83,7 @@ CommonMarkBlockChecks.Run(runtime, portable);
 MarkdownSyntaxChecks.Run(portable);
 MappingRegressionChecks.Run(portable);
 CommonMarkInlineChecks.Run(portable);
+ReviewFixChecks.Run(runtime, portable);
 
 static object Parse(Assembly assembly, string input)
 {

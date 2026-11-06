@@ -2,7 +2,7 @@
 
 SM05 の公開 Map/行位置 query の比較用 runner。製品に新しい依存を追加しない。YamlDotNet は製品と同じ18.1.0を固定し、比較する Syntamark assembly は `SyntamarkAssembly` で指定する。比較対象を同時に load せず、各版を独立 process で動かす。
 
-全結果と採用判断は [性能検証](../../docs/performance.md)。選んだ版の全 sample は `Results/shared-helper`、採用しなかった二重保持 cache は `Results/lazy-cache` にある。
+問い合わせの使い方と費用は [問い合わせと構文保持の費用](../../docs/performance.md)を参照する。選んだ版の全 sample は `Results/shared-helper`、採用しなかった二重保持 cache は `Results/lazy-cache` にある。
 
 ## 再実行
 
@@ -56,4 +56,4 @@ dotnet <runner>/Syntamark.Benchmarks.dll --list <source-label> <new-list-results
 - retained は32 documentの問い合わせなし/1 Map/全 Map/行 indexを別々に保持して、明示GC前後のmanaged heap差分を観測する。queryの割り当てと生存メモリを同一視しない。
 - resource中断・Failedは測定結果にしない。完全なparseを測るsmall/mediumのstatusはJSONへ保存する。
 
-`QueryChecks` は固定した基準 hash、CRLF境界、全 offset、全 projection subrange、並行した初期化を検証する。性能のwall-clock値をCIの合否条件にしていない。表の時間は専用機以外の限定的な観測であり、別の文書や実行hostへ一般化しない。
+`QueryChecks` は固定した基準 hash、CRLF境界、全 offset、全 projection subrange、並行した初期化を検証する。性能のwall-clock値をCIの合否条件にしていない。保存した測定時間は専用機以外の限定的な観測であり、別の文書や実行hostへ一般化しない。

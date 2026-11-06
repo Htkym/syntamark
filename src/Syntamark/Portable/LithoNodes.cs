@@ -126,6 +126,21 @@ internal sealed record LithoRawText(string Text, LithoLineMap Map) : LithoInline
 /// <param name="BodyEnd">Body offset one past the joined text.</param>
 internal sealed record LithoLineMap(int[] LocalStarts, int[] BodyStarts, int TextLength, int BodyEnd)
 {
+    // Table preprocessing replaces each raw \| token with one local character.
+    internal int[] EscapedPipes { get; init; } = [];
+
+    internal int UnitLength(int local) => Array.BinarySearch(EscapedPipes, local) >= 0 ? 2 : 1;
+
+    internal int RawLength(int from, int length)
+    {
+        var first = Array.BinarySearch(EscapedPipes, from);
+        var after = Array.BinarySearch(EscapedPipes, from + length);
+        return length + (after < 0 ? ~after : after) - (first < 0 ? ~first : first);
+    }
+
+    internal int GlobalEnd(int localEnd) => localEnd <= 0 ? Global(0)
+        : Global(localEnd - 1) + UnitLength(localEnd - 1);
+
     /// <summary>Single-line map over contiguous text.</summary>
     public static LithoLineMap Contiguous(int bodyStart, int length) =>
         new([0], [bodyStart], length, bodyStart + length);

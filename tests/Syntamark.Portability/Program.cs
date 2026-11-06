@@ -13,6 +13,9 @@ var portableContext = new AssemblyLoadContext("MD-03 portable canary", isCollect
 portableContext.Resolving += (_, name) => AssemblyLoadContext.Default.LoadFromAssemblyName(name);
 var portable = portableContext.LoadFromAssemblyPath(Path.Combine(AppContext.BaseDirectory, "Portable", "Syntamark.dll"));
 var portableTarget = portable.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName;
+FactsSnapshotChecks.Run(runtime, portable, args);
+if (args.Length != 0)
+    return;
 Check(portableTarget == ".NETStandard,Version=v2.0", "Portable assembly must really target netstandard2.0.");
 Check(!portable.GetReferencedAssemblies().Any(reference => reference.Name == "LithoSharp"),
     "The standalone parser must not reference the product assembly.");
@@ -70,6 +73,7 @@ foreach (var (id, input) in cases)
 
 MarkdownFactsChecks.Run();
 Md02ReviewFixChecks.Run(runtime, portable);
+MappingRegressionChecks.Run(portable);
 
 static object Parse(Assembly assembly, string input)
 {

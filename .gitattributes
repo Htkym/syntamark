@@ -1,0 +1,2 @@
+# Keep the checksum-pinned upstream fixture byte-for-byte on every checkout.
+tests/Fixtures/CommonMark/0.31.2/spec.json -text

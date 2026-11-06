@@ -87,9 +87,9 @@ internal static class MdSourceMapping
                 return Unknown(decoded);
             // A token crossing a removed prefix has no single raw token range.
             var start = map.Global(from);
-            var end = map.Global(from + length - 1) + 1;
-            return end - start == length
-                ? new(decoded, new[] { new MdSourceSegment(new MdRawRange(0, decoded.Length), new MdRawRange(start, length), MdSegmentKind.Atomic) })
+            var end = map.GlobalEnd(from + length);
+            return end - start == map.RawLength(from, length)
+                ? new(decoded, new[] { new MdSourceSegment(new MdRawRange(0, decoded.Length), new MdRawRange(start, end - start), MdSegmentKind.Atomic) })
                 : Unknown(decoded);
         }
         if (decoded.Length != length)
@@ -98,8 +98,15 @@ internal static class MdSourceMapping
         while (decodedStart < length)
         {
             var rawStart = map.Global(from + decodedStart);
+            if (map.UnitLength(from + decodedStart) != 1)
+            {
+                result.Add(new MdSourceSegment(new MdRawRange(decodedStart, 1),
+                    new MdRawRange(rawStart, map.UnitLength(from + decodedStart)), MdSegmentKind.Atomic));
+                decodedStart++;
+                continue;
+            }
             var end = decodedStart + 1;
-            while (end < length && map.Global(from + end) == rawStart + end - decodedStart)
+            while (end < length && map.UnitLength(from + end) == 1 && map.Global(from + end) == rawStart + end - decodedStart)
                 end++;
             var run = end - decodedStart;
             result.Add(new MdSourceSegment(new MdRawRange(decodedStart, run), new MdRawRange(rawStart, run), MdSegmentKind.Linear));

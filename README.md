@@ -34,4 +34,6 @@ compiler host向けにはSyntamark.Sourceを用意しています。netstandard2
 
 現在の解析契約は1.0、dialect profileは互換性を保つためlithosharp-markdown/1です。名称変更による構文追加はありません。旧LithoSharp.Markdownの固定候補と、新しいSyntamark候補は別のpackageとして保持します。
 
+汎用的な解析基盤に向けた改善状況は、[初回改善の記録](docs/foundation-progress.md)、[CommonMark 0.31.2 対応表](docs/commonmark-support.md)、[Markdig との比較](docs/library-comparison.md)、[Roslyn/source package の統合例](docs/roslyn-integration.md)にまとめています。現在の互換プロファイルは CommonMark の完全準拠を表しません。
+
 ライセンスはMITです。著作権と依存ライブラリの通知はLICENSE、THIRD-PARTY-NOTICES.md、licenses/YamlDotNet.LICENSE.txtに記載しています。eng/markdown/source-history.jsonは移管元の履歴対応を保持します。

@@ -1,0 +1,67 @@
+{
+  "baselineCommit": "6120fc0f231c952cdf01ed77784bb0f2e4a898d4",
+  "profileId": "lithosharp-markdown/1",
+  "contractVersion": "1.0",
+  "semanticExclusions": [
+    "ParserVersion"
+  ],
+  "parserVersion": "1/7e854150d5cad96e554b90a550251dce74d29b79ceef2964fa9cfa4a226e2051",
+  "fixtures": [
+    {
+      "id": "historical-entity",
+      "rawText": "# A \u0026amp; \uD83D\uDE00\r\n\r\n[link](target.md)\r\n",
+      "rawUtf16Length": 35,
+      "factsSha256": "6d9e3549a016a9f32712cb2b47c0e0968b67d22b8431e7822bf18279ad6a15f6",
+      "facadeSha256": "cec5a032e641ad9bc507fa36037b142e5329d52cb0ef3ab86de2b8c793b75bb6",
+      "linePositionsSha256": "2c5a1c10ad0744c58ae90b7c8277a267c3397bf9902552aab620423ca298cf25"
+    },
+    {
+      "id": "historical-frontmatter",
+      "rawText": "\uFEFF---\r\ntitle: x\r\n---\r\n## Y\r\n\r\n~~~csharp\r\nx\r\n~~~\r\n",
+      "rawUtf16Length": 48,
+      "factsSha256": "f5a78e59f7c8b3cd3093bba94a0700954f63ada27f351debecd3412795378ca4",
+      "facadeSha256": "879b8bb1e407e36a52bf17df2e27de4fbb9c08e2cabca6adb7fdf64ff139bd07",
+      "linePositionsSha256": "aacbeab226fc83bb018730fec78dbe881f661a871c3b16be673283fdd2271515"
+    },
+    {
+      "id": "historical-unresolved",
+      "rawText": "# Same\n# Same\n\n[link][missing]\n",
+      "rawUtf16Length": 31,
+      "factsSha256": "72e6ffb54fd2838d9dee206cbf1830b541b9e376bb59de236ac47f46d480dbc0",
+      "facadeSha256": "e4904797e90af4b39bdea603f5d1bdcf66848340c16d74bc223623572bfe0da3",
+      "linePositionsSha256": "3bb9acb17d39b3d07f578f7d152ad6fbe4f086a7fb87ad5166db057542653e26"
+    },
+    {
+      "id": "nested-reference",
+      "rawText": "\u003E # A\\* \u0026amp; \uD83D\uDE00\r\n\u003E [ref][r]\r\n\r\n[r]: /docs?a=1\u0026amp;b=2 \u0022Guide\u0022\r\n",
+      "rawUtf16Length": 64,
+      "factsSha256": "7faa023551d8de8258afe7b2df371696b24b1ce9c9195110cb845799f97646c4",
+      "facadeSha256": "96c1b4323f1bc936cf215b9670b0505884f0c772898b411689da28024cd8a672",
+      "linePositionsSha256": "c9015847e6dc973357ff7e8353447331d931da3ce3df8037aa5d07ee83bac453"
+    },
+    {
+      "id": "table-plain",
+      "rawText": "| A | B |\n| - | - |\n| same [x](/u) | same [x](/u) |\n",
+      "rawUtf16Length": 52,
+      "factsSha256": "0425aa92d6b6317ac7619526c11bb9e36e8851ad09f09af9035502d8faba57d0",
+      "facadeSha256": "d054501203dfdeac735231c2fd624e0e5dfe8180cef138729c9bc421eb63a89c",
+      "linePositionsSha256": "6b1bc4b7155ca2345947e1391ef0019fa52d7cb152d023b2b5c90a3ee159fbeb"
+    },
+    {
+      "id": "opaque-partial",
+      "rawText": "before \u003CWidget\u003E{x}\u003C/Widget\u003E after\n\n\u0060a  b\u0060\n",
+      "rawUtf16Length": 42,
+      "factsSha256": "79d640d2bd0f52b495fac6d2df11af1843417b85723c892e3830f5c5154a007e",
+      "facadeSha256": "1e8dc44c467e554cf9ef0f3a34223fb9531da8837dfa6347627a34c5cbd7f866",
+      "linePositionsSha256": "3bf9eccd9b9b938ecba5dc17388521d3271127241aac93d96dbffdbdaa631ae0"
+    },
+    {
+      "id": "code-normalization",
+      "rawText": "A \u0060 one\r\ntwo \u0060 B\n\n    a\uD83D\uDE00\r\n    b\r\n",
+      "rawUtf16Length": 34,
+      "factsSha256": "471aab962d7a2aa1b404d78f381cfc0595b117fe70bae14e26715ca290081764",
+      "facadeSha256": "127210d7445d7364240734622f691787582cba972441acde50b17f336d3766a8",
+      "linePositionsSha256": "44cdd5d7b084de63a2be5924b55836e947355a2341da6f022ccdd0f4cb71f001"
+    }
+  ]
+}

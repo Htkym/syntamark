@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <NuGetLockFilePath Condition="'$(SyntamarkCandidateMode)' == 'true'">obj/candidate.packages.lock.json</NuGetLockFilePath>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../samples/Syntamark.Roslyn/Syntamark.Roslyn.csproj" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="[4.14.0]" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="CompilerHost/**/*.cs" />
+  </ItemGroup>
+</Project>

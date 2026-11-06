@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>13.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <SyntamarkIncludeSource>true</SyntamarkIncludeSource>
+    <SyntamarkSourceVersion Condition="'$(SyntamarkSourceVersion)' == ''">1.0.1</SyntamarkSourceVersion>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <!-- This non-shipping canary declares only its tested C# host and has no analyzer release history. -->
+    <NoWarn>$(NoWarn);RS1004;RS2008</NoWarn>
+    <NuGetLockFilePath Condition="'$(SyntamarkCandidateMode)' == 'true'">obj/candidate.packages.lock.json</NuGetLockFilePath>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Syntamark.Source" Version="[$(SyntamarkSourceVersion)]" PrivateAssets="all" IncludeAssets="build" />
+    <PackageReference Include="YamlDotNet" Version="[18.1.0]" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="[4.14.0]" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

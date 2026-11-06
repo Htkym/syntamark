@@ -1,5 +1,5 @@
 name: Verify portability
-description: Build and run the existing portable component checks without issuing packages.
+description: Verify facts, CommonMark inventory, comparison, and private compiler-host packages without publishing.
 runs:
   using: composite
   steps:
@@ -7,9 +7,38 @@ runs:
       run: dotnet restore tests/Syntamark.Portability --locked-mode
     - shell: bash
       run: dotnet run --project tests/Syntamark.Portability -c Release --no-restore
-    - shell: bash
+    - name: Inventory CommonMark and compare shared facts
+      shell: bash
       run: |
-        for project in src/Syntamark/Syntamark.csproj tests/Syntamark.Portability/Syntamark.Portability.csproj; do
+        for project in tests/Syntamark.Conformance tests/Syntamark.Comparison; do
+          dotnet restore "$project" --locked-mode
+        done
+        dotnet run --project tests/Syntamark.Conformance -c Release --no-restore -- --revision "$GITHUB_SHA" --output .local/commonmark
+        dotnet run --project tests/Syntamark.Comparison -c Release --no-restore -- --output .local/comparison/current.json
+    - name: Verify the published source-package baseline
+      shell: pwsh
+      run: |
+        ./tests/Syntamark.Roslyn.Integration/Verify.ps1
+    - name: Verify formatting
+      shell: bash
+      run: |
+        for project in src/Syntamark/Syntamark.csproj tests/Syntamark.Portability/Syntamark.Portability.csproj tests/Syntamark.Conformance/Syntamark.Conformance.csproj tests/Syntamark.Comparison/Syntamark.Comparison.csproj tests/Syntamark.Roslyn.Integration/Syntamark.Roslyn.Integration.csproj; do
           dotnet format style "$project" --diagnostics IDE2001 --exclude src/Syntamark/Portable/MarkdownParserVersion.g.cs --no-restore --verify-no-changes
           dotnet format whitespace "$project" --exclude src/Syntamark/Portable/MarkdownParserVersion.g.cs --no-restore --verify-no-changes
         done
+        # The immutable source dependency has its own historical style; check the authored sample only.
+        dotnet format style samples/Syntamark.Roslyn/Syntamark.Roslyn.csproj --diagnostics IDE2001 --include samples/Syntamark.Roslyn/MarkdownTodoAnalyzer.cs --no-restore --verify-no-changes
+        dotnet format whitespace samples/Syntamark.Roslyn/Syntamark.Roslyn.csproj --include samples/Syntamark.Roslyn/MarkdownTodoAnalyzer.cs --no-restore --verify-no-changes
+    - name: Prepare a private source-package canary
+      shell: bash
+      run: |
+        node eng/markdown/New-ArtifactPair.mjs prepare "$GITHUB_SHA" 2.0.0-preview.20261106 "$RUNNER_TEMP/syntamark-canary"
+        dotnet restore "$RUNNER_TEMP/syntamark-canary/source/source.csproj" --configfile "$RUNNER_TEMP/syntamark-canary/NuGet.Config" --packages "$RUNNER_TEMP/syntamark-canary/packages"
+        dotnet pack "$RUNNER_TEMP/syntamark-canary/source/source.csproj" -c Release --no-restore -o "$RUNNER_TEMP/syntamark-canary/feed"
+    - name: Verify the candidate in the compiler host
+      shell: pwsh
+      run: |
+        $candidateRoot = Join-Path $env:RUNNER_TEMP 'syntamark-canary'
+        $env:NUGET_PACKAGES = Join-Path $candidateRoot 'packages'
+        $prepared = Get-Content -LiteralPath (Join-Path $candidateRoot 'prepared.json') -Raw | ConvertFrom-Json
+        ./tests/Syntamark.Roslyn.Integration/Verify.ps1 -CandidateVersion 2.0.0-preview.20261106 -CandidateFeed (Join-Path $candidateRoot 'feed') -ExpectedParserVersion $prepared.metadata.parserVersion

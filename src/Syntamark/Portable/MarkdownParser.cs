@@ -177,7 +177,9 @@ internal static class MdParser
                 {
                     var bodyText = raw.Substring(body.Value.Start, body.Value.Length);
                     var parsed = LithoBlockParser.ParseFactsBlocks(bodyText, context);
-                    if (includeSyntax || RetainBlocks)
+                    if (RetainBlocks)
+                        Blocks = parsed.Blocks;
+                    if (includeSyntax)
                         syntaxBlocks = parsed.Blocks;
                     if (WantsInlineTargets)
                     {
@@ -246,8 +248,6 @@ internal static class MdParser
                         ? MdSyntaxFactory.Create(syntaxBlocks, raw.Length, body!.Value.Start, cancellationToken, links, context, raw)
                         : MdSyntaxFactory.CreateWithTargets(syntaxBlocks, raw.Length, body!.Value.Start, cancellationToken,
                             syntaxTargets ?? new Dictionary<MdRawRange, MdRawRange?>(), context, raw);
-                if (RetainBlocks)
-                    Blocks = syntaxBlocks;
             }
             catch (MdResourceLimit limit)
             {

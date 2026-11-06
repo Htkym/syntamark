@@ -17,6 +17,11 @@
   "frontMatterRecovery": {
     "default": "none",
     "values": ["none", "treatAsBody"],
-    "canonicalization": "Include frontMatterRecovery:treatAsBody only when effective in lithosharp-markdown/1; none and CommonMark preserve their existing hashes"
+    "canonicalization": "Include frontMatterRecovery:treatAsBody only when effective for document input in lithosharp-markdown/1; none, body input and CommonMark omit it"
+  },
+  "inputKind": {
+    "default": "document",
+    "values": ["document", "body"],
+    "canonicalization": "Include inputKind:body for explicit body input; document preserves its existing hash"
   }
 }

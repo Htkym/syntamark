@@ -45,7 +45,8 @@ test('release version policy and one private artifact pair', {timeout: 300_000},
   let previewNumber = 4;
   while (recorded.has('2.0.0-preview.' + previewNumber)) previewNumber++;
   const unusedPreview = '2.0.0-preview.' + previewNumber;
-  const pairVersion = unusedPreview;
+  const pairVersion = '2.0.0-preview.' + BigInt('0x' + sourceCommit.slice(0, 12)).toString();
+  assert(!recorded.has(pairVersion), 'Private pair version must be unused');
   const stage = path.join(output, 'private-pair');
 
   const prepared = JSON.parse(success(cli('prepare', sourceCommit, pairVersion, stage)));

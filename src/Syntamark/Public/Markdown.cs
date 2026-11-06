@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using Syntamark.Compilation;
 
@@ -36,6 +35,28 @@ public enum MarkdownLinkKind { Inline, Autolink, ReferenceUse, ReferenceDefiniti
 public enum MarkdownLinkResolution { Inline, ResolvedReference, UnresolvedReference }
 public enum MarkdownDiagnosticSeverity { Information, Warning, Error }
 
+internal static class MarkdownCollections
+{
+    internal static IReadOnlyList<TResult> Convert<T, TResult>(IReadOnlyList<T> values, Func<T, TResult> convert)
+    {
+        if (values.Count == 0)
+            return Empty<TResult>.Values;
+        var result = new TResult[values.Count];
+        for (var i = 0; i < result.Length; i++)
+            result[i] = convert(values[i]);
+        return Array.AsReadOnly(result);
+    }
+
+    // The caller relinquishes its privately built array after this call.
+    internal static IReadOnlyList<T> FromOwned<T>(T[] values) => values.Length == 0
+        ? Empty<T>.Values : Array.AsReadOnly(values);
+
+    private static class Empty<T>
+    {
+        internal static readonly IReadOnlyList<T> Values = Array.AsReadOnly(Array.Empty<T>());
+    }
+}
+
 /// <summary>Immutable parse-only SourceSegment facts; positions refer to the original UTF-16 input.</summary>
 public sealed class MarkdownSourceSegment
 {
@@ -55,7 +76,7 @@ public sealed class MarkdownMappingResult
 {
     internal MarkdownMappingResult(MdMappingResult facts)
     {
-        RawFragments = Array.AsReadOnly(facts.RawFragments.Select(value => global::Syntamark.RawSpan.From(value)).ToArray());
+        RawFragments = MarkdownCollections.Convert(facts.RawFragments, static value => global::Syntamark.RawSpan.From(value));
         Precision = (MarkdownMappingPrecision)facts.Precision;
     }
     public IReadOnlyList<RawSpan> RawFragments { get; }
@@ -68,7 +89,7 @@ public sealed class MarkdownTextProjection
     internal MarkdownTextProjection(MdTextProjection facts)
     {
         Text = facts.Text;
-        SourceSegments = Array.AsReadOnly(facts.SourceSegments.Select(value => new MarkdownSourceSegment(value)).ToArray());
+        SourceSegments = MarkdownCollections.Convert(facts.SourceSegments, static value => new MarkdownSourceSegment(value));
     }
     public string? Text { get; }
     public IReadOnlyList<MarkdownSourceSegment> SourceSegments { get; }
@@ -96,7 +117,7 @@ public sealed class MarkdownYamlNode
         Kind = (MarkdownYamlKind)facts.Kind;
         RawSpan = global::Syntamark.RawSpan.From(facts.RawSpan);
         Scalar = new MarkdownTextProjection(facts.Scalar);
-        Children = Array.AsReadOnly(facts.Children.Select(value => new MarkdownYamlNode(value)).ToArray());
+        Children = MarkdownCollections.Convert(facts.Children, static value => new MarkdownYamlNode(value));
     }
     public MarkdownYamlKind Kind { get; }
     public RawSpan? RawSpan { get; }
@@ -263,8 +284,8 @@ public sealed class MarkdownCoverage
     {
         RawPositions = (MarkdownCoverageState)facts.RawPositions;
         DecodedMapping = (MarkdownCoverageState)facts.DecodedMapping;
-        UnprojectedRegions = Array.AsReadOnly(facts.UnprojectedRegions.Select(value => new MarkdownTextRegion(value)).ToArray());
-        Reasons = Array.AsReadOnly(facts.Reasons.Select(value => value).ToArray());
+        UnprojectedRegions = MarkdownCollections.Convert(facts.UnprojectedRegions, static value => new MarkdownTextRegion(value));
+        Reasons = facts.Reasons;
     }
     public MarkdownCoverageState RawPositions { get; }
     public MarkdownCoverageState DecodedMapping { get; }
@@ -292,13 +313,13 @@ public sealed class MarkdownDocument
         Status = (MarkdownParseStatus)facts.Status;
         BodySpan = global::Syntamark.RawSpan.From(facts.BodySpan);
         FrontMatter = new MarkdownFrontMatter(facts.FrontMatter);
-        Headings = Array.AsReadOnly(facts.Headings.Select(value => new MarkdownHeading(value)).ToArray());
-        Sections = Array.AsReadOnly(facts.Sections.Select(value => new MarkdownSection(value)).ToArray());
-        Links = Array.AsReadOnly(facts.Links.Select(value => new MarkdownLink(value)).ToArray());
-        Fences = Array.AsReadOnly(facts.Fences.Select(value => new MarkdownFence(value)).ToArray());
-        TextRegions = Array.AsReadOnly(facts.TextRegions.Select(value => new MarkdownTextRegion(value)).ToArray());
-        Diagnostics = Array.AsReadOnly(facts.Diagnostics.Select(value => new MarkdownDiagnostic(value)).ToArray());
-        Capabilities = Array.AsReadOnly(facts.Capabilities.Select(value => new MarkdownCapability(value)).ToArray());
+        Headings = MarkdownCollections.Convert(facts.Headings, static value => new MarkdownHeading(value));
+        Sections = MarkdownCollections.Convert(facts.Sections, static value => new MarkdownSection(value));
+        Links = MarkdownCollections.Convert(facts.Links, static value => new MarkdownLink(value));
+        Fences = MarkdownCollections.Convert(facts.Fences, static value => new MarkdownFence(value));
+        TextRegions = MarkdownCollections.Convert(facts.TextRegions, static value => new MarkdownTextRegion(value));
+        Diagnostics = MarkdownCollections.Convert(facts.Diagnostics, static value => new MarkdownDiagnostic(value));
+        Capabilities = MarkdownCollections.Convert(facts.Capabilities, static value => new MarkdownCapability(value));
         Coverage = new MarkdownCoverage(facts.Coverage);
     }
     private string RawText { get; }
@@ -390,11 +411,13 @@ public sealed class MarkdownParseOptions
 /// <summary>Parses owned text without rendering, site resolution, file access or user code.</summary>
 public static partial class MarkdownParser
 {
+    private static readonly MdOptions defaultOptions = new();
+
     public static MarkdownDocument Parse(string rawText, string scopeId, string sourceId,
         string? sourceVersion = null, MarkdownParseOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        var facts = MdParser.Parse(rawText, scopeId, sourceId, sourceVersion, options?.Core ?? new MdOptions(), cancellationToken);
+        var facts = MdParser.Parse(rawText, scopeId, sourceId, sourceVersion, options?.Core ?? defaultOptions, cancellationToken);
         var result = new MarkdownDocument(facts);
         cancellationToken.ThrowIfCancellationRequested();
         return result;

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 
 namespace Syntamark.Compilation;
@@ -21,8 +22,29 @@ internal readonly record struct MdRawRange
 
 internal static class MdFreeze
 {
-    internal static IReadOnlyList<T> Copy<T>(IEnumerable<T> values) => Array.AsReadOnly(values.ToArray());
-    internal static IReadOnlyList<T> Empty<T>() => Array.AsReadOnly(new T[0]);
+    internal static IReadOnlyList<T> Copy<T>(IEnumerable<T> values)
+    {
+        if (values is Snapshot<T> snapshot)
+            return snapshot;
+        if (values is ICollection<T> { Count: 0 })
+            return Empty<T>();
+        var copy = values.ToArray();
+        return Owned(copy);
+    }
+
+    internal static IReadOnlyList<T> Empty<T>() => EmptyCache<T>.Value;
+
+    // The caller transfers a private array and must never mutate it after publication.
+    internal static IReadOnlyList<T> Owned<T>(T[] values) => values.Length == 0 ? Empty<T>() : new Snapshot<T>(values);
+
+    private sealed class Snapshot<T>(T[] values) : ReadOnlyCollection<T>(values)
+    {
+    }
+
+    private static class EmptyCache<T>
+    {
+        internal static readonly IReadOnlyList<T> Value = new Snapshot<T>(Array.Empty<T>());
+    }
 }
 
 internal enum MdParseStatus { Complete, Partial, Failed }
@@ -56,6 +78,8 @@ internal sealed class MdMappingResult
         RawFragments = MdFreeze.Copy(rawFragments);
         Precision = precision;
     }
+    internal static MdMappingResult CreateOwned(MdRawRange[] rawFragments, MdMappingPrecision precision) =>
+        new(MdFreeze.Owned(rawFragments), precision);
     internal IReadOnlyList<MdRawRange> RawFragments { get; }
     internal MdMappingPrecision Precision { get; }
 }
@@ -67,6 +91,8 @@ internal sealed class MdTextProjection
         Text = text;
         SourceSegments = MdFreeze.Copy(sourceSegments);
     }
+    internal static MdTextProjection CreateOwned(string? text, MdSourceSegment[] sourceSegments) =>
+        new(text, MdFreeze.Owned(sourceSegments));
     internal string? Text { get; }
     internal IReadOnlyList<MdSourceSegment> SourceSegments { get; }
 }

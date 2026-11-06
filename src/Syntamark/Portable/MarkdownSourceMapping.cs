@@ -59,7 +59,7 @@ internal static class MdSourceMapping
                     unknown = true;
             }
             return !unknown && boundaries.Count == 1
-                ? new MdMappingResult(new[] { new MdRawRange(boundaries.Single(), 0) }, MdMappingPrecision.Exact)
+                ? MdMappingResult.CreateOwned(new[] { new MdRawRange(boundaries.Single(), 0) }, MdMappingPrecision.Exact)
                 : new MdMappingResult(MdFreeze.Empty<MdRawRange>(), MdMappingPrecision.Unknown);
         }
         var fragments = new List<MdRawRange>();
@@ -95,8 +95,8 @@ internal static class MdSourceMapping
         return new MdMappingResult(fragments, precision);
     }
 
-    internal static MdTextProjection Unknown(string? text) => new(text,
-        text is null || text.Length == 0 ? MdFreeze.Empty<MdSourceSegment>()
+    internal static MdTextProjection Unknown(string? text) => MdTextProjection.CreateOwned(text,
+        text is null || text.Length == 0 ? Array.Empty<MdSourceSegment>()
         : new[] { new MdSourceSegment(new MdRawRange(0, text.Length), null, MdSegmentKind.Unknown) });
 
     internal static MdTextProjection Local(string decoded, string original, LithoLineMap map,
@@ -104,7 +104,6 @@ internal static class MdSourceMapping
     {
         if (decoded.Length == 0)
             return new(decoded, MdFreeze.Empty<MdSourceSegment>());
-        var result = new List<MdSourceSegment>();
         if (atomic)
         {
             if (length <= 0)
@@ -113,11 +112,12 @@ internal static class MdSourceMapping
             var start = map.Global(from);
             var end = map.GlobalEnd(from + length);
             return end - start == map.RawLength(from, length)
-                ? new(decoded, new[] { new MdSourceSegment(new MdRawRange(0, decoded.Length), new MdRawRange(start, end - start), MdSegmentKind.Atomic) })
+                ? MdTextProjection.CreateOwned(decoded, new[] { new MdSourceSegment(new MdRawRange(0, decoded.Length), new MdRawRange(start, end - start), MdSegmentKind.Atomic) })
                 : Unknown(decoded);
         }
         if (decoded.Length != length)
             return Unknown(decoded);
+        var result = new List<MdSourceSegment>();
         var decodedStart = 0;
         while (decodedStart < length)
         {
@@ -139,23 +139,49 @@ internal static class MdSourceMapping
         return new(decoded, result);
     }
 
-    internal static MdTextProjection Shift(MdTextProjection text, int rawOffset) => new(text.Text,
-        text.SourceSegments.Select(s => new MdSourceSegment(s.DecodedSpan,
-            s.RawSpan.HasValue ? new MdRawRange(checked(s.RawSpan.Value.Start + rawOffset), s.RawSpan.Value.Length) : null, s.Kind)).ToArray());
+    internal static MdTextProjection Shift(MdTextProjection text, int rawOffset)
+    {
+        if (rawOffset == 0)
+            return text;
+        var segments = new MdSourceSegment[text.SourceSegments.Count];
+        for (var index = 0; index < segments.Length; index++)
+        {
+            var segment = text.SourceSegments[index];
+            segments[index] = segment.RawSpan.HasValue
+                ? new MdSourceSegment(segment.DecodedSpan,
+                    new MdRawRange(checked(segment.RawSpan.Value.Start + rawOffset), segment.RawSpan.Value.Length), segment.Kind)
+                : segment;
+        }
+        return MdTextProjection.CreateOwned(text.Text, segments);
+    }
 
     internal static MdTextProjection Join(IEnumerable<MdTextProjection> parts)
     {
+        using var enumerator = parts.GetEnumerator();
+        if (!enumerator.MoveNext())
+            return new MdTextProjection(string.Empty, MdFreeze.Empty<MdSourceSegment>());
+        var first = enumerator.Current;
+        if (first.Text is null)
+            throw new InvalidOperationException("Cannot concatenate an unprojected region.");
+        if (!enumerator.MoveNext())
+            return first;
         var text = new System.Text.StringBuilder();
         var segments = new List<MdSourceSegment>();
-        foreach (var part in parts)
+        Append(first);
+        do
+            Append(enumerator.Current);
+        while (enumerator.MoveNext());
+        return new(text.ToString(), segments);
+
+        void Append(MdTextProjection part)
         {
             if (part.Text is null)
                 throw new InvalidOperationException("Cannot concatenate an unprojected region.");
             foreach (var s in part.SourceSegments)
-                segments.Add(new MdSourceSegment(new MdRawRange(text.Length + s.DecodedSpan.Start, s.DecodedSpan.Length), s.RawSpan, s.Kind));
+                segments.Add(text.Length == 0 ? s : new MdSourceSegment(
+                    new MdRawRange(text.Length + s.DecodedSpan.Start, s.DecodedSpan.Length), s.RawSpan, s.Kind));
             text.Append(part.Text);
         }
-        return new(text.ToString(), segments);
     }
 }
 

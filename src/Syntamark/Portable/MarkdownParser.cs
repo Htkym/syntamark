@@ -102,7 +102,7 @@ internal static class MdParser
         private readonly List<MdTextRegion> unprojected = new();
         private readonly HashSet<string> reasons = new(StringComparer.Ordinal);
         private LithoAnchorIds? anchorIds;
-        private MdRawRange[] opaqueRanges = new MdRawRange[0];
+        private MdRawRange[] opaqueRanges = Array.Empty<MdRawRange>();
         private List<(string Kind, SourceSpan Span)>? htmlTokens;
         private bool unknownMapping;
         private bool incompleteRaw;
@@ -209,14 +209,17 @@ internal static class MdParser
 
         private MdTextProjection PublishText(MdTextProjection source, bool shift = true)
         {
-            if (shift)
-                source = MaskOpaque(source);
-            var text = shift ? MdSourceMapping.Shift(source, body!.Value.Start) : source;
-            var valid = new List<MdSourceSegment>();
+            var masked = shift ? MaskOpaque(source) : null;
+            var rawOffset = shift ? body!.Value.Start : 0;
+            var count = masked?.Count ?? source.SourceSegments.Count;
+            CheckProjectionShift(source, masked, rawOffset, count);
+            MdSourceSegment[]? materialized = masked is null ? null : new MdSourceSegment[count];
             var decodedEnd = 0;
             var rawEnd = -1;
-            foreach (var segment in text.SourceSegments)
+            for (var index = 0; index < count; index++)
             {
+                var segment = ProjectionSegment(source, masked, index);
+                segment = segment with { RawSpan = ShiftRaw(segment.RawSpan, rawOffset) };
                 context.Scan(segment.DecodedSpan.Length);
                 if (segment.DecodedSpan.Start != decodedEnd || segment.DecodedSpan.Length == 0)
                     throw new InvalidOperationException("Decoded mapping must cover the projected string in order.");
@@ -228,27 +231,61 @@ internal static class MdParser
                     if (rawSpan.End > raw.Length)
                         throw new InvalidOperationException("Projected raw range is outside the source.");
                     if (rawSpan.Start < rawEnd)
-                        converted = new MdSourceSegment(segment.DecodedSpan, null, MdSegmentKind.Unknown);
+                        converted = new MdMappingSegment(segment.DecodedSpan, null, MdSegmentKind.Unknown);
                     else
                         rawEnd = rawSpan.End;
                     if (segment.Kind == MdSegmentKind.Linear && converted.Kind != MdSegmentKind.Unknown)
                     {
                         if (rawSpan.Length != segment.DecodedSpan.Length)
                             throw new InvalidOperationException("Linear lengths differ.");
-                        if (string.CompareOrdinal(raw, rawSpan.Start, text.Text!, segment.DecodedSpan.Start, rawSpan.Length) != 0)
-                            converted = new MdSourceSegment(segment.DecodedSpan, rawSpan, MdSegmentKind.Atomic);
+                        if (string.CompareOrdinal(raw, rawSpan.Start, source.Text!, segment.DecodedSpan.Start, rawSpan.Length) != 0)
+                            converted = new MdMappingSegment(segment.DecodedSpan, rawSpan, MdSegmentKind.Atomic);
                     }
                 }
                 else if (segment.Kind != MdSegmentKind.Unknown)
                     throw new InvalidOperationException("Known mapping has no raw range.");
                 if (converted.Kind == MdSegmentKind.Unknown)
                     unknownMapping = true;
-                valid.Add(converted);
+                StoreProjectionSegment(source, masked, ref materialized, index, converted);
             }
-            if (text.Text is not null && decodedEnd != text.Text.Length)
+            if (source.Text is not null && decodedEnd != source.Text.Length)
                 throw new InvalidOperationException("Incomplete decoded mapping.");
-            context.Emit(valid.Count);
-            return new MdTextProjection(text.Text, valid);
+            context.Emit(count);
+            return materialized is null ? source : MdTextProjection.CreateOwned(source.Text, materialized);
+        }
+
+        private static MdMappingSegment ProjectionSegment(MdTextProjection source, List<MdMappingSegment>? masked, int index)
+        {
+            if (masked is not null)
+                return masked[index];
+            var segment = source.SourceSegments[index];
+            return new MdMappingSegment(segment.DecodedSpan, segment.RawSpan, segment.Kind);
+        }
+
+        private static MdRawRange? ShiftRaw(MdRawRange? span, int rawOffset) => span.HasValue
+            ? new MdRawRange(checked(span.Value.Start + rawOffset), span.Value.Length) : null;
+
+        private static void CheckProjectionShift(MdTextProjection source, List<MdMappingSegment>? masked, int rawOffset, int count)
+        {
+            if (rawOffset == 0)
+                return;
+            // Shifting used to complete before publication Scan/Emit. Keep its checked
+            // arithmetic at that barrier without materializing an intermediate projection.
+            for (var index = 0; index < count; index++)
+                _ = ShiftRaw(ProjectionSegment(source, masked, index).RawSpan, rawOffset);
+        }
+
+        private static void StoreProjectionSegment(MdTextProjection source, List<MdMappingSegment>? masked,
+            ref MdSourceSegment[]? materialized, int index, MdMappingSegment value)
+        {
+            if (masked is null)
+            {
+                var original = source.SourceSegments[index];
+                if (original.DecodedSpan == value.DecodedSpan && original.RawSpan == value.RawSpan && original.Kind == value.Kind)
+                    return;
+                materialized ??= source.SourceSegments.ToArray();
+            }
+            materialized![index] = new MdSourceSegment(value.DecodedSpan, value.RawSpan, value.Kind);
         }
 
         private void CheckYaml(MdYamlNode? node)
@@ -278,12 +315,18 @@ internal static class MdParser
                 context.CancellationToken.ThrowIfCancellationRequested();
                 var node = pending.Pop();
                 yield return node;
+                if (node is LithoList list)
+                {
+                    for (var item = list.Items.Count - 1; item >= 0; item--)
+                        for (var child = list.Items[item].Children.Count - 1; child >= 0; child--)
+                            pending.Push(list.Items[item].Children[child]);
+                    continue;
+                }
                 var children = node switch
                 {
                     LithoQuote quote => quote.Children,
                     LithoAdmonition admonition => admonition.Children,
                     LithoDirective directive => directive.Children,
-                    LithoList list => list.Items.SelectMany(item => item.Children).ToArray(),
                     _ => null,
                 };
                 if (children is not null)
@@ -429,29 +472,40 @@ internal static class MdParser
             return index < opaqueRanges.Length && opaqueRanges[index].Start <= span.Start && span.End <= opaqueRanges[index].End;
         }
 
-        private MdTextProjection MaskOpaque(MdTextProjection text)
+        private List<MdMappingSegment>? MaskOpaque(MdTextProjection text)
         {
             if (opaqueRanges.Length == 0)
-                return text;
-            var segments = new List<MdSourceSegment>();
-            foreach (var segment in text.SourceSegments)
+                return null;
+            List<MdMappingSegment>? segments = null;
+            for (var segmentIndex = 0; segmentIndex < text.SourceSegments.Count; segmentIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                var segment = text.SourceSegments[segmentIndex];
                 if (!segment.RawSpan.HasValue)
                 {
-                    segments.Add(segment);
+                    segments?.Add(new MdMappingSegment(segment.DecodedSpan, segment.RawSpan, segment.Kind));
                     continue;
                 }
                 var raw = segment.RawSpan.Value;
                 var index = FirstOpaque(raw.Start);
                 if (index == opaqueRanges.Length || opaqueRanges[index].Start >= raw.End)
                 {
-                    segments.Add(segment);
+                    segments?.Add(new MdMappingSegment(segment.DecodedSpan, segment.RawSpan, segment.Kind));
                     continue;
+                }
+                if (segments is null)
+                {
+                    segments = new List<MdMappingSegment>(text.SourceSegments.Count);
+                    for (var previous = 0; previous < segmentIndex; previous++)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var retained = text.SourceSegments[previous];
+                        segments.Add(new MdMappingSegment(retained.DecodedSpan, retained.RawSpan, retained.Kind));
+                    }
                 }
                 if (segment.Kind != MdSegmentKind.Linear)
                 {
-                    segments.Add(new MdSourceSegment(segment.DecodedSpan, null, MdSegmentKind.Unknown));
+                    segments.Add(new MdMappingSegment(segment.DecodedSpan, null, MdSegmentKind.Unknown));
                     continue;
                 }
                 var cursor = raw.Start;
@@ -469,11 +523,11 @@ internal static class MdParser
                 }
                 if (cursor < raw.End)
                     Add(cursor, raw.End, known: true);
-                void Add(int start, int end, bool known) => segments.Add(new MdSourceSegment(
+                void Add(int start, int end, bool known) => segments!.Add(new MdMappingSegment(
                     new MdRawRange(segment.DecodedSpan.Start + start - raw.Start, end - start),
                     known ? new MdRawRange(start, end - start) : null, known ? MdSegmentKind.Linear : MdSegmentKind.Unknown));
             }
-            return new MdTextProjection(text.Text, segments);
+            return segments;
         }
 
         private void Opaque(string kind, MdRawRange span)
@@ -491,35 +545,43 @@ internal static class MdParser
 
         private MdLink ShiftLink(MdLink link, bool maskLabel = false)
         {
-            var label = maskLabel ? MaskOpaque(link.Label) : link.Label;
+            var source = link.Label;
+            var masked = maskLabel ? MaskOpaque(source) : null;
+            var count = masked?.Count ?? source.SourceSegments.Count;
             if (maskLabel)
             {
                 // The scanner already charged the original unresolved label segments.
-                context.Emit(label.SourceSegments.Count - link.Label.SourceSegments.Count);
-                if (label.SourceSegments.Any(segment => segment.Kind == MdSegmentKind.Unknown))
-                    unknownMapping = true;
+                context.Emit(count - source.SourceSegments.Count);
+                for (var index = 0; index < count; index++)
+                    if (ProjectionSegment(source, masked, index).Kind == MdSegmentKind.Unknown)
+                    {
+                        unknownMapping = true;
+                        break;
+                    }
             }
-            label = MdSourceMapping.Shift(label, body!.Value.Start);
-            MdSourceSegment[]? corrected = null;
-            for (var index = 0; index < label.SourceSegments.Count; index++)
+            var rawOffset = body!.Value.Start;
+            CheckProjectionShift(source, masked, rawOffset, count);
+            MdSourceSegment[]? materialized = masked is null ? null : new MdSourceSegment[count];
+            for (var index = 0; index < count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var segment = label.SourceSegments[index];
-                if (segment.Kind != MdSegmentKind.Linear || !segment.RawSpan.HasValue)
-                    continue;
-                var span = segment.RawSpan.Value;
-                if (span.End > raw.Length || label.Text is null || segment.DecodedSpan.End > label.Text.Length)
-                    throw new InvalidOperationException("Link label mapping is outside its source.");
-                if (span.Length != segment.DecodedSpan.Length
-                    || string.CompareOrdinal(raw, span.Start, label.Text, segment.DecodedSpan.Start, span.Length) != 0)
+                var segment = ProjectionSegment(source, masked, index);
+                segment = segment with { RawSpan = ShiftRaw(segment.RawSpan, rawOffset) };
+                if (segment.Kind == MdSegmentKind.Linear && segment.RawSpan.HasValue)
                 {
-                    // These segments were already charged before reference resolution or resource-stop retention.
-                    corrected ??= label.SourceSegments.ToArray();
-                    corrected[index] = new MdSourceSegment(segment.DecodedSpan, span, MdSegmentKind.Atomic);
+                    var span = segment.RawSpan.Value;
+                    if (span.End > raw.Length || source.Text is null || segment.DecodedSpan.End > source.Text.Length)
+                        throw new InvalidOperationException("Link label mapping is outside its source.");
+                    if (span.Length != segment.DecodedSpan.Length
+                        || string.CompareOrdinal(raw, span.Start, source.Text, segment.DecodedSpan.Start, span.Length) != 0)
+                    {
+                        // These segments were already charged before reference resolution or resource-stop retention.
+                        segment = segment with { Kind = MdSegmentKind.Atomic };
+                    }
                 }
+                StoreProjectionSegment(source, masked, ref materialized, index, segment);
             }
-            if (corrected is not null)
-                label = new MdTextProjection(label.Text, corrected);
+            var label = materialized is null ? source : MdTextProjection.CreateOwned(source.Text, materialized);
             return new MdLink(link.Kind, link.Resolution, link.Image,
                 new MdRawRange(link.RawSpan.Start + body!.Value.Start, link.RawSpan.Length),
                 label, link.Target, link.Title,

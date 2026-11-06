@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>13</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/Syntamark/Portable/**/*.cs" Link="Portable/%(RecursiveDir)%(Filename)%(Extension)" />
+    <PackageReference Include="YamlDotNet" Version="[18.1.0]" />
+  </ItemGroup>
+</Project>

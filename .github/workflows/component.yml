@@ -38,15 +38,18 @@ jobs:
           node-version: 22
           package-manager-cache: false
       - uses: ./.github/actions/verify-portability
-      - name: Save foundation verification evidence
+      - name: Save verification evidence
         if: always()
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: syntamark-foundation-${{ github.run_id }}
+          name: syntamark-verification-${{ github.run_id }}
           path: |
             .local/commonmark/
+            .local/commonmark-standard/
+            .local/commonmark-comparison/
             .local/comparison/
             .local/roslyn-canary/
+            .local/safety.log
           include-hidden-files: true
           if-no-files-found: warn
       - name: Refuse repeated formal issuance

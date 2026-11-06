@@ -9,5 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Syntamark/Syntamark.csproj" />
     <PackageReference Include="Markdig" Version="[1.5.1]" />
+    <Compile Include="../Syntamark.Conformance/SyntaxHtml.cs" Link="SyntaxHtml.cs" />
+    <None Include="../Fixtures/CommonMark/0.31.2/spec.json" Link="Fixtures/spec.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

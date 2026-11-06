@@ -8,6 +8,10 @@ using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using Syntamark;
 
+if (args.Length > 0 && args[0] == "--commonmark-output")
+    return args.Length == 2 ? CommonMarkComparison.Run(args[1])
+        : throw new ArgumentException("Usage: Syntamark.Comparison --commonmark-output <directory>");
+
 var pipeline = new MarkdownPipelineBuilder().UsePreciseSourceLocation().Build();
 Check(ConvertMarkdig(SourceSpan.Empty) is null && ConvertMarkdig(new SourceSpan(8, 7)) == new RangeFact(8, 0)
     && ConvertMarkdig(new SourceSpan(8, 8)) == new RangeFact(8, 1), "Inclusive range and empty-sentinel conversion.");

@@ -11,8 +11,10 @@ const string fixtureHash = "d431b29d97b6f73e69d547109cf5081578fac931e72afe95639e
 var output = Path.GetFullPath(".local/commonmark");
 int? selected = null;
 var strict = false;
+var includeSyntax = false;
 string? revision = null;
 string? assemblyPath = null;
+var profile = "lithosharp-markdown/1";
 for (var i = 0; i < args.Length; i++)
 {
     switch (args[i])
@@ -26,14 +28,20 @@ for (var i = 0; i < args.Length; i++)
         case "--strict":
             strict = true;
             break;
+        case "--syntax":
+            includeSyntax = true;
+            break;
         case "--revision" when i + 1 < args.Length:
             revision = args[++i];
             break;
         case "--assembly" when i + 1 < args.Length:
             assemblyPath = Path.GetFullPath(args[++i]);
             break;
+        case "--profile" when i + 1 < args.Length:
+            profile = args[++i];
+            break;
         default:
-            throw new ArgumentException("Usage: [--example NUMBER] [--output DIRECTORY] [--revision LABEL] [--assembly DLL] [--strict]");
+            throw new ArgumentException("Usage: [--example NUMBER] [--output DIRECTORY] [--revision LABEL] [--assembly DLL] [--profile ID] [--syntax] [--strict]");
     }
 }
 
@@ -55,10 +63,11 @@ var contextType = assembly.GetType("Syntamark.Compilation.MdParseContext", true)
 var parse = assembly.GetType("Syntamark.Compilation.LithoBlockParser", true)!
     .GetMethod("ParseFactsBlocks", BindingFlags.Static | BindingFlags.NonPublic)!;
 var coreOptions = Activator.CreateInstance(optionsType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
-    null, new object[] { 1048576, 1048576, 200, 134217728, "lithosharp-markdown/1", 1 }, null)!;
+    null, new object[] { 1048576, 1048576, 200, 134217728, profile, 1 }, null)!;
 var publicOptions = Activator.CreateInstance(assembly.GetType("Syntamark.MarkdownParseOptions", true)!,
-    new object[] { 1048576, 1048576, 200, 134217728, "lithosharp-markdown/1", 1 })!;
+    new object[] { 1048576, 1048576, 200, 134217728, profile, 1 })!;
 var publicParse = assembly.GetType("Syntamark.MarkdownParser", true)!.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public)!;
+var publicSyntaxParse = assembly.GetType("Syntamark.MarkdownParser", true)!.GetMethod("ParseWithSyntax", BindingFlags.Static | BindingFlags.Public);
 object ParseFacts(string raw, string id) => publicParse.Invoke(null, new[] { raw, "commonmark-inventory", id, null, publicOptions, CancellationToken.None })!;
 var results = new List<Result>();
 foreach (var example in examples)
@@ -87,7 +96,7 @@ foreach (var example in examples)
             null, new[] { coreOptions, (object)CancellationToken.None }, null)!;
         var parsed = parse.Invoke(null, new[] { example.Markdown, context })!;
         var blocks = (IEnumerable)parsed.GetType().GetField("Item1")!.GetValue(parsed)!;
-        actual = SyntaxHtml.Render(blocks);
+        actual = SyntaxHtml.Render(blocks, decodedInfo: profile == "commonmark/0.31.2");
         var reason = SyntaxHtml.Get<IEnumerable>(facts, "Diagnostics").Cast<object>().Any(d => SyntaxHtml.Get<string>(d, "Origin") == "resource") ? "resource-limit"
             : SyntaxHtml.Get<object>(SyntaxHtml.Get<object>(facts, "FrontMatter"), "State").ToString() != "Absent" ? "profile-front-matter"
             : actual == example.Html ? "html-match" : "html-mismatch";
@@ -104,6 +113,27 @@ foreach (var example in examples)
         results.Add(new(example.Number, example.Section, "failed", "execution-error: " + (error.InnerException ?? error).Message,
             factsError is null ? "unverified" : "failed-invariants", factsStatus, factsError, actual, example.Html));
     }
+    if (includeSyntax)
+    {
+        try
+        {
+            if (publicSyntaxParse is null)
+                results[^1] = results[^1] with { Syntax = "not-observable", SyntaxError = "This revision has no public syntax entry." };
+            else
+            {
+                var syntaxDocument = publicSyntaxParse.Invoke(null, new[] { example.Markdown, "commonmark-inventory", example.Number.ToString(), null, publicOptions, CancellationToken.None })!;
+                var root = SyntaxHtml.Get<object?>(syntaxDocument, "Root");
+                if (root is null)
+                    throw new InvalidOperationException("Syntax root was not obtained with the explicit specification budget.");
+                var unknown = CheckSyntax(root, example.Markdown.Length);
+                results[^1] = results[^1] with { Syntax = "passed-invariants", SyntaxUnknownRanges = unknown };
+            }
+        }
+        catch (Exception error)
+        {
+            results[^1] = results[^1] with { Syntax = "failed-invariants", SyntaxError = (error.InnerException ?? error).Message };
+        }
+    }
 }
 
 var totals = Counts(results);
@@ -111,7 +141,7 @@ var report = new
 {
     specification = "CommonMark 0.31.2",
     fixtureSha256 = fixtureHash,
-    profileId = "lithosharp-markdown/1",
+    profileId = profile,
     sourceRevision = revision,
     parserVersion = SyntaxHtml.Get<string>(ParseFacts("", "metadata"), "ParserVersion"),
     assemblyVersion = assembly.GetName().Version?.ToString(),
@@ -121,13 +151,16 @@ var report = new
     syntaxEntry = "LithoBlockParser.ParseFactsBlocks(raw) + test-only SyntaxHtml; full facade preprocessing and resource status checked separately",
     factsScope = "Raw range bounds, ordered decoded coverage, Linear raw/decoded equality; independent golden facts remain in Portability",
     selectedExample = selected,
+    syntaxRequested = includeSyntax,
+    syntaxInvariantFailures = results.Count(r => r.Syntax == "failed-invariants"),
+    syntaxUnknownRanges = results.Sum(r => r.SyntaxUnknownRanges),
     totals,
     chapters = results.GroupBy(r => r.Section).Select(g => new { section = g.Key, counts = Counts(g), remaining = g.Where(r => r.Status != "passed").Select(r => r.Example) }),
     results,
 };
 Directory.CreateDirectory(output);
 File.WriteAllText(Path.Combine(output, "results.json"), JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }) + "\n", new UTF8Encoding(false));
-var markdown = new StringBuilder("# CommonMark 0.31.2 inventory\n\nProfile: `lithosharp-markdown/1`. This is an inventory, not a pure CommonMark conformance claim.\n\n"
+var markdown = new StringBuilder("# CommonMark 0.31.2 inventory\n\nProfile: `" + profile + "`. This is an example inventory, not a complete conformance claim.\n\n"
     + "| Section | Passed | Failed | Not observable | Skipped | Not run | Total |\n|---|---:|---:|---:|---:|---:|---:|\n");
 foreach (var chapter in results.GroupBy(r => r.Section))
 {
@@ -135,11 +168,56 @@ foreach (var chapter in results.GroupBy(r => r.Section))
     markdown.AppendLine($"| {chapter.Key} | {c.Passed} | {c.Failed} | {c.NotObservable} | {c.Skipped} | {c.NotRun} | {c.Total} |");
 }
 markdown.AppendLine($"| Total | {totals.Passed} | {totals.Failed} | {totals.NotObservable} | {totals.Skipped} | {totals.NotRun} | {totals.Total} |");
-markdown.AppendLine("\nPer-example expected/actual HTML, reason, facade status, and separate facts invariants are in `results.json`.\n\nHTML mismatches may include test adapter defects; review the expected/actual output before changing the parser. Facts invariants do not prove expected facts are complete or semantically correct.\n");
+markdown.AppendLine("\nPer-example expected/actual HTML, reason, facade status, and separate facts/syntax invariants are in `results.json`.\n\nHTML mismatches may include test adapter defects; review the expected/actual output before changing the parser. Facts/syntax invariants do not prove expected facts or nodes are complete or semantically correct.\n");
 File.WriteAllText(Path.Combine(output, "summary.md"), markdown.ToString(), new UTF8Encoding(false));
-Console.WriteLine(JsonSerializer.Serialize(new { profileId = "lithosharp-markdown/1", fixtureSha256 = fixtureHash, totals, factsInvariantFailures = results.Count(r => r.Facts == "failed-invariants"), reportDirectory = output }));
-return results.Any(r => r.Facts == "failed-invariants" || r.Reason.StartsWith("execution-error:", StringComparison.Ordinal))
-    || strict && results.Any(r => r.Status is "failed" or "not-observable") ? 1 : 0;
+Console.WriteLine(JsonSerializer.Serialize(new
+{
+    profileId = profile,
+    fixtureSha256 = fixtureHash,
+    totals,
+    factsInvariantFailures = results.Count(r => r.Facts == "failed-invariants"),
+    syntaxInvariantFailures = results.Count(r => r.Syntax == "failed-invariants"),
+    syntaxUnknownRanges = results.Sum(r => r.SyntaxUnknownRanges),
+    reportDirectory = output
+}));
+return results.Any(r => r.Facts == "failed-invariants" || r.Syntax == "failed-invariants" || r.Reason.StartsWith("execution-error:", StringComparison.Ordinal))
+    || strict && results.Any(r => r.Status is "failed" or "not-observable" || includeSyntax && r.Syntax == "not-observable") ? 1 : 0;
+
+static int CheckSyntax(object root, int rawLength)
+{
+    var pending = new Stack<object>();
+    pending.Push(root);
+    var unknown = 0;
+    while (pending.Count != 0)
+    {
+        var node = pending.Pop();
+        var parent = Range(node);
+        if (!parent.HasValue)
+            unknown++;
+        else if (parent.Value.Start < 0 || parent.Value.End < parent.Value.Start || parent.Value.End > rawLength)
+            throw new InvalidOperationException($"Syntax raw range is outside source: {SyntaxHtml.Get<object>(node, "Kind")} [{parent.Value.Start},{parent.Value.End}) / {rawLength}");
+        var previousEnd = -1;
+        foreach (var child in SyntaxHtml.Get<IEnumerable>(node, "Children").Cast<object>())
+        {
+            var range = Range(child);
+            if (range.HasValue)
+            {
+                if (parent.HasValue && (range.Value.Start < parent.Value.Start || range.Value.End > parent.Value.End))
+                    throw new InvalidOperationException($"Syntax child lies outside parent: {SyntaxHtml.Get<object>(child, "Kind")} [{range.Value.Start},{range.Value.End}) in {SyntaxHtml.Get<object>(node, "Kind")} [{parent.Value.Start},{parent.Value.End})");
+                if (range.Value.Start < previousEnd)
+                    throw new InvalidOperationException($"Syntax siblings overlap or are out of source order: {SyntaxHtml.Get<object>(node, "Kind")}, start {range.Value.Start} < previous end {previousEnd}");
+                previousEnd = range.Value.End;
+            }
+            pending.Push(child);
+        }
+    }
+    return unknown;
+    static (int Start, int End)? Range(object node)
+    {
+        var span = SyntaxHtml.Get<object?>(node, "RawSpan");
+        return span is null ? null : (SyntaxHtml.Get<int>(span, "Start"), SyntaxHtml.Get<int>(span, "End"));
+    }
+}
 
 static Count Counts(IEnumerable<Result> sequence)
 {
@@ -198,5 +276,6 @@ internal sealed record Example([property: JsonPropertyName("example")] int Numbe
     [property: JsonPropertyName("markdown")] string Markdown,
     [property: JsonPropertyName("html")] string Html);
 internal sealed record Result(int Example, string Section, string Status, string Reason, string Facts,
-    string? FactsStatus, string? FactsError, string? ActualHtml, string? ExpectedHtml);
+    string? FactsStatus, string? FactsError, string? ActualHtml, string? ExpectedHtml,
+    string Syntax = "not-run", string? SyntaxError = null, int SyntaxUnknownRanges = 0);
 internal sealed record Count(int Passed, int Failed, int NotObservable, int Skipped, int NotRun, int Total);

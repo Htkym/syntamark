@@ -94,6 +94,29 @@ internal static class MappingRegressionChecks
         var nul = MarkdownParser.Parse("A\0B", "mapping", "nul").TextRegions.Single().Content;
         Check(nul.Text == "A\uFFFDB" && nul.Map(new RawSpan(1, 1)).Precision == MarkdownMappingPrecision.CoveringTokens
             && nul.Map(new RawSpan(1, 1)).RawFragments.Single() == new RawSpan(0, 3), "NUL replacement retains a covering raw token");
+        foreach (var profile in new[] { "lithosharp-markdown/1", "commonmark/0.31.2" })
+        {
+            var options = new MarkdownParseOptions(profileId: profile);
+            foreach (var normalized in new[] { "\r", "\r\n", "\0" })
+            {
+                var raw = "prefix\n\n[a" + normalized + "b]\n";
+                var label = MarkdownParser.Parse(raw, "mapping", "unresolved-normalization", options: options).Links
+                    .Single(link => link.Resolution == MarkdownLinkResolution.UnresolvedReference).Label;
+                Check(label.Text == (normalized == "\0" ? "a\uFFFDb" : "a\nb"), profile + ": unresolved label decoding");
+                var mapped = label.Map(new RawSpan(1, 1));
+                var expectedToken = normalized == "\0" ? "a\0b" : normalized;
+                Check(mapped.Precision == MarkdownMappingPrecision.CoveringTokens
+                    && Slice(raw, mapped.RawFragments.Single()) == expectedToken, profile + ": unresolved label raw token");
+                foreach (var segment in label.SourceSegments.Where(segment => segment.Kind == MarkdownSegmentKind.Linear))
+                    Check(Slice(raw, segment.RawSpan!.Value) == label.Text!.Substring(segment.DecodedSpan.Start, segment.DecodedSpan.Length),
+                        profile + ": Linear label mapping retains identical text");
+            }
+            const string definitionRaw = "[a\0b]: /target\n";
+            var definition = MarkdownParser.Parse(definitionRaw, "mapping", "definition-normalization", options: options).Links
+                .Single(link => link.Kind == MarkdownLinkKind.ReferenceDefinition).Label;
+            Check(definition.Text == "a\uFFFDb" && definition.Map(new RawSpan(1, 1)).Precision == MarkdownMappingPrecision.CoveringTokens
+                && Slice(definitionRaw, definition.Map(new RawSpan(1, 1)).RawFragments.Single()) == "a\0b", profile + ": definition label raw token");
+        }
         Console.WriteLine(JsonSerializer.Serialize(new { task = "SM-02", status = "PASS", cases = cases.Length, checks = "raw slices/empty destinations/table transformations/atomic boundaries" }));
     }
 

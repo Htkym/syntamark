@@ -80,10 +80,14 @@ function prepare(commit,version,out){
   assert(stampBytes.toString().includes('"'+parserVersion+'"'),'Canonical hash differs from the selected Git stamp');
   const dependencies=JSON.parse(blob(commit,component+'Contracts/markdown-dependencies.json'));
   assert(JSON.stringify(dependencies.dependencies)===JSON.stringify({YamlDotNet:'18.1.0'}),'Unexpected portable dependencies');
+  const profile=JSON.parse(blob(commit,component+'Contracts/markdown-profile.json'));
+  const defaultProfileId=profile.defaultProfileId??profile.profileId;
+  const supportedProfileIds=(profile.availableProfiles??[{profileId:profile.profileId}]).map(p=>p.profileId);
+  assert(defaultProfileId==='lithosharp-markdown/1'&&supportedProfileIds.includes(defaultProfileId),'Unexpected default profile');
   const metadata={
     componentVersion:version,sourceCommit:commit,canonicalSourceHash:hash,parserVersion,
     sourceRepository:{kind:'git',url:'https://github.com/Htkym/syntamark',component:'Syntamark',historyMap:'eng/markdown/source-history.json'},
-    contractVersion:'1.0',profileId:'lithosharp-markdown/1',
+    contractVersion:'1.0',profileId:defaultProfileId,defaultProfileId,supportedProfileIds,
     hashEncoding:'UTF8 path byte order + uint64 BE path/content lengths + Git blob bytes',
     excludedGeneratedStamp:stamp,
     dependencies:[{packageId:'YamlDotNet',version:'18.1.0',range:'[18.1.0]',
@@ -96,9 +100,13 @@ function prepare(commit,version,out){
   const icon=blob(commit,'images/icon.png');
   metadata.icon={sourcePath:'images/icon.png',packagePath:'icon.png',sha256:sha(icon)};
   for(const kind of ['runtime','source'])write(path.join(out,kind,metadata.icon.packagePath),icon);
-  const licenseMap=[['LICENSE','LICENSE'],['licenses/YamlDotNet.LICENSE.txt','licenses/YamlDotNet.LICENSE.txt']];
+  const retainedLicenses=git(['ls-tree','-r','--name-only',commit,'--','licenses']).toString().trim().split('\n');
+  const licenseMap=[['LICENSE','LICENSE'],['licenses/YamlDotNet.LICENSE.txt','licenses/YamlDotNet.LICENSE.txt'],
+    ...['licenses/WHATWG.LICENSE.txt','licenses/Unicode.LICENSE.txt'].filter(p=>retainedLicenses.includes(p)).map(p=>[p,p])];
   // Keep notices specific to the portable component; site-only dependencies are not distributed.
-  const notice=Buffer.from('Syntamark and Syntamark.Source include YamlDotNet 18.1.0 (MIT).\nSee licenses/YamlDotNet.LICENSE.txt. Portable parser author/license are preserved in LICENSE.\n');
+  const notice=Buffer.from('Syntamark and Syntamark.Source include YamlDotNet 18.1.0 (MIT).\nSee licenses/YamlDotNet.LICENSE.txt. Portable parser author/license are preserved in LICENSE.\n'
+    +(retainedLicenses.includes('licenses/WHATWG.LICENSE.txt')?'CommonMark named entity data derives from WHATWG HTML source portions (BSD-3-Clause); see licenses/WHATWG.LICENSE.txt.\n':'')
+    +(retainedLicenses.includes('licenses/Unicode.LICENSE.txt')?'CommonMark Unicode case folding data is covered by the Unicode data license; see licenses/Unicode.LICENSE.txt.\n':''));
   for(const [original,packagePath] of licenseMap){
     const bytes=blob(commit,original);metadata.licenses.push({sourcePath:original,packagePath,sha256:sha(bytes)});
     for(const kind of ['runtime','source'])write(path.join(out,kind,packagePath),bytes);
@@ -128,7 +136,13 @@ function prepare(commit,version,out){
     write(target,text);
   }
   const readmeInput=blob(commit,'README.md');
-  const readme=Buffer.from(readmeInput.toString().replaceAll(/1\.0\.[01]|2\.0\.0-preview\.[1-9][0-9]*/g,version));
+  const versionPattern='(?:1\\.0\\.[01]|2\\.0\\.0-preview\\.[1-9][0-9]*)';
+  // Replace installation selections, not historical release statements.
+  const readme=Buffer.from(readmeInput.toString()
+    .replace(new RegExp('(dotnet add package Syntamark --version )'+versionPattern,'g'),(_,prefix)=>prefix+version)
+    .replace(new RegExp('(<SyntamarkSourceVersion>)'+versionPattern+'(?=</SyntamarkSourceVersion>)','g'),(_,prefix)=>prefix+version)
+    .replace(new RegExp('(<PackageReference Include="Syntamark.Source" Version="\\[)'+versionPattern+'(?=\\]")','g'),(_,prefix)=>prefix+version)
+    .replace(/\]\((docs\/[^)]+)\)/g,(_,p)=>'](https://github.com/Htkym/syntamark/blob/'+commit+'/'+p+')'));
   metadata.readme={sourcePath:'README.md',packagePath:'README.md',sourceSha256:sha(readmeInput),sha256:sha(readme)};
   for(const kind of ['runtime','source']){
     writeJson(path.join(out,kind,'markdown/manifest.json'),metadata);

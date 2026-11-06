@@ -10,11 +10,14 @@ runs:
     - name: Inventory CommonMark and compare shared facts
       shell: bash
       run: |
-        for project in tests/Syntamark.Conformance tests/Syntamark.Comparison; do
+        for project in tests/Syntamark.Conformance tests/Syntamark.Comparison tests/Syntamark.Safety; do
           dotnet restore "$project" --locked-mode
         done
         dotnet run --project tests/Syntamark.Conformance -c Release --no-restore -- --revision "$GITHUB_SHA" --output .local/commonmark
+        dotnet run --project tests/Syntamark.Conformance -c Release --no-restore -- --profile commonmark/0.31.2 --strict --revision "$GITHUB_SHA" --output .local/commonmark-standard
         dotnet run --project tests/Syntamark.Comparison -c Release --no-restore -- --output .local/comparison/current.json
+        dotnet run --project tests/Syntamark.Comparison -c Release --no-restore -- --commonmark-output .local/commonmark-comparison
+        dotnet run --project tests/Syntamark.Safety -c Release --no-restore > .local/safety.log
     - name: Verify the published source-package baseline
       shell: pwsh
       run: |
@@ -22,7 +25,7 @@ runs:
     - name: Verify formatting
       shell: bash
       run: |
-        for project in src/Syntamark/Syntamark.csproj tests/Syntamark.Portability/Syntamark.Portability.csproj tests/Syntamark.Conformance/Syntamark.Conformance.csproj tests/Syntamark.Comparison/Syntamark.Comparison.csproj tests/Syntamark.Roslyn.Integration/Syntamark.Roslyn.Integration.csproj; do
+        for project in src/Syntamark/Syntamark.csproj tests/Syntamark.Portability/Syntamark.Portability.csproj tests/Syntamark.Conformance/Syntamark.Conformance.csproj tests/Syntamark.Comparison/Syntamark.Comparison.csproj tests/Syntamark.Roslyn.Integration/Syntamark.Roslyn.Integration.csproj tests/Syntamark.Safety/Syntamark.Safety.csproj; do
           dotnet format style "$project" --diagnostics IDE2001 --exclude src/Syntamark/Portable/MarkdownParserVersion.g.cs --no-restore --verify-no-changes
           dotnet format whitespace "$project" --exclude src/Syntamark/Portable/MarkdownParserVersion.g.cs --no-restore --verify-no-changes
         done

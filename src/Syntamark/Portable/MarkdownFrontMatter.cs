@@ -11,6 +11,8 @@ internal static class MdFrontMatterParser
 {
     internal static (MdFrontMatter Facts, MdRawRange? Body, MdDiagnostic? Diagnostic) Split(string raw, MdParseContext context)
     {
+        if (context.Options.IsCommonMark)
+            return (new MdFrontMatter(MdFrontMatterState.Absent, null, null, null, null), new MdRawRange(0, raw.Length), null);
         var envelope = MdFrontMatterScan.Scan(raw, context.CancellationToken, context);
         if (!envelope.Opening.HasValue)
             return (new MdFrontMatter(MdFrontMatterState.Absent, null, null, null, null), envelope.Body, null);

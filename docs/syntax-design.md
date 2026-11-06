@@ -43,6 +43,6 @@ syntax opt-in は追加の node ごとに output budget、構築の走査に sca
 
 source package には同じ `MdParser.ParseWithSyntax` と `MdSyntaxDocument` / `MdSyntaxNode` が含まれる。runtime facade は従来どおり source package に含めない。source host からは internal entry を consumer の shim が呼ぶ。Roslyn 自体や renderer を core の依存へ追加しない。
 
-visitor、rewriter、incremental parsing、全 trivia の帰属、安定 node ID、AST からの原文再生成は今回の対象外。syntax opt-in は構文探索のための追加機能であり、性能改善としては扱わない。時間・割当て・保持メモリの測定記録は、性能を扱う後続の変更で示す。
+visitor、rewriter、incremental parsing、全 trivia の帰属、安定 node ID、AST からの原文再生成は今回の対象外。syntax opt-in は構文探索のための追加機能であり、性能改善としては扱わない。時間・割当て・保持メモリの追加負担は、[測定記録](performance.md)に示す。
 
 CommonMark 0.31.2 の固定された全652例を `Syntamark.Conformance --syntax` で検査した結果、標準 profile は HTML 652/652、facts/syntax invariant 違反0、位置不明 node 0。互換 profile は従来の HTML 分類 521 passed / 129 failed / 2 not-observable を保持し、facts/syntax invariant 違反0、24例に計25個の位置不明 emphasis node がある。位置検査は known range の入力境界、親子の包含、兄弟の非重複・文書順を調べ、semantic target を除外する。これは node の意味的な完全性を証明する検査ではない。

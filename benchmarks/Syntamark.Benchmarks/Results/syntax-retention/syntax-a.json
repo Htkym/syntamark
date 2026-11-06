@@ -1,0 +1,215 @@
+{
+  "mode": "--syntax",
+  "source": "root-working-20261106-011332UTC",
+  "timestampUtc": "2026-11-06T01:18:16.0643643Z",
+  "framework": ".NET 10.0.14",
+  "os": "Microsoft Windows 10.0.26300",
+  "cpu": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+  "processors": 8,
+  "tieredCompilation": "0",
+  "assemblySha256": "75aaac05d717d0866f2e4b4adda9bef891650a9dd1713e99126731339977977e",
+  "ParserVersion": "1/a6a14ab542fa607d81208f8dcb67a4243b807ac744d5492cf4e067f872170b86",
+  "ProfileId": "commonmark/0.31.2",
+  "OptionsHash": "00dd7de21f4b72cc04b60f2be13c09d72da55429b19245d97b00df2760be157a",
+  "semanticExclusions": [
+    "ParserVersion"
+  ],
+  "results": [
+    {
+      "fixture": "small",
+      "rawUtf16Length": 97,
+      "inputSha256": "89c0739918886b18b93bae51ed5c997514360313851fbf4f04947aefdcbf45ab",
+      "factsSha256": "985271bed1da2028d793aba51780a3688e8e5a264c3e3587682aa6e5f27c974d",
+      "status": "Complete",
+      "syntaxNodes": 19,
+      "noSyntax": {
+        "operationsPerSample": 200,
+        "samples": [
+          {
+            "NanosecondsPerOperation": 22463.5,
+            "AllocatedBytesPerOperation": 32193.64,
+            "Gen0": 1,
+            "Gen1": 1,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 17214.5,
+            "AllocatedBytesPerOperation": 32193.64,
+            "Gen0": 1,
+            "Gen1": 0,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 16252,
+            "AllocatedBytesPerOperation": 32193.64,
+            "Gen0": 1,
+            "Gen1": 0,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 15139.5,
+            "AllocatedBytesPerOperation": 32193.64,
+            "Gen0": 1,
+            "Gen1": 0,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 13123.5,
+            "AllocatedBytesPerOperation": 32193.64,
+            "Gen0": 1,
+            "Gen1": 0,
+            "Gen2": 0
+          }
+        ]
+      },
+      "withSyntax": {
+        "operationsPerSample": 200,
+        "samples": [
+          {
+            "NanosecondsPerOperation": 22604.5,
+            "AllocatedBytesPerOperation": 42539.28,
+            "Gen0": 2,
+            "Gen1": 0,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 19166.5,
+            "AllocatedBytesPerOperation": 42537.64,
+            "Gen0": 1,
+            "Gen1": 0,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 17520.5,
+            "AllocatedBytesPerOperation": 42537.64,
+            "Gen0": 1,
+            "Gen1": 0,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 18221,
+            "AllocatedBytesPerOperation": 42539.28,
+            "Gen0": 2,
+            "Gen1": 0,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 20138.5,
+            "AllocatedBytesPerOperation": 42537.64,
+            "Gen0": 1,
+            "Gen1": 0,
+            "Gen2": 0
+          }
+        ]
+      },
+      "retainedNoSyntax": {
+        "documents": 32,
+        "retainedBytes": 98296,
+        "bytesPerDocument": 3071.75
+      },
+      "retainedWithSyntax": {
+        "documents": 32,
+        "retainedBytes": 232952,
+        "bytesPerDocument": 7279.75
+      }
+    },
+    {
+      "fixture": "medium",
+      "rawUtf16Length": 7760,
+      "inputSha256": "591339ce83d6c3aea360abd6768272b5124491414f59ff56a80b07b7db0f0fbd",
+      "factsSha256": "5f8831b2f7e178739119c452132d6f4fc8054f66d8a3f49e14e932c3e4710ef4",
+      "status": "Complete",
+      "syntaxNodes": 1441,
+      "noSyntax": {
+        "operationsPerSample": 5,
+        "samples": [
+          {
+            "NanosecondsPerOperation": 1275040,
+            "AllocatedBytesPerOperation": 1896078.4,
+            "Gen0": 2,
+            "Gen1": 2,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 1119840,
+            "AllocatedBytesPerOperation": 1896054.4,
+            "Gen0": 1,
+            "Gen1": 1,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 1193500,
+            "AllocatedBytesPerOperation": 1896099.2,
+            "Gen0": 2,
+            "Gen1": 1,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 983420,
+            "AllocatedBytesPerOperation": 1896033.6,
+            "Gen0": 1,
+            "Gen1": 1,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 1083340,
+            "AllocatedBytesPerOperation": 1896099.2,
+            "Gen0": 2,
+            "Gen1": 1,
+            "Gen2": 0
+          }
+        ]
+      },
+      "withSyntax": {
+        "operationsPerSample": 5,
+        "samples": [
+          {
+            "NanosecondsPerOperation": 1474780,
+            "AllocatedBytesPerOperation": 2646659.2,
+            "Gen0": 2,
+            "Gen1": 2,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 1329720,
+            "AllocatedBytesPerOperation": 2646659.2,
+            "Gen0": 2,
+            "Gen1": 2,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 1610420,
+            "AllocatedBytesPerOperation": 2646659.2,
+            "Gen0": 2,
+            "Gen1": 2,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 1285380,
+            "AllocatedBytesPerOperation": 2646659.2,
+            "Gen0": 2,
+            "Gen1": 2,
+            "Gen2": 0
+          },
+          {
+            "NanosecondsPerOperation": 1401300,
+            "AllocatedBytesPerOperation": 2646659.2,
+            "Gen0": 2,
+            "Gen1": 2,
+            "Gen2": 0
+          }
+        ]
+      },
+      "retainedNoSyntax": {
+        "documents": 32,
+        "retainedBytes": 4965368,
+        "bytesPerDocument": 155167.75
+      },
+      "retainedWithSyntax": {
+        "documents": 32,
+        "retainedBytes": 15200504,
+        "bytesPerDocument": 475015.75
+      }
+    }
+  ]
+}

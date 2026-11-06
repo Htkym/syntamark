@@ -72,14 +72,20 @@ public sealed class MarkdownTextProjection
     }
     public string? Text { get; }
     public IReadOnlyList<MarkdownSourceSegment> SourceSegments { get; }
-    public MarkdownMappingResult Map(RawSpan decodedSpan)
+    private readonly struct PublicSegments(IReadOnlyList<MarkdownSourceSegment> segments) : IMdMappingSegments
     {
-        var core = new MdTextProjection(Text, SourceSegments.Select(s => new MdSourceSegment(
-            new MdRawRange(s.DecodedSpan.Start, s.DecodedSpan.Length),
-            s.RawSpan.HasValue ? new MdRawRange(s.RawSpan.Value.Start, s.RawSpan.Value.Length) : null,
-            (MdSegmentKind)s.Kind)).ToArray());
-        return new MarkdownMappingResult(MdSourceMapping.Map(core, new MdRawRange(decodedSpan.Start, decodedSpan.Length)));
+        public int Count => segments.Count;
+        public MdMappingSegment Get(int index)
+        {
+            var segment = segments[index];
+            return new(new MdRawRange(segment.DecodedSpan.Start, segment.DecodedSpan.Length),
+                segment.RawSpan.HasValue ? new MdRawRange(segment.RawSpan.Value.Start, segment.RawSpan.Value.Length) : null,
+                (MdSegmentKind)segment.Kind);
+        }
     }
+
+    public MarkdownMappingResult Map(RawSpan decodedSpan) => new(MdSourceMapping.MapSegments(Text,
+        new PublicSegments(SourceSegments), new MdRawRange(decodedSpan.Start, decodedSpan.Length)));
 }
 
 /// <summary>Immutable parse-only YamlNode facts; positions refer to the original UTF-16 input.</summary>
@@ -269,6 +275,9 @@ public sealed class MarkdownCoverage
 /// <summary>Immutable parse-only DocumentFacts facts; positions refer to the original UTF-16 input.</summary>
 public sealed class MarkdownDocument
 {
+    private SourceText? lineSource;
+    private int linePositionRequested;
+
     internal MarkdownDocument(MdDocumentFacts facts)
     {
         RawText = facts.RawText;
@@ -316,6 +325,26 @@ public sealed class MarkdownDocument
     {
         if (rawOffset < 0 || rawOffset > RawText.Length)
             throw new ArgumentOutOfRangeException(nameof(rawOffset));
+        if (rawOffset == 0)
+            return new MarkdownLinePosition(1, 1);
+        var indexed = Volatile.Read(ref lineSource);
+        if (indexed is null)
+        {
+            // A single query does not need to retain a document-wide index.
+            if (Interlocked.Exchange(ref linePositionRequested, 1) == 0)
+                return ScanLinePosition(rawOffset);
+            var created = new SourceText(RawText);
+            indexed = Interlocked.CompareExchange(ref lineSource, created, null) ?? created;
+        }
+        // The public contract locates the LF of CRLF at the next line's first column.
+        var offset = rawOffset < RawText.Length && RawText[rawOffset] == '\n' && RawText[rawOffset - 1] == '\r'
+            ? rawOffset + 1 : rawOffset;
+        var position = indexed.GetLineAndColumn(offset);
+        return new MarkdownLinePosition(position.Line, position.Column);
+    }
+
+    private MarkdownLinePosition ScanLinePosition(int rawOffset)
+    {
         var line = 1;
         var column = 1;
         for (var i = 0; i < rawOffset; i++)

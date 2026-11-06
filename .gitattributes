@@ -1,2 +1,5 @@
 # Keep the checksum-pinned upstream fixture byte-for-byte on every checkout.
 tests/Fixtures/CommonMark/0.31.2/spec.json -text
+benchmarks/Syntamark.Benchmarks/Results/** -text whitespace=cr-at-eol
+benchmarks/Syntamark.Comparison/results/** -text whitespace=cr-at-eol
+benchmarks/**/*.patch whitespace=cr-at-eol,-blank-at-eol

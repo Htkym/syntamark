@@ -43,6 +43,8 @@ var standard = MarkdownParser.Parse(raw, "example", "input.md", options: options
 
 固定した公式652例の構文出力は全例で一致しています。これは全入力の完全準拠や、すべての facts の意味・位置精度を証明するものではありません。[対応表](docs/commonmark-support.md)では、互換 profile と標準 profile、構文比較と位置検証を区別しています。
 
-汎用的な解析基盤に向けた改善状況は、[初回改善の記録](docs/foundation-progress.md)、[CommonMark 0.31.2 対応表](docs/commonmark-support.md)、[Markdig との比較](docs/library-comparison.md)、[Roslyn/source package の統合例](docs/roslyn-integration.md)にまとめています。現在の互換プロファイルは CommonMark の完全準拠を表しません。
+開発版の `MarkdownParser.ParseWithSyntax` は、一回の解析から既存 facts と読み取り専用の構文 view を返します。構造が必要な caller だけが明示的に使用します。[構文 API](docs/syntax-design.md)、[prose の利用例](docs/prose-consumer.md)、[Roslyn/source package の統合例](docs/roslyn-integration.md)に使い方と位置情報の限界を記載しています。
 
-ライセンスはMITです。著作権と依存ライブラリの通知はLICENSE、THIRD-PARTY-NOTICES.md、licenses/YamlDotNet.LICENSE.txtに記載しています。eng/markdown/source-history.jsonは移管元の履歴対応を保持します。
+改善の履歴は[初回の記録](docs/foundation-progress.md)、標準対応は[対応表](docs/commonmark-support.md)、時間・割当て・保持メモリの観測は[性能改善](docs/performance.md)と[Markdig との比較](docs/library-comparison.md)を参照してください。現在の互換プロファイルは CommonMark の完全準拠を表しません。
+
+プロジェクトのライセンスはMITです。著作権、第三者データと依存ライブラリの通知はLICENSE、THIRD-PARTY-NOTICES.md、licenses/に記載しています。eng/markdown/source-history.jsonは移管元の履歴対応を保持します。

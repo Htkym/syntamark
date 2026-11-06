@@ -1,0 +1,549 @@
+{
+  "label": "baseline-a",
+  "source": "de0a64272e5a75faceb1ff093d29d6bd10105984",
+  "timestampUtc": "2026-11-06T01:05:54.8555601Z",
+  "framework": ".NET 10.0.14",
+  "os": "Microsoft Windows 10.0.26300",
+  "cpu": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+  "processors": 8,
+  "tieredCompilation": "0",
+  "assemblySha256": "6aa09c1ccd956db2d360d5b4c048a308c29c2c9620a488394ab36ef0428d5f73",
+  "parserVersion": "1/a6a14ab542fa607d81208f8dcb67a4243b807ac744d5492cf4e067f872170b86",
+  "optionsHash": "970d603ab09c239dde63511f42543a76b80b8897a323e335a4cf57685d1c8591",
+  "profile": "lithosharp-markdown/1",
+  "querySemanticHash": "d03842829c409e51f2bc068a7188fd949b0044ac4575029c04b11ee0d06309a9",
+  "fixtures": [
+    {
+      "id": "small",
+      "length": 63,
+      "sha256": "f83783f70dffb43b701d11ca68fa39bf094f7796817182857490e689e06b998c",
+      "status": "Complete"
+    },
+    {
+      "id": "medium",
+      "length": 15360,
+      "sha256": "4bcd063051aa660e969240616fc7071f919baa282338921054bc170f51531be9",
+      "status": "Complete"
+    }
+  ],
+  "results": [
+    {
+      "Workload": "parse-small",
+      "OperationsPerSample": 500,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 10979.4,
+          "AllocatedBytesPerOperation": 23737.312,
+          "Gen0": 2,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 10341.2,
+          "AllocatedBytesPerOperation": 23737.312,
+          "Gen0": 2,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 11216.6,
+          "AllocatedBytesPerOperation": 23736.656,
+          "Gen0": 1,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 9749.2,
+          "AllocatedBytesPerOperation": 23737.312,
+          "Gen0": 2,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 9970.6,
+          "AllocatedBytesPerOperation": 23737.312,
+          "Gen0": 2,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Workload": "parse-medium",
+      "OperationsPerSample": 10,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 2138140,
+          "AllocatedBytesPerOperation": 3435620,
+          "Gen0": 5,
+          "Gen1": 5,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 7633310,
+          "AllocatedBytesPerOperation": 3435652.8,
+          "Gen0": 6,
+          "Gen1": 5,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 3724830,
+          "AllocatedBytesPerOperation": 3435620,
+          "Gen0": 5,
+          "Gen1": 5,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 4485170,
+          "AllocatedBytesPerOperation": 3435652.8,
+          "Gen0": 6,
+          "Gen1": 5,
+          "Gen2": 1
+        },
+        {
+          "NanosecondsPerOperation": 2316360,
+          "AllocatedBytesPerOperation": 3435620,
+          "Gen0": 5,
+          "Gen1": 3,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Workload": "map-linear-repeated",
+      "OperationsPerSample": 100000,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 261.376,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 12,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 262.669,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 13,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 292.281,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 13,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 275.433,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 12,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 254.025,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 13,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Workload": "map-atomic-repeated",
+      "OperationsPerSample": 100000,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 274.971,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 13,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 265.055,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 13,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 301.421,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 12,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 282.853,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 13,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 280.272,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 13,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Workload": "map-zero-width-repeated",
+      "OperationsPerSample": 100000,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 292.327,
+          "AllocatedBytesPerOperation": 944,
+          "Gen0": 15,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 289.62,
+          "AllocatedBytesPerOperation": 944,
+          "Gen0": 15,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 280.417,
+          "AllocatedBytesPerOperation": 944,
+          "Gen0": 15,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 316.51,
+          "AllocatedBytesPerOperation": 944,
+          "Gen0": 15,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 296.153,
+          "AllocatedBytesPerOperation": 944,
+          "Gen0": 15,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Workload": "map-unknown-repeated",
+      "OperationsPerSample": 100000,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 167.764,
+          "AllocatedBytesPerOperation": 400,
+          "Gen0": 7,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 166.775,
+          "AllocatedBytesPerOperation": 400,
+          "Gen0": 6,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 169.406,
+          "AllocatedBytesPerOperation": 400,
+          "Gen0": 6,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 180.085,
+          "AllocatedBytesPerOperation": 400,
+          "Gen0": 7,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 161.383,
+          "AllocatedBytesPerOperation": 400,
+          "Gen0": 6,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Workload": "line-random-repeated",
+      "OperationsPerSample": 10000,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 4660.93,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 4899.09,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 4535.41,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 4694.85,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 4479.42,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Workload": "line-ascending-repeated",
+      "OperationsPerSample": 10000,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 2947.25,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 3057.52,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 2814.85,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 2716.67,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 2649.28,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Workload": "map-first",
+      "OperationsPerSample": 32,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 318.75,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 318.75,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 275,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 284.375,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 287.5,
+          "AllocatedBytesPerOperation": 792,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Workload": "line-first-start",
+      "OperationsPerSample": 32,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 46.875,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 59.375,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 50,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 40.625,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 46.875,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Workload": "line-first-end",
+      "OperationsPerSample": 32,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 8978.125,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 9353.125,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 9603.125,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 9231.25,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 9906.25,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    },
+    {
+      "Workload": "line-second-index",
+      "OperationsPerSample": 32,
+      "Samples": [
+        {
+          "NanosecondsPerOperation": 8762.5,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 8931.25,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 9006.25,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 9465.625,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        },
+        {
+          "NanosecondsPerOperation": 9721.875,
+          "AllocatedBytesPerOperation": 0,
+          "Gen0": 0,
+          "Gen1": 0,
+          "Gen2": 0
+        }
+      ]
+    }
+  ],
+  "retained": [
+    {
+      "mode": "no-queries",
+      "documents": 32,
+      "retainedBytes": 8933376,
+      "bytesPerDocument": 279168
+    },
+    {
+      "mode": "one-map",
+      "documents": 32,
+      "retainedBytes": 8933376,
+      "bytesPerDocument": 279168
+    },
+    {
+      "mode": "all-maps",
+      "documents": 32,
+      "retainedBytes": 8933568,
+      "bytesPerDocument": 279174
+    },
+    {
+      "mode": "line-index",
+      "documents": 32,
+      "retainedBytes": 8933376,
+      "bytesPerDocument": 279168
+    }
+  ]
+}

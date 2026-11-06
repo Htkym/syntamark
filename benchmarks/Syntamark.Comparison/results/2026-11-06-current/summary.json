@@ -1,0 +1,1084 @@
+{
+  "contract": "bounded-common-facts-and-roslyn-locations/1",
+  "order": [
+    "A",
+    "B",
+    "B",
+    "A"
+  ],
+  "aggregation": "Median of four independent process medians; all five raw samples per process remain in the source reports.",
+  "runtime": ".NET 10.0.14",
+  "os": "Microsoft Windows 10.0.26300",
+  "cpu": "Intel64 Family 6 Model 189 Stepping 1, GenuineIntel",
+  "syntamark": {
+    "profile": "commonmark/0.31.2",
+    "ParserVersion": "1/a6a14ab542fa607d81208f8dcb67a4243b807ac744d5492cf4e067f872170b86",
+    "OptionsHash": "740ccf0155f5998cbbcf24bfc6357251830931068e8de3c6d0731c62f63e8702",
+    "assembly": {
+      "name": "Syntamark, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+      "informationalVersion": "1.0.0+de0a64272e5a75faceb1ff093d29d6bd10105984",
+      "sha256": "d874958d2eda50cdf3ae18ce6f8263a7f02f754fe789b5af2448749b1ad4b2da"
+    },
+    "options": {
+      "MaxInputUtf16": 1048576,
+      "MaxOutputItems": 1048576,
+      "MaxNestingDepth": 200,
+      "MaxScanUnits": 134217728,
+      "ProfileId": "commonmark/0.31.2",
+      "OptionsSchemaVersion": 1
+    }
+  },
+  "markdig": {
+    "packageVersion": "1.5.1",
+    "assembly": {
+      "name": "Markdig, Version=1.5.0.0, Culture=neutral, PublicKeyToken=null",
+      "informationalVersion": "1.5.1+bbf197eaf3c96b9a6ada6532ec970b59751ca9c6",
+      "sha256": "1386c42c5e40e6b746673a068e32e95e8fbf31017b05784d47e4ea695c82eb63"
+    },
+    "preciseSourceLocation": true,
+    "extensions": [],
+    "MaximumNestingDepth": 128,
+    "resourceStatus": "No equivalent accounting/cancellation adapter. Fixed bounded fixtures validate normally; not an adversarial resource-contract test."
+  },
+  "roslyn": {
+    "packageVersion": "4.14.0",
+    "assembly": {
+      "name": "Microsoft.CodeAnalysis, Version=4.14.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35",
+      "informationalVersion": "4.14.0-3.25262.10+8edf7bcd4f1594c3d68a6a567469f41dbd33dd1b",
+      "sha256": "395736b2d0e02be77bedc3847b269da7a93bf8e49cd3431a4a8e68d2c52d5846"
+    },
+    "compilerHost": "Not measured. This is .NET 10 CLI application use of SourceText/Location."
+  },
+  "validation": [
+    {
+      "Id": "small",
+      "utf16Length": 229,
+      "inputSha256": "d0470dc81f91f211cc562fbbe44072d80181311e5948404b382386f3e3c356cf",
+      "expectedCommonFactsSha256": "6ae7fca940d8a0dee91fa273ce656593485af140b3757dd0dcbcb300e26eb836",
+      "expectedLocationsSha256": "d4f61155f44cca4a35bbcd0d3e8ae68f27759b2fec72b93fe23356fc93782a13",
+      "headings": 1,
+      "links": 2,
+      "fencedCode": 1,
+      "locations": 6,
+      "status": "Complete",
+      "resourceDiagnostics": 0,
+      "rawCoverage": "Complete",
+      "mappingCoverage": "Complete",
+      "ParserVersion": "1/a6a14ab542fa607d81208f8dcb67a4243b807ac744d5492cf4e067f872170b86",
+      "OptionsHash": "740ccf0155f5998cbbcf24bfc6357251830931068e8de3c6d0731c62f63e8702",
+      "extraSyntamarkFacts": {
+        "sections": 2,
+        "textRegions": 1,
+        "referenceDefinitions": 1,
+        "sourceSegments": 5
+      },
+      "snapshotType": "Microsoft.CodeAnalysis.Text.SubText",
+      "snapshotToStringReusesOriginal": false,
+      "independentOracles": "Constructed from unique raw tokens, explicit decoded values, and a separate raw UTF-16 CR/LF scanner before any timing."
+    },
+    {
+      "Id": "medium",
+      "utf16Length": 5496,
+      "inputSha256": "e170a247d7e29a7c48d905256c25c21a72e7713d16ca21a3e0441e2f8bb4281a",
+      "expectedCommonFactsSha256": "9ba2105df38b8398ce0ebb6c887c532b536ecda0c360d2ad5413284d4d5a98e7",
+      "expectedLocationsSha256": "233cf8a7e974c586b919d5da7f382c58e2c80de690da8d51c2f0d56f1c1b9835",
+      "headings": 24,
+      "links": 48,
+      "fencedCode": 24,
+      "locations": 144,
+      "status": "Complete",
+      "resourceDiagnostics": 0,
+      "rawCoverage": "Complete",
+      "mappingCoverage": "Complete",
+      "ParserVersion": "1/a6a14ab542fa607d81208f8dcb67a4243b807ac744d5492cf4e067f872170b86",
+      "OptionsHash": "740ccf0155f5998cbbcf24bfc6357251830931068e8de3c6d0731c62f63e8702",
+      "extraSyntamarkFacts": {
+        "sections": 25,
+        "textRegions": 24,
+        "referenceDefinitions": 24,
+        "sourceSegments": 120
+      },
+      "snapshotType": "Microsoft.CodeAnalysis.Text.SubText",
+      "snapshotToStringReusesOriginal": false,
+      "independentOracles": "Constructed from unique raw tokens, explicit decoded values, and a separate raw UTF-16 CR/LF scanner before any timing."
+    },
+    {
+      "Id": "larger",
+      "utf16Length": 21984,
+      "inputSha256": "b21770f3aea6392c27a13dec6788264f5b28bd1400ec9d52b3d3bd8cee1031b1",
+      "expectedCommonFactsSha256": "dff0ad11f2a6296e1a5798411c0ac787433387ba1b7da0daa471883136034f69",
+      "expectedLocationsSha256": "50615f6db8471d0750cb73fe815afc2ea248b0114d0955351ea14856959e2e66",
+      "headings": 96,
+      "links": 192,
+      "fencedCode": 96,
+      "locations": 576,
+      "status": "Complete",
+      "resourceDiagnostics": 0,
+      "rawCoverage": "Complete",
+      "mappingCoverage": "Complete",
+      "ParserVersion": "1/a6a14ab542fa607d81208f8dcb67a4243b807ac744d5492cf4e067f872170b86",
+      "OptionsHash": "740ccf0155f5998cbbcf24bfc6357251830931068e8de3c6d0731c62f63e8702",
+      "extraSyntamarkFacts": {
+        "sections": 97,
+        "textRegions": 96,
+        "referenceDefinitions": 96,
+        "sourceSegments": 480
+      },
+      "snapshotType": "Microsoft.CodeAnalysis.Text.SubText",
+      "snapshotToStringReusesOriginal": false,
+      "independentOracles": "Constructed from unique raw tokens, explicit decoded values, and a separate raw UTF-16 CR/LF scanner before any timing."
+    }
+  ],
+  "rows": [
+    {
+      "fixture": "small",
+      "engine": "Syntamark",
+      "stage": "representation-unequal-work",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 100,
+      "medianOfProcessMedianNanoseconds": 27086.5,
+      "minProcessMedianNanoseconds": 24766.0,
+      "maxProcessMedianNanoseconds": 29054.0,
+      "medianOfProcessMedianAllocatedBytes": 50899.28,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 29054,
+          "medianAllocatedBytes": 50899.28
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 28992,
+          "medianAllocatedBytes": 50899.28
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 25181,
+          "medianAllocatedBytes": 50899.28
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 24766,
+          "medianAllocatedBytes": 50899.28
+        }
+      ]
+    },
+    {
+      "fixture": "small",
+      "engine": "Markdig",
+      "stage": "representation-unequal-work",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 100,
+      "medianOfProcessMedianNanoseconds": 3662.5,
+      "minProcessMedianNanoseconds": 3115.0,
+      "maxProcessMedianNanoseconds": 4687.0,
+      "medianOfProcessMedianAllocatedBytes": 4128,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 3115,
+          "medianAllocatedBytes": 4128
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 3762,
+          "medianAllocatedBytes": 4128
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 4687,
+          "medianAllocatedBytes": 4128
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 3563,
+          "medianAllocatedBytes": 4128
+        }
+      ]
+    },
+    {
+      "fixture": "small",
+      "engine": "Syntamark",
+      "stage": "common-facts",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 100,
+      "medianOfProcessMedianNanoseconds": 20753.5,
+      "minProcessMedianNanoseconds": 19760.0,
+      "maxProcessMedianNanoseconds": 22136.0,
+      "medianOfProcessMedianAllocatedBytes": 40971.28,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 21423,
+          "medianAllocatedBytes": 40971.28
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 19760,
+          "medianAllocatedBytes": 40971.28
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 22136,
+          "medianAllocatedBytes": 40971.28
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 20084,
+          "medianAllocatedBytes": 40971.28
+        }
+      ]
+    },
+    {
+      "fixture": "small",
+      "engine": "Markdig",
+      "stage": "common-facts",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 100,
+      "medianOfProcessMedianNanoseconds": 4801,
+      "minProcessMedianNanoseconds": 4095.0,
+      "maxProcessMedianNanoseconds": 5072.0,
+      "medianOfProcessMedianAllocatedBytes": 7264,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 4095,
+          "medianAllocatedBytes": 7264
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 4611,
+          "medianAllocatedBytes": 7264
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 5072,
+          "medianAllocatedBytes": 7264
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 4991,
+          "medianAllocatedBytes": 7264
+        }
+      ]
+    },
+    {
+      "fixture": "small",
+      "engine": "Syntamark",
+      "stage": "snapshot-to-locations",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 100,
+      "medianOfProcessMedianNanoseconds": 23578,
+      "minProcessMedianNanoseconds": 21865.0,
+      "maxProcessMedianNanoseconds": 29364.0,
+      "medianOfProcessMedianAllocatedBytes": 42683.28,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 24089,
+          "medianAllocatedBytes": 42683.28
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 29364,
+          "medianAllocatedBytes": 42683.28
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 23067,
+          "medianAllocatedBytes": 42683.28
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 21865,
+          "medianAllocatedBytes": 42683.28
+        }
+      ]
+    },
+    {
+      "fixture": "small",
+      "engine": "Markdig",
+      "stage": "snapshot-to-locations",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 100,
+      "medianOfProcessMedianNanoseconds": 5848.5,
+      "minProcessMedianNanoseconds": 5266.0,
+      "maxProcessMedianNanoseconds": 7900.0,
+      "medianOfProcessMedianAllocatedBytes": 8976,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 5266,
+          "medianAllocatedBytes": 8976
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 7900,
+          "medianAllocatedBytes": 8976
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 5974,
+          "medianAllocatedBytes": 8976
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 5723,
+          "medianAllocatedBytes": 8976
+        }
+      ]
+    },
+    {
+      "fixture": "small",
+      "engine": "Syntamark-only",
+      "stage": "additional-preparsed-substring-map",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 10000,
+      "medianOfProcessMedianNanoseconds": 104.1,
+      "minProcessMedianNanoseconds": 96.84,
+      "maxProcessMedianNanoseconds": 117.07,
+      "medianOfProcessMedianAllocatedBytes": 320,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 96.84,
+          "medianAllocatedBytes": 320
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 110.6,
+          "medianAllocatedBytes": 320
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 97.6,
+          "medianAllocatedBytes": 320
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 117.07,
+          "medianAllocatedBytes": 320
+        }
+      ]
+    },
+    {
+      "fixture": "medium",
+      "engine": "Syntamark",
+      "stage": "representation-unequal-work",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 8,
+      "medianOfProcessMedianNanoseconds": 569331.25,
+      "minProcessMedianNanoseconds": 535212.5,
+      "maxProcessMedianNanoseconds": 614637.5,
+      "medianOfProcessMedianAllocatedBytes": 1014290,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 544575,
+          "medianAllocatedBytes": 1014290
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 594087.5,
+          "medianAllocatedBytes": 1014290
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 614637.5,
+          "medianAllocatedBytes": 1014290
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 535212.5,
+          "medianAllocatedBytes": 1014290
+        }
+      ]
+    },
+    {
+      "fixture": "medium",
+      "engine": "Markdig",
+      "stage": "representation-unequal-work",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 8,
+      "medianOfProcessMedianNanoseconds": 69462.5,
+      "minProcessMedianNanoseconds": 68375.0,
+      "maxProcessMedianNanoseconds": 79300.0,
+      "medianOfProcessMedianAllocatedBytes": 85840,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 69512.5,
+          "medianAllocatedBytes": 85840
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 79300,
+          "medianAllocatedBytes": 85840
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 69412.5,
+          "medianAllocatedBytes": 85840
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 68375,
+          "medianAllocatedBytes": 85840
+        }
+      ]
+    },
+    {
+      "fixture": "medium",
+      "engine": "Syntamark",
+      "stage": "common-facts",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 8,
+      "medianOfProcessMedianNanoseconds": 575912.5,
+      "minProcessMedianNanoseconds": 531012.5,
+      "maxProcessMedianNanoseconds": 630600.0,
+      "medianOfProcessMedianAllocatedBytes": 783185,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 531012.5,
+          "medianAllocatedBytes": 783185
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 630600,
+          "medianAllocatedBytes": 783185
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 614025,
+          "medianAllocatedBytes": 783185
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 537800,
+          "medianAllocatedBytes": 783185
+        }
+      ]
+    },
+    {
+      "fixture": "medium",
+      "engine": "Markdig",
+      "stage": "common-facts",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 8,
+      "medianOfProcessMedianNanoseconds": 94837.5,
+      "minProcessMedianNanoseconds": 88325.0,
+      "maxProcessMedianNanoseconds": 101287.5,
+      "medianOfProcessMedianAllocatedBytes": 146736,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 101287.5,
+          "medianAllocatedBytes": 146736
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 94050,
+          "medianAllocatedBytes": 146736
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 95625,
+          "medianAllocatedBytes": 146736
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 88325,
+          "medianAllocatedBytes": 146736
+        }
+      ]
+    },
+    {
+      "fixture": "medium",
+      "engine": "Syntamark",
+      "stage": "snapshot-to-locations",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 8,
+      "medianOfProcessMedianNanoseconds": 574468.75,
+      "minProcessMedianNanoseconds": 541762.5,
+      "maxProcessMedianNanoseconds": 656825.0,
+      "medianOfProcessMedianAllocatedBytes": 812034,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 541762.5,
+          "medianAllocatedBytes": 812034
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 606100,
+          "medianAllocatedBytes": 812034
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 656825,
+          "medianAllocatedBytes": 812034
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 542837.5,
+          "medianAllocatedBytes": 812034
+        }
+      ]
+    },
+    {
+      "fixture": "medium",
+      "engine": "Markdig",
+      "stage": "snapshot-to-locations",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 8,
+      "medianOfProcessMedianNanoseconds": 110081.25,
+      "minProcessMedianNanoseconds": 100462.5,
+      "maxProcessMedianNanoseconds": 120812.5,
+      "medianOfProcessMedianAllocatedBytes": 175544,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 100462.5,
+          "medianAllocatedBytes": 175544
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 115250,
+          "medianAllocatedBytes": 175544
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 120812.5,
+          "medianAllocatedBytes": 175544
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 104912.5,
+          "medianAllocatedBytes": 175544
+        }
+      ]
+    },
+    {
+      "fixture": "medium",
+      "engine": "Syntamark-only",
+      "stage": "additional-preparsed-substring-map",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 10000,
+      "medianOfProcessMedianNanoseconds": 96.55,
+      "minProcessMedianNanoseconds": 94.42,
+      "maxProcessMedianNanoseconds": 102.88,
+      "medianOfProcessMedianAllocatedBytes": 320,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 97.53,
+          "medianAllocatedBytes": 320
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 102.88,
+          "medianAllocatedBytes": 320
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 94.42,
+          "medianAllocatedBytes": 320
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 95.57,
+          "medianAllocatedBytes": 320
+        }
+      ]
+    },
+    {
+      "fixture": "larger",
+      "engine": "Syntamark",
+      "stage": "representation-unequal-work",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 2,
+      "medianOfProcessMedianNanoseconds": 2978525,
+      "minProcessMedianNanoseconds": 2712550.0,
+      "maxProcessMedianNanoseconds": 3070550.0,
+      "medianOfProcessMedianAllocatedBytes": 4024976,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 2712550,
+          "medianAllocatedBytes": 4024976
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 2952200,
+          "medianAllocatedBytes": 4024976
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 3004850,
+          "medianAllocatedBytes": 4024976
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 3070550,
+          "medianAllocatedBytes": 4024976
+        }
+      ]
+    },
+    {
+      "fixture": "larger",
+      "engine": "Markdig",
+      "stage": "representation-unequal-work",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 2,
+      "medianOfProcessMedianNanoseconds": 310875,
+      "minProcessMedianNanoseconds": 281400.0,
+      "maxProcessMedianNanoseconds": 334000.0,
+      "medianOfProcessMedianAllocatedBytes": 349616,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 328400,
+          "medianAllocatedBytes": 349616
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 334000,
+          "medianAllocatedBytes": 349616
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 281400,
+          "medianAllocatedBytes": 349616
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 293350,
+          "medianAllocatedBytes": 349616
+        }
+      ]
+    },
+    {
+      "fixture": "larger",
+      "engine": "Syntamark",
+      "stage": "common-facts",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 2,
+      "medianOfProcessMedianNanoseconds": 1541250,
+      "minProcessMedianNanoseconds": 1390050.0,
+      "maxProcessMedianNanoseconds": 1651250.0,
+      "medianOfProcessMedianAllocatedBytes": 3110516,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 1555200,
+          "medianAllocatedBytes": 3110516
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 1527300,
+          "medianAllocatedBytes": 3110516
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 1390050,
+          "medianAllocatedBytes": 3110516
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 1651250,
+          "medianAllocatedBytes": 3110516
+        }
+      ]
+    },
+    {
+      "fixture": "larger",
+      "engine": "Markdig",
+      "stage": "common-facts",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 2,
+      "medianOfProcessMedianNanoseconds": 340925,
+      "minProcessMedianNanoseconds": 329450.0,
+      "maxProcessMedianNanoseconds": 350900.0,
+      "medianOfProcessMedianAllocatedBytes": 590848,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 329450,
+          "medianAllocatedBytes": 590848
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 350650,
+          "medianAllocatedBytes": 590848
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 331200,
+          "medianAllocatedBytes": 590848
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 350900,
+          "medianAllocatedBytes": 590848
+        }
+      ]
+    },
+    {
+      "fixture": "larger",
+      "engine": "Syntamark",
+      "stage": "snapshot-to-locations",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 2,
+      "medianOfProcessMedianNanoseconds": 2090750,
+      "minProcessMedianNanoseconds": 1775700.0,
+      "maxProcessMedianNanoseconds": 2247900.0,
+      "medianOfProcessMedianAllocatedBytes": 3224140,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 2088250,
+          "medianAllocatedBytes": 3224140
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 2093250,
+          "medianAllocatedBytes": 3224140
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 2247900,
+          "medianAllocatedBytes": 3224140
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 1775700,
+          "medianAllocatedBytes": 3224140
+        }
+      ]
+    },
+    {
+      "fixture": "larger",
+      "engine": "Markdig",
+      "stage": "snapshot-to-locations",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 2,
+      "medianOfProcessMedianNanoseconds": 427100,
+      "minProcessMedianNanoseconds": 399950.0,
+      "maxProcessMedianNanoseconds": 555600.0,
+      "medianOfProcessMedianAllocatedBytes": 704472,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 450200,
+          "medianAllocatedBytes": 704472
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 555600,
+          "medianAllocatedBytes": 704472
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 399950,
+          "medianAllocatedBytes": 704472
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 404000,
+          "medianAllocatedBytes": 704472
+        }
+      ]
+    },
+    {
+      "fixture": "larger",
+      "engine": "Syntamark-only",
+      "stage": "additional-preparsed-substring-map",
+      "independentProcesses": 4,
+      "samplesPerProcess": 5,
+      "operationsPerSample": 10000,
+      "medianOfProcessMedianNanoseconds": 101.43,
+      "minProcessMedianNanoseconds": 89.61,
+      "maxProcessMedianNanoseconds": 106.35,
+      "medianOfProcessMedianAllocatedBytes": 320,
+      "perProcess": [
+        {
+          "label": "run-1-A",
+          "medianNanoseconds": 96.88,
+          "medianAllocatedBytes": 320
+        },
+        {
+          "label": "run-2-B",
+          "medianNanoseconds": 106.35,
+          "medianAllocatedBytes": 320
+        },
+        {
+          "label": "run-3-B",
+          "medianNanoseconds": 105.98,
+          "medianAllocatedBytes": 320
+        },
+        {
+          "label": "run-4-A",
+          "medianNanoseconds": 89.61,
+          "medianAllocatedBytes": 320
+        }
+      ]
+    }
+  ],
+  "retained": [
+    {
+      "fixture": "small",
+      "engine": "Syntamark",
+      "stage": "representation-unequal-work",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 8808,
+      "perProcessBytesPerOutput": [
+        8808,
+        8808,
+        8808,
+        8808
+      ]
+    },
+    {
+      "fixture": "small",
+      "engine": "Markdig",
+      "stage": "representation-unequal-work",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 3485,
+      "perProcessBytesPerOutput": [
+        3485,
+        3485,
+        3485,
+        3485
+      ]
+    },
+    {
+      "fixture": "small",
+      "engine": "Syntamark",
+      "stage": "common-facts",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 972,
+      "perProcessBytesPerOutput": [
+        972,
+        972,
+        972,
+        972
+      ]
+    },
+    {
+      "fixture": "small",
+      "engine": "Markdig",
+      "stage": "common-facts",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 908,
+      "perProcessBytesPerOutput": [
+        908,
+        908,
+        908,
+        908
+      ]
+    },
+    {
+      "fixture": "small",
+      "engine": "Syntamark",
+      "stage": "snapshot-to-locations",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 1604,
+      "perProcessBytesPerOutput": [
+        1604,
+        1604,
+        1604,
+        1604
+      ]
+    },
+    {
+      "fixture": "small",
+      "engine": "Markdig",
+      "stage": "snapshot-to-locations",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 1528,
+      "perProcessBytesPerOutput": [
+        1528,
+        2556,
+        1528,
+        1528
+      ]
+    },
+    {
+      "fixture": "medium",
+      "engine": "Syntamark",
+      "stage": "representation-unequal-work",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 179856,
+      "perProcessBytesPerOutput": [
+        179856,
+        179856,
+        179856,
+        179856
+      ]
+    },
+    {
+      "fixture": "medium",
+      "engine": "Markdig",
+      "stage": "representation-unequal-work",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 71968,
+      "perProcessBytesPerOutput": [
+        71968,
+        71968,
+        71968,
+        71968
+      ]
+    },
+    {
+      "fixture": "medium",
+      "engine": "Syntamark",
+      "stage": "common-facts",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 21028,
+      "perProcessBytesPerOutput": [
+        21028,
+        21028,
+        21028,
+        21028
+      ]
+    },
+    {
+      "fixture": "medium",
+      "engine": "Markdig",
+      "stage": "common-facts",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 20068,
+      "perProcessBytesPerOutput": [
+        20068,
+        20068,
+        20068,
+        20068
+      ]
+    },
+    {
+      "fixture": "medium",
+      "engine": "Syntamark",
+      "stage": "snapshot-to-locations",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 34908,
+      "perProcessBytesPerOutput": [
+        34908,
+        34908,
+        34908,
+        34908
+      ]
+    },
+    {
+      "fixture": "medium",
+      "engine": "Markdig",
+      "stage": "snapshot-to-locations",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 33948,
+      "perProcessBytesPerOutput": [
+        33948,
+        33948,
+        33948,
+        33948
+      ]
+    },
+    {
+      "fixture": "larger",
+      "engine": "Syntamark",
+      "stage": "representation-unequal-work",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 715728,
+      "perProcessBytesPerOutput": [
+        715728,
+        715728,
+        715728,
+        715728
+      ]
+    },
+    {
+      "fixture": "larger",
+      "engine": "Markdig",
+      "stage": "representation-unequal-work",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 290440,
+      "perProcessBytesPerOutput": [
+        290440,
+        290440,
+        290440,
+        290440
+      ]
+    },
+    {
+      "fixture": "larger",
+      "engine": "Syntamark",
+      "stage": "common-facts",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 83812,
+      "perProcessBytesPerOutput": [
+        83812,
+        83812,
+        83812,
+        83812
+      ]
+    },
+    {
+      "fixture": "larger",
+      "engine": "Markdig",
+      "stage": "common-facts",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 79972,
+      "perProcessBytesPerOutput": [
+        79972,
+        79972,
+        79972,
+        79972
+      ]
+    },
+    {
+      "fixture": "larger",
+      "engine": "Syntamark",
+      "stage": "snapshot-to-locations",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 139164,
+      "perProcessBytesPerOutput": [
+        139164,
+        139164,
+        139164,
+        139164
+      ]
+    },
+    {
+      "fixture": "larger",
+      "engine": "Markdig",
+      "stage": "snapshot-to-locations",
+      "cohortOutputs": 8,
+      "medianBytesPerOutput": 135324,
+      "perProcessBytesPerOutput": [
+        135324,
+        135324,
+        135324,
+        135324
+      ]
+    }
+  ]
+}

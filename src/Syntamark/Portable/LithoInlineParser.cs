@@ -390,16 +390,38 @@ internal static class LithoInlineParser
             }
 
             FlushText();
-            var content = text[(_position + run)..closer];
-            context?.Scan((long)content.Length * 3);
-            content = content.Replace("\r\n", "\n").Replace('\r', '\n').Replace('\n', ' ');
-            if (content.Length >= 2 && content[0] == ' ' && content[^1] == ' ' && content.Trim().Length != 0)
+            var contentStart = _position + run;
+            var contentLength = closer - contentStart;
+            context?.Scan((long)contentLength * 3);
+            string content;
+            if (text.IndexOf('\r', contentStart, contentLength) < 0
+                && text.IndexOf('\n', contentStart, contentLength) < 0)
             {
-                content = content[1..^1];
+                var start = contentStart;
+                var length = contentLength;
+                if (length >= 2 && text[start] == ' ' && text[start + length - 1] == ' ')
+                {
+                    var firstContent = start;
+                    while (firstContent < closer && char.IsWhiteSpace(text[firstContent]))
+                        firstContent++;
+                    if (firstContent < closer)
+                    {
+                        start++;
+                        length -= 2;
+                    }
+                }
+                content = text.Substring(start, length);
+            }
+            else
+            {
+                content = text.Substring(contentStart, contentLength)
+                    .Replace("\r\n", "\n").Replace('\r', '\n').Replace('\n', ' ');
+                if (content.Length >= 2 && content[0] == ' ' && content[^1] == ' ' && content.Trim().Length != 0)
+                    content = content[1..^1];
             }
 
             Current.Add(new LithoCodeSpan(content, SpanAt(_position, (closer + run) - _position))
-            { Projection = Project(content, _position + run, closer - _position - run, atomic: true) });
+            { Projection = Project(content, contentStart, contentLength, atomic: true) });
             _position = closer + run;
         }
 

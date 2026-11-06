@@ -412,11 +412,15 @@ internal static partial class LithoBlockParser
         {
             // The final line cannot end in a hard break (no following line),
             // so trailing spaces/tabs are stripped per CommonMark.
-            var lastText = acc[^1].Text.TrimEnd(' ', '\t');
+            var last = acc[^1];
             if (acc.Count == 1)
             {
-                return (lastText, new LithoLineMap([0], [acc[0].Offset], lastText.Length, acc[0].Offset + lastText.Length));
+                var lastText = last.Text.TrimEnd(' ', '\t');
+                return (lastText, new LithoLineMap([0], [last.Offset], lastText.Length, last.Offset + lastText.Length));
             }
+            var lastLength = last.Text.Length;
+            while (lastLength > 0 && last.Text[lastLength - 1] is ' ' or '\t')
+                lastLength--;
 
             var builder = new System.Text.StringBuilder();
             var localStarts = new List<int>(acc.Count);
@@ -426,7 +430,8 @@ internal static partial class LithoBlockParser
                 context?.Scan(8);
                 localStarts.Add(builder.Length);
                 bodyStarts.Add(acc[i].Offset);
-                builder.Append(i + 1 < acc.Count ? acc[i].Text : lastText);
+                var source = acc[i].Text;
+                builder.Append(source, 0, i + 1 < acc.Count ? source.Length : lastLength);
                 if (i + 1 < acc.Count)
                 {
                     builder.Append(acc[i].Break);
@@ -434,8 +439,7 @@ internal static partial class LithoBlockParser
             }
 
             var text = builder.ToString();
-            var last = acc[^1];
-            return (text, new LithoLineMap([.. localStarts], [.. bodyStarts], text.Length, last.Offset + lastText.Length));
+            return (text, new LithoLineMap([.. localStarts], [.. bodyStarts], text.Length, last.Offset + lastLength));
         }
 
         private bool TryParseFenced(int index, int to, out LithoCode? code, out int next)

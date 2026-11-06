@@ -15,6 +15,7 @@ internal enum MdAnalysisParts
     Fences = 16,
     TextRegions = 32,
     Syntax = 64,
+    UnsupportedSyntax = 128,
     AllFacts = 63,
     All = 127,
 }
@@ -32,6 +33,12 @@ internal sealed class MdAnalysisResult
     private readonly MdDocumentFacts facts;
 
     internal MdAnalysisResult(MdDocumentFacts facts, MdSyntaxNode? root, MdAnalysisParts requestedParts)
+        : this(facts, root, requestedParts, MdFreeze.Empty<MdUnsupportedSyntaxCandidate>(), null)
+    {
+    }
+
+    internal MdAnalysisResult(MdDocumentFacts facts, MdSyntaxNode? root, MdAnalysisParts requestedParts,
+        IReadOnlyList<MdUnsupportedSyntaxCandidate> unsupportedSyntax, IReadOnlyList<LithoBlock>? blocks)
     {
         if (facts is null)
             throw new ArgumentNullException(nameof(facts));
@@ -39,6 +46,8 @@ internal sealed class MdAnalysisResult
         this.facts = facts;
         Root = root;
         RequestedParts = requestedParts;
+        UnsupportedSyntax = HasOutput(MdAnalysisParts.UnsupportedSyntax) ? MdFreeze.Copy(unsupportedSyntax) : null;
+        Blocks = blocks is null ? null : MdFreeze.Copy(blocks);
         AnalysisHash = MdHash.Compute("{\"analysisSchemaVersion\":1,\"optionsHash\":\"" + facts.OptionsHash
             + "\",\"requestedParts\":" + ((int)requestedParts).ToString(CultureInfo.InvariantCulture) + "}");
     }
@@ -65,6 +74,9 @@ internal sealed class MdAnalysisResult
     internal IReadOnlyList<MdFence>? Fences => HasOutput(MdAnalysisParts.Fences) ? facts.Fences : null;
     internal IReadOnlyList<MdTextRegion>? TextRegions => HasOutput(MdAnalysisParts.TextRegions) ? facts.TextRegions : null;
     internal MdSyntaxNode? Root { get; }
+    internal IReadOnlyList<MdUnsupportedSyntaxCandidate>? UnsupportedSyntax { get; }
+    // Body-relative legacy rendering blocks are retained only by AnalyzeWithBlocks.
+    internal IReadOnlyList<LithoBlock>? Blocks { get; }
     internal MdAnalysisParts RequestedParts { get; }
     internal string AnalysisHash { get; }
 
@@ -73,14 +85,14 @@ internal sealed class MdAnalysisResult
 
     internal static void Validate(MdAnalysisParts parts)
     {
-        if ((parts & ~MdAnalysisParts.All) != 0)
+        if ((parts & ~(MdAnalysisParts.All | MdAnalysisParts.UnsupportedSyntax)) != 0)
             throw new ArgumentOutOfRangeException(nameof(parts));
     }
 
     internal MdAnalysisAvailability GetAvailability(MdAnalysisParts part)
     {
         var value = (int)part;
-        if (value <= 0 || (part & ~MdAnalysisParts.All) != 0 || (value & (value - 1)) != 0)
+        if (value <= 0 || (part & ~(MdAnalysisParts.All | MdAnalysisParts.UnsupportedSyntax)) != 0 || (value & (value - 1)) != 0)
             throw new ArgumentOutOfRangeException(nameof(part));
         if ((RequestedParts & part) == 0)
             return MdAnalysisAvailability.NotRequested;

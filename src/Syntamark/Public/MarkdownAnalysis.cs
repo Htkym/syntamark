@@ -16,6 +16,7 @@ public enum MarkdownAnalysisParts
     Fences = 16,
     TextRegions = 32,
     Syntax = 64,
+    UnsupportedSyntax = 128,
     AllFacts = 63,
     All = 127,
 }
@@ -32,7 +33,7 @@ public sealed class MarkdownAnalysisResult
     {
         RequestedParts = (MarkdownAnalysisParts)result.RequestedParts;
         AnalysisHash = result.AnalysisHash;
-        availability = new MarkdownAnalysisAvailability[7];
+        availability = new MarkdownAnalysisAvailability[8];
         for (var i = 0; i < availability.Length; i++)
             availability[i] = (MarkdownAnalysisAvailability)result.GetAvailability((MdAnalysisParts)(1 << i));
         document = result.PublishSelected(static facts => new MarkdownDocument(facts));
@@ -42,6 +43,8 @@ public sealed class MarkdownAnalysisResult
         Links = HasOutput(MarkdownAnalysisParts.Links) ? document.Links : null;
         Fences = HasOutput(MarkdownAnalysisParts.Fences) ? document.Fences : null;
         TextRegions = HasOutput(MarkdownAnalysisParts.TextRegions) ? document.TextRegions : null;
+        UnsupportedSyntax = result.UnsupportedSyntax is { } candidates
+            ? MarkdownCollections.Convert(candidates, static candidate => new MarkdownUnsupportedSyntaxCandidate(candidate)) : null;
         Root = HasOutput(MarkdownAnalysisParts.Syntax) && result.Root is { } root
             ? MarkdownSyntaxNode.From(root, result.RawText, cancellationToken) : null;
         cancellationToken.ThrowIfCancellationRequested();
@@ -66,6 +69,7 @@ public sealed class MarkdownAnalysisResult
     public IReadOnlyList<MarkdownLink>? Links { get; }
     public IReadOnlyList<MarkdownFence>? Fences { get; }
     public IReadOnlyList<MarkdownTextRegion>? TextRegions { get; }
+    public IReadOnlyList<MarkdownUnsupportedSyntaxCandidate>? UnsupportedSyntax { get; }
     public MarkdownSyntaxNode? Root { get; }
     public IReadOnlyList<MarkdownDiagnostic> Diagnostics => document.Diagnostics;
     public IReadOnlyList<MarkdownCapability> Capabilities => document.Capabilities;
@@ -83,11 +87,27 @@ public sealed class MarkdownAnalysisResult
         MarkdownAnalysisParts.Fences => 4,
         MarkdownAnalysisParts.TextRegions => 5,
         MarkdownAnalysisParts.Syntax => 6,
+        MarkdownAnalysisParts.UnsupportedSyntax => 7,
         _ => throw new ArgumentOutOfRangeException(nameof(part), "Select exactly one analysis part."),
     }];
 
     private bool HasOutput(MarkdownAnalysisParts part) => GetAvailability(part) is
         MarkdownAnalysisAvailability.Complete or MarkdownAnalysisAvailability.Partial;
+}
+
+public enum MarkdownUnsupportedSyntaxKind { Footnote, DefinitionList, GenericAttribute, GridTable }
+
+public sealed class MarkdownUnsupportedSyntaxCandidate
+{
+    internal MarkdownUnsupportedSyntaxCandidate(MdUnsupportedSyntaxCandidate candidate)
+    {
+        Kind = (MarkdownUnsupportedSyntaxKind)candidate.Kind;
+        Reason = candidate.Reason;
+        RawSpan = global::Syntamark.RawSpan.From(candidate.RawSpan);
+    }
+    public MarkdownUnsupportedSyntaxKind Kind { get; }
+    public string Reason { get; }
+    public RawSpan RawSpan { get; }
 }
 
 public static partial class MarkdownParser

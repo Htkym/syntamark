@@ -16,6 +16,7 @@ var portableTarget = portable.GetCustomAttribute<TargetFrameworkAttribute>()?.Fr
 if (args is ["--editor-analysis"])
 {
     EditorAnalysisChecks.Run(portable);
+    UnsupportedSyntaxChecks.Run(portable);
     return;
 }
 if (args is ["--review-fixes"])
@@ -92,6 +93,7 @@ PublicAllocationChecks.Run();
 MappingFusionChecks.Run(runtime, portable);
 AnalysisChecks.Run(portable);
 EditorAnalysisChecks.Run(portable);
+UnsupportedSyntaxChecks.Run(portable);
 OwnedSliceChecks.Run(portable);
 MappingRegressionChecks.Run(portable);
 CommonMarkInlineChecks.Run(portable);

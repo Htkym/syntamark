@@ -38,7 +38,19 @@ jobs:
           node-version: 22
           package-manager-cache: false
       - name: Verify release version and pair guards
+        env:
+          SYNTAMARK_TEST_ROOT: ${{ runner.temp }}/syntamark-pair-checks
         run: node --test eng/markdown/New-ArtifactPair.test.mjs
+      - name: Save the private integration pair
+        if: github.event_name != 'workflow_dispatch'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: syntamark-private-pair-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/syntamark-pair-checks/*/private-pair/feed/*.nupkg
+            ${{ runner.temp }}/syntamark-pair-checks/*/private-pair/pair-manifest.json
+            ${{ runner.temp }}/syntamark-pair-checks/*/private-pair-receipt.json
+          if-no-files-found: error
       - uses: ./.github/actions/verify-portability
       - name: Save verification evidence
         if: always()

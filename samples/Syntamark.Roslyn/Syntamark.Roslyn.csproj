@@ -11,6 +11,7 @@
     <!-- This non-shipping canary declares only its tested C# host and has no analyzer release history. -->
     <NoWarn>$(NoWarn);RS1004;RS2008</NoWarn>
     <NuGetLockFilePath Condition="'$(SyntamarkCandidateMode)' == 'true'">obj/candidate.packages.lock.json</NuGetLockFilePath>
+    <DefineConstants Condition="'$(SyntamarkCandidateMode)' == 'true'">$(DefineConstants);SYNTAMARK_CANDIDATE</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Syntamark.Source" Version="[$(SyntamarkSourceVersion)]" PrivateAssets="all" IncludeAssets="build" />

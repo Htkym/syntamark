@@ -13,11 +13,16 @@ runs:
         for project in tests/Syntamark.Conformance tests/Syntamark.Comparison tests/Syntamark.Safety; do
           dotnet restore "$project" --locked-mode
         done
-        dotnet run --project tests/Syntamark.Conformance -c Release --no-restore -- --revision "$GITHUB_SHA" --output .local/commonmark
-        dotnet run --project tests/Syntamark.Conformance -c Release --no-restore -- --profile commonmark/0.31.2 --strict --revision "$GITHUB_SHA" --output .local/commonmark-standard
+        dotnet run --project tests/Syntamark.Conformance -c Release --no-restore -- --syntax --revision "$GITHUB_SHA" --output .local/commonmark
+        dotnet run --project tests/Syntamark.Conformance -c Release --no-restore -- --profile commonmark/0.31.2 --syntax --strict --revision "$GITHUB_SHA" --output .local/commonmark-standard
         dotnet run --project tests/Syntamark.Comparison -c Release --no-restore -- --output .local/comparison/current.json
         dotnet run --project tests/Syntamark.Comparison -c Release --no-restore -- --commonmark-output .local/commonmark-comparison
         dotnet run --project tests/Syntamark.Safety -c Release --no-restore > .local/safety.log
+    - name: Verify prose through the public syntax API
+      shell: bash
+      run: |
+        dotnet restore samples/Syntamark.Prose --locked-mode
+        dotnet run --project samples/Syntamark.Prose -c Release --no-restore > .local/prose.log
     - name: Verify the published source-package baseline
       shell: pwsh
       run: |
@@ -25,7 +30,7 @@ runs:
     - name: Verify formatting
       shell: bash
       run: |
-        for project in src/Syntamark/Syntamark.csproj tests/Syntamark.Portability/Syntamark.Portability.csproj tests/Syntamark.Conformance/Syntamark.Conformance.csproj tests/Syntamark.Comparison/Syntamark.Comparison.csproj tests/Syntamark.Roslyn.Integration/Syntamark.Roslyn.Integration.csproj tests/Syntamark.Safety/Syntamark.Safety.csproj; do
+        for project in src/Syntamark/Syntamark.csproj tests/Syntamark.Portability/Syntamark.Portability.csproj tests/Syntamark.Conformance/Syntamark.Conformance.csproj tests/Syntamark.Comparison/Syntamark.Comparison.csproj tests/Syntamark.Roslyn.Integration/Syntamark.Roslyn.Integration.csproj tests/Syntamark.Safety/Syntamark.Safety.csproj samples/Syntamark.Prose/Syntamark.Prose.csproj; do
           dotnet format style "$project" --diagnostics IDE2001 --exclude src/Syntamark/Portable/MarkdownParserVersion.g.cs --no-restore --verify-no-changes
           dotnet format whitespace "$project" --exclude src/Syntamark/Portable/MarkdownParserVersion.g.cs --no-restore --verify-no-changes
         done

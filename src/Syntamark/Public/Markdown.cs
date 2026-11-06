@@ -359,7 +359,7 @@ public sealed class MarkdownParseOptions
 }
 
 /// <summary>Parses owned text without rendering, site resolution, file access or user code.</summary>
-public static class MarkdownParser
+public static partial class MarkdownParser
 {
     public static MarkdownDocument Parse(string rawText, string scopeId, string sourceId,
         string? sourceVersion = null, MarkdownParseOptions? options = null,

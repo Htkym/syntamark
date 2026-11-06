@@ -6,7 +6,7 @@ Run from the repository root:
 dotnet restore tests/Syntamark.Conformance --locked-mode
 dotnet run --project tests/Syntamark.Conformance -c Release --no-restore -- --output .local/commonmark
 dotnet run --project tests/Syntamark.Conformance -c Release --no-build -- --example 191 --output .local/commonmark-191
-dotnet run --project tests/Syntamark.Conformance -c Release --no-build -- --profile commonmark/0.31.2 --output .local/commonmark-standard
+dotnet run --project tests/Syntamark.Conformance -c Release --no-build -- --profile commonmark/0.31.2 --syntax --output .local/commonmark-standard
 ```
 
 The default command inventories known differences and exits zero when the runner completes.
@@ -17,8 +17,7 @@ the same syntax adapter, facade checks, and facts invariants then run against th
 This supports baseline/candidate comparison without modifying a historical fixture or product friend declarations.
 Unknown options, fixture/adapter self-check failures, execution exceptions, and facts invariant failures always fail the process.
 An example selection keeps all 652 identities in the report and marks unselected rows `not-run`.
-The public syntax entry is deferred to the separate syntax change. The optional reflection hook
-`--syntax` calls the public `ParseWithSyntax` entry and reports independent syntax invariants:
+`--syntax` additionally calls the public `ParseWithSyntax` entry and reports independent syntax invariants:
 known raw bounds, child containment, sibling order/non-overlap, and the count of unknown raw positions.
 Semantic destination ranges are not treated as children. A missing entry on a historical DLL is `not-observable`.
 Syntax invariant failures fail inventory mode too; these checks do not count as HTML passes.

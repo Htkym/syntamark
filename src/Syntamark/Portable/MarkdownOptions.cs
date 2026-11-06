@@ -107,6 +107,7 @@ internal sealed class MdParseContext(MdOptions options, CancellationToken cancel
     private int outputItems;
     internal MdOptions Options { get; } = options;
     internal CancellationToken CancellationToken { get; } = cancellationToken;
+    internal bool CaptureUnsupportedSyntax { get; set; }
     internal System.Collections.Generic.List<MdLink> Definitions { get; } = new();
     internal System.Collections.Generic.List<MdRawRange> OpaqueTokens { get; } = new();
     internal void Scan(long units = 1)

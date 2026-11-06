@@ -48,7 +48,36 @@ internal static class EditorAnalysisChecks
             options: new MarkdownParseOptions(MarkdownFrontMatterRecovery.TreatAsBody, profileId: "commonmark/0.31.2"));
         Check(standard.OptionsHash == standardRecovery.OptionsHash && standardRecovery.FrontMatter.State == MarkdownFrontMatterState.Absent,
             "Profiles without front matter must hash the same effective options.");
+        foreach (var assembly in new[] { typeof(MarkdownParser).Assembly, portable })
+            RenderingBlocks(assembly);
         Console.WriteLine("Editor front matter recovery: PASS (runtime/netstandard2.0, default identity, raw positions).");
+    }
+
+    private static void RenderingBlocks(Assembly assembly)
+    {
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+        const string raw = "---\ntitle: x\n---\n# Heading\n\n[use][r]\n\n[r]: /target\n";
+        var optionsType = assembly.GetType("Syntamark.Compilation.MdOptions", true)!;
+        var parser = assembly.GetType("Syntamark.Compilation.MdParser", true)!;
+        var options = optionsType.GetConstructors(flags).Single(ctor => ctor.GetParameters().Length == 6)
+            .Invoke(new object[] { 1048576, 131072, 200, 16777216, "lithosharp-markdown/1", 1 });
+        var parts = Enum.ToObject(assembly.GetType("Syntamark.Compilation.MdAnalysisParts", true)!, 10);
+        var arguments = new[] { (object)raw, parts, "rendering", "same.md", null, options, CancellationToken.None };
+        var result = parser.GetMethod("AnalyzeWithBlocks", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, arguments)!;
+        object? Get(object value, string name) => value.GetType().GetProperty(name, flags)!.GetValue(value);
+        var blocks = ((System.Collections.IEnumerable)Get(result, "Blocks")!).Cast<object>().ToArray();
+        var heading = ((System.Collections.IEnumerable)Get(result, "Headings")!).Cast<object>().Single();
+        var headingOffset = (int)Get(Get(heading, "RawSpan")!, "Start")!;
+        var bodyOffset = (int)Get(Get(result, "BodySpan")!, "Start")!;
+        Check(blocks[0].GetType().Name == "LithoHeading" && Get(result, "Root") is null
+            && (int)Get(Get(blocks[0], "Span")!, "Start")! + bodyOffset == headingOffset,
+            "Rendering blocks and raw facts must share one body offset without requiring public syntax.");
+        var links = ((System.Collections.IEnumerable)Get(result, "Links")!).Cast<object>();
+        Check(links.Any(link => (string?)Get(link, "Target") == "/target" && Get(link, "Resolution")!.ToString() == "ResolvedReference"),
+            "The shared rendering parse must resolve forward references for selected facts.");
+        var ordinary = parser.GetMethod("Analyze", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, arguments)!;
+        Check(Get(ordinary, "Blocks") is null && Get(ordinary, "AnalysisHash")!.Equals(Get(result, "AnalysisHash")),
+            "Ordinary analysis must not retain rendering blocks or change selected-facts identity.");
     }
 
     private static void Check(bool condition, string message)

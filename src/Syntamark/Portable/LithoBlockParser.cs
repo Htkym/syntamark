@@ -24,6 +24,7 @@ internal static partial class LithoBlockParser
     internal readonly record struct Line(string Text, int Offset, string Break)
     {
         internal bool Lazy { get; init; }
+        internal int ParagraphIndentColumns { get; init; }
         // Spaces left by consuming only part of an indentation tab. Offset points
         // after that raw tab; stripped paragraph prefixes must not advance it twice.
         internal int Padding { get; init; }
@@ -405,7 +406,11 @@ internal static partial class LithoBlockParser
             var stripped = line.Text.TrimStart(' ', '\t');
             return stripped.Length == line.Text.Length
                 ? line
-                : new Line(stripped, line.Offset + (line.Text.Length - stripped.Length) - line.Padding, line.Break) { Lazy = line.Lazy };
+                : new Line(stripped, line.Offset + (line.Text.Length - stripped.Length) - line.Padding, line.Break)
+                {
+                    Lazy = line.Lazy,
+                    ParagraphIndentColumns = context?.CaptureUnsupportedSyntax == true ? CountIndent(line.Text, 0, context).Columns : 0,
+                };
         }
 
         private (string Text, LithoLineMap Map) JoinLines(List<Line> acc)
@@ -416,7 +421,10 @@ internal static partial class LithoBlockParser
             if (acc.Count == 1)
             {
                 var lastText = last.Text.TrimEnd(' ', '\t');
-                return (lastText, new LithoLineMap([0], [last.Offset], lastText.Length, last.Offset + lastText.Length));
+                return (lastText, new LithoLineMap([0], [last.Offset], lastText.Length, last.Offset + lastText.Length)
+                {
+                    ParagraphIndentColumns = context?.CaptureUnsupportedSyntax == true ? [last.ParagraphIndentColumns] : null,
+                });
             }
             var lastLength = last.Text.Length;
             while (lastLength > 0 && last.Text[lastLength - 1] is ' ' or '\t')
@@ -439,7 +447,10 @@ internal static partial class LithoBlockParser
             }
 
             var text = builder.ToString();
-            return (text, new LithoLineMap([.. localStarts], [.. bodyStarts], text.Length, last.Offset + lastLength));
+            return (text, new LithoLineMap([.. localStarts], [.. bodyStarts], text.Length, last.Offset + lastLength)
+            {
+                ParagraphIndentColumns = context?.CaptureUnsupportedSyntax == true ? acc.Select(line => line.ParagraphIndentColumns).ToArray() : null,
+            });
         }
 
         private bool TryParseFenced(int index, int to, out LithoCode? code, out int next)

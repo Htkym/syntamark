@@ -413,14 +413,14 @@ internal static partial class LithoBlockParser
             // The final line cannot end in a hard break (no following line),
             // so trailing spaces/tabs are stripped per CommonMark.
             var last = acc[^1];
+            if (acc.Count == 1)
+            {
+                var lastText = last.Text.TrimEnd(' ', '\t');
+                return (lastText, new LithoLineMap([0], [last.Offset], lastText.Length, last.Offset + lastText.Length));
+            }
             var lastLength = last.Text.Length;
             while (lastLength > 0 && last.Text[lastLength - 1] is ' ' or '\t')
                 lastLength--;
-            if (acc.Count == 1)
-            {
-                var lastText = lastLength == last.Text.Length ? last.Text : last.Text.Substring(0, lastLength);
-                return (lastText, new LithoLineMap([0], [last.Offset], lastLength, last.Offset + lastLength));
-            }
 
             var builder = new System.Text.StringBuilder();
             var localStarts = new List<int>(acc.Count);

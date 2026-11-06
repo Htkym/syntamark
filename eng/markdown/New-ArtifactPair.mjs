@@ -68,7 +68,7 @@ function checkPublishedPackage(local,published){
 }
 function prepare(commit,version,out){
   assert(/^[0-9a-f]{40}$/.test(commit),'Require one full source commit');
-  assert(/^(?:1\.0\.[01]|2\.0\.0-preview\.[1-9][0-9]*)$/.test(version),'Require one new immutable 1.0.0, 1.0.1 or 2.0.0-preview.N');
+  assert(/^(?:1\.0\.[01]|1\.1\.0|2\.0\.0-preview\.[1-9][0-9]*)$/.test(version),'Require one new immutable 1.0.0, 1.0.1, 1.1.0 or 2.0.0-preview.N');
   assert(!json(path.join(root,'eng/markdown/immutable-versions.json')).some(a=>a.componentVersion===version),'Version is already immutable; choose an unused version');
   out=path.resolve(out);assert(!fs.existsSync(out),'Never overwrite an artifact stage; choose new output/version');
   assert(git(['rev-parse',commit+'^{commit}']).toString().trim()===commit,'Source commit mismatch');
@@ -136,7 +136,7 @@ function prepare(commit,version,out){
     write(target,text);
   }
   const readmeInput=blob(commit,'README.md');
-  const versionPattern='(?:1\\.0\\.[01]|2\\.0\\.0-preview\\.[1-9][0-9]*)';
+  const versionPattern='(?:1\\.0\\.[01]|1\\.1\\.0|2\\.0\\.0-preview\\.[1-9][0-9]*)';
   // Replace installation selections, not historical release statements.
   const readme=Buffer.from(readmeInput.toString()
     .replace(new RegExp('(dotnet add package Syntamark --version )'+versionPattern,'g'),(_,prefix)=>prefix+version)
@@ -279,4 +279,4 @@ else if(action==='seal'&&args.length===1)seal(args[0]);
 else if(action==='verify-restored'&&args.length===2)verifyRestored(...args);
 else if(action==='check-pair'&&args.length===2)checkPair(...args);
 else if(action==='check-published-package'&&args.length===2)checkPublishedPackage(...args);
-else throw Error('Usage: New-ArtifactPair.mjs prepare <source SHA> <1.0.0|1.0.1|2.0.0-preview.N> <new absolute stage>; check-stage <stage>; seal <stage>; verify-restored <stage> <canary JSON>; check-pair <artifact directory> <manifest SHA256>; check-published-package <sealed nupkg> <published nupkg>');
+else throw Error('Usage: New-ArtifactPair.mjs prepare <source SHA> <1.0.0|1.0.1|1.1.0|2.0.0-preview.N> <new absolute stage>; check-stage <stage>; seal <stage>; verify-restored <stage> <canary JSON>; check-pair <artifact directory> <manifest SHA256>; check-published-package <sealed nupkg> <published nupkg>');

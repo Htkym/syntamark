@@ -8,6 +8,8 @@ namespace Syntamark.Compilation;
 
 internal sealed class MdOptions
 {
+    private string? hash;
+
     internal MdOptions(int maxInputUtf16 = 1048576, int maxOutputItems = 131072,
         int maxNestingDepth = 200, int maxScanUnits = 16777216,
         string profileId = "lithosharp-markdown/1", int optionsSchemaVersion = 1)
@@ -30,12 +32,22 @@ internal sealed class MdOptions
     internal string ProfileId { get; }
     internal bool IsCommonMark => ProfileId == "commonmark/0.31.2";
     internal int OptionsSchemaVersion { get; }
-    internal string Hash => MdHash.Compute("{\"maxInputUtf16\":" + MaxInputUtf16.ToString(CultureInfo.InvariantCulture)
-        + ",\"maxNestingDepth\":" + MaxNestingDepth.ToString(CultureInfo.InvariantCulture)
-        + ",\"maxOutputItems\":" + MaxOutputItems.ToString(CultureInfo.InvariantCulture)
-        + ",\"maxScanUnits\":" + MaxScanUnits.ToString(CultureInfo.InvariantCulture)
-        + ",\"optionsSchemaVersion\":" + OptionsSchemaVersion.ToString(CultureInfo.InvariantCulture)
-        + ",\"profileId\":\"" + ProfileId + "\"}");
+    internal string Hash
+    {
+        get
+        {
+            var cached = Volatile.Read(ref hash);
+            if (cached is not null)
+                return cached;
+            var computed = MdHash.Compute("{\"maxInputUtf16\":" + MaxInputUtf16.ToString(CultureInfo.InvariantCulture)
+                + ",\"maxNestingDepth\":" + MaxNestingDepth.ToString(CultureInfo.InvariantCulture)
+                + ",\"maxOutputItems\":" + MaxOutputItems.ToString(CultureInfo.InvariantCulture)
+                + ",\"maxScanUnits\":" + MaxScanUnits.ToString(CultureInfo.InvariantCulture)
+                + ",\"optionsSchemaVersion\":" + OptionsSchemaVersion.ToString(CultureInfo.InvariantCulture)
+                + ",\"profileId\":\"" + ProfileId + "\"}");
+            return Interlocked.CompareExchange(ref hash, computed, null) ?? computed;
+        }
+    }
 }
 
 internal static class MdHash

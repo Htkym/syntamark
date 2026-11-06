@@ -86,10 +86,11 @@ public sealed class MarkdownSyntaxNode
                 continue;
             }
             pending.Pop();
-            var node = new MarkdownSyntaxNode(frame.Source, rawText, frame.Children.AsReadOnly());
+            var node = new MarkdownSyntaxNode(frame.Source, rawText, MarkdownCollections.FromOwned(frame.Children));
             if (pending.Count == 0)
                 return node;
-            pending.Peek().Children.Add(node);
+            var parent = pending.Peek();
+            parent.Children[parent.Index - 1] = node;
         }
         throw new InvalidOperationException("Syntax root was not converted.");
     }
@@ -97,7 +98,8 @@ public sealed class MarkdownSyntaxNode
     private sealed class Frame(MdSyntaxNode source)
     {
         internal MdSyntaxNode Source { get; } = source;
-        internal List<MarkdownSyntaxNode> Children { get; } = new();
+        internal MarkdownSyntaxNode[] Children { get; } = source.Children.Count == 0
+            ? Array.Empty<MarkdownSyntaxNode>() : new MarkdownSyntaxNode[source.Children.Count];
         internal int Index { get; set; }
     }
 }
@@ -124,7 +126,7 @@ public static partial class MarkdownParser
         CancellationToken cancellationToken = default)
     {
         var parsed = MdParser.ParseWithSyntax(rawText, scopeId, sourceId, sourceVersion,
-            options?.Core ?? new MdOptions(), cancellationToken);
+            options?.Core ?? defaultOptions, cancellationToken);
         return new MarkdownSyntaxDocument(parsed, cancellationToken);
     }
 }

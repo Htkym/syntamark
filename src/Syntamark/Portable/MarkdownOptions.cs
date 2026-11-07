@@ -6,6 +6,8 @@ using System.Threading;
 
 namespace Syntamark.Compilation;
 
+internal enum MdFrontMatterRecovery { None, TreatAsBody }
+
 internal sealed class MdOptions
 {
     private string? hash;
@@ -13,7 +15,17 @@ internal sealed class MdOptions
     internal MdOptions(int maxInputUtf16 = 1048576, int maxOutputItems = 131072,
         int maxNestingDepth = 200, int maxScanUnits = 16777216,
         string profileId = "lithosharp-markdown/1", int optionsSchemaVersion = 1)
+        : this(MdFrontMatterRecovery.None, maxInputUtf16, maxOutputItems, maxNestingDepth, maxScanUnits,
+            profileId, optionsSchemaVersion)
     {
+    }
+
+    internal MdOptions(MdFrontMatterRecovery frontMatterRecovery, int maxInputUtf16 = 1048576, int maxOutputItems = 131072,
+        int maxNestingDepth = 200, int maxScanUnits = 16777216,
+        string profileId = "lithosharp-markdown/1", int optionsSchemaVersion = 1)
+    {
+        if (frontMatterRecovery is not (MdFrontMatterRecovery.None or MdFrontMatterRecovery.TreatAsBody))
+            throw new ArgumentOutOfRangeException(nameof(frontMatterRecovery));
         if (maxInputUtf16 < 1 || maxOutputItems < 1 || maxNestingDepth < 1 || maxScanUnits < 1)
             throw new ArgumentOutOfRangeException(nameof(maxInputUtf16), "Resource limits must be positive integers.");
         if ((profileId != "lithosharp-markdown/1" && profileId != "commonmark/0.31.2") || optionsSchemaVersion != 1)
@@ -24,6 +36,7 @@ internal sealed class MdOptions
         MaxScanUnits = maxScanUnits;
         ProfileId = profileId;
         OptionsSchemaVersion = optionsSchemaVersion;
+        FrontMatterRecovery = frontMatterRecovery;
     }
     internal int MaxInputUtf16 { get; }
     internal int MaxOutputItems { get; }
@@ -32,6 +45,7 @@ internal sealed class MdOptions
     internal string ProfileId { get; }
     internal bool IsCommonMark => ProfileId == "commonmark/0.31.2";
     internal int OptionsSchemaVersion { get; }
+    internal MdFrontMatterRecovery FrontMatterRecovery { get; }
     internal string Hash
     {
         get
@@ -39,7 +53,9 @@ internal sealed class MdOptions
             var cached = Volatile.Read(ref hash);
             if (cached is not null)
                 return cached;
-            var computed = MdHash.Compute("{\"maxInputUtf16\":" + MaxInputUtf16.ToString(CultureInfo.InvariantCulture)
+            var recovery = FrontMatterRecovery == MdFrontMatterRecovery.TreatAsBody && !IsCommonMark
+                ? "\"frontMatterRecovery\":\"treatAsBody\"," : "";
+            var computed = MdHash.Compute("{" + recovery + "\"maxInputUtf16\":" + MaxInputUtf16.ToString(CultureInfo.InvariantCulture)
                 + ",\"maxNestingDepth\":" + MaxNestingDepth.ToString(CultureInfo.InvariantCulture)
                 + ",\"maxOutputItems\":" + MaxOutputItems.ToString(CultureInfo.InvariantCulture)
                 + ",\"maxScanUnits\":" + MaxScanUnits.ToString(CultureInfo.InvariantCulture)

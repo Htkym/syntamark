@@ -17,7 +17,9 @@ internal static class MdFrontMatterParser
         if (!envelope.Opening.HasValue)
             return (new MdFrontMatter(MdFrontMatterState.Absent, null, null, null, null), envelope.Body, null);
         if (!envelope.Closing.HasValue)
-            return (new MdFrontMatter(MdFrontMatterState.Unterminated, envelope.Opening, envelope.Yaml, null, null), null,
+            return (new MdFrontMatter(MdFrontMatterState.Unterminated, envelope.Opening, envelope.Yaml, null, null,
+                    new MdRawRange(raw.Length, 0), envelope.FailureLine),
+                context.Options.FrontMatterRecovery == MdFrontMatterRecovery.TreatAsBody ? new MdRawRange(0, raw.Length) : null,
                 Diagnostic("LMD004", "Frontmatter has no closing delimiter.", envelope.Opening, "unterminated"));
         var yaml = envelope.Yaml!.Value;
         var yamlText = raw.Substring(yaml.Start, yaml.Length);

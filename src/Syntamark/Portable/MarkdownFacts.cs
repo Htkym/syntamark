@@ -115,18 +115,28 @@ internal sealed class MdYamlNode
 internal sealed class MdFrontMatter
 {
     internal MdFrontMatter(MdFrontMatterState state, MdRawRange? openingSpan, MdRawRange? yamlSpan, MdRawRange? closingSpan, MdYamlNode? root)
+        : this(state, openingSpan, yamlSpan, closingSpan, root, null, null)
+    {
+    }
+
+    internal MdFrontMatter(MdFrontMatterState state, MdRawRange? openingSpan, MdRawRange? yamlSpan, MdRawRange? closingSpan,
+        MdYamlNode? root, MdRawRange? failureSpan, int? failureLine)
     {
         State = state;
         OpeningSpan = openingSpan;
         YamlSpan = yamlSpan;
         ClosingSpan = closingSpan;
         Root = root;
+        FailureSpan = failureSpan;
+        FailureLine = failureLine;
     }
     internal MdFrontMatterState State { get; }
     internal MdRawRange? OpeningSpan { get; }
     internal MdRawRange? YamlSpan { get; }
     internal MdRawRange? ClosingSpan { get; }
     internal MdYamlNode? Root { get; }
+    internal MdRawRange? FailureSpan { get; }
+    internal int? FailureLine { get; }
 }
 
 internal sealed class MdHeading

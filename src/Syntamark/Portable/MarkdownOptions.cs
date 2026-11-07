@@ -7,6 +7,7 @@ using System.Threading;
 namespace Syntamark.Compilation;
 
 internal enum MdFrontMatterRecovery { None, TreatAsBody }
+internal enum MdInputKind { Document, Body }
 
 internal sealed class MdOptions
 {
@@ -23,7 +24,17 @@ internal sealed class MdOptions
     internal MdOptions(MdFrontMatterRecovery frontMatterRecovery, int maxInputUtf16 = 1048576, int maxOutputItems = 131072,
         int maxNestingDepth = 200, int maxScanUnits = 16777216,
         string profileId = "lithosharp-markdown/1", int optionsSchemaVersion = 1)
+        : this(MdInputKind.Document, frontMatterRecovery, maxInputUtf16, maxOutputItems, maxNestingDepth, maxScanUnits,
+            profileId, optionsSchemaVersion)
     {
+    }
+
+    internal MdOptions(MdInputKind inputKind, MdFrontMatterRecovery frontMatterRecovery = MdFrontMatterRecovery.None,
+        int maxInputUtf16 = 1048576, int maxOutputItems = 131072, int maxNestingDepth = 200, int maxScanUnits = 16777216,
+        string profileId = "lithosharp-markdown/1", int optionsSchemaVersion = 1)
+    {
+        if (inputKind is not (MdInputKind.Document or MdInputKind.Body))
+            throw new ArgumentOutOfRangeException(nameof(inputKind));
         if (frontMatterRecovery is not (MdFrontMatterRecovery.None or MdFrontMatterRecovery.TreatAsBody))
             throw new ArgumentOutOfRangeException(nameof(frontMatterRecovery));
         if (maxInputUtf16 < 1 || maxOutputItems < 1 || maxNestingDepth < 1 || maxScanUnits < 1)
@@ -37,6 +48,7 @@ internal sealed class MdOptions
         ProfileId = profileId;
         OptionsSchemaVersion = optionsSchemaVersion;
         FrontMatterRecovery = frontMatterRecovery;
+        InputKind = inputKind;
     }
     internal int MaxInputUtf16 { get; }
     internal int MaxOutputItems { get; }
@@ -46,6 +58,7 @@ internal sealed class MdOptions
     internal bool IsCommonMark => ProfileId == "commonmark/0.31.2";
     internal int OptionsSchemaVersion { get; }
     internal MdFrontMatterRecovery FrontMatterRecovery { get; }
+    internal MdInputKind InputKind { get; }
     internal string Hash
     {
         get
@@ -53,9 +66,10 @@ internal sealed class MdOptions
             var cached = Volatile.Read(ref hash);
             if (cached is not null)
                 return cached;
-            var recovery = FrontMatterRecovery == MdFrontMatterRecovery.TreatAsBody && !IsCommonMark
+            var recovery = InputKind == MdInputKind.Document && FrontMatterRecovery == MdFrontMatterRecovery.TreatAsBody && !IsCommonMark
                 ? "\"frontMatterRecovery\":\"treatAsBody\"," : "";
-            var computed = MdHash.Compute("{" + recovery + "\"maxInputUtf16\":" + MaxInputUtf16.ToString(CultureInfo.InvariantCulture)
+            var input = InputKind == MdInputKind.Body ? "\"inputKind\":\"body\"," : "";
+            var computed = MdHash.Compute("{" + recovery + input + "\"maxInputUtf16\":" + MaxInputUtf16.ToString(CultureInfo.InvariantCulture)
                 + ",\"maxNestingDepth\":" + MaxNestingDepth.ToString(CultureInfo.InvariantCulture)
                 + ",\"maxOutputItems\":" + MaxOutputItems.ToString(CultureInfo.InvariantCulture)
                 + ",\"maxScanUnits\":" + MaxScanUnits.ToString(CultureInfo.InvariantCulture)

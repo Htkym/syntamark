@@ -31,6 +31,7 @@ public enum MarkdownSegmentKind { Linear, Atomic, Unknown }
 public enum MarkdownMappingPrecision { Exact, CoveringTokens, Partial, Unknown }
 public enum MarkdownFrontMatterState { Absent, Parsed, Empty, Invalid, Unterminated, Unknown }
 public enum MarkdownFrontMatterRecovery { None, TreatAsBody }
+public enum MarkdownInputKind { Document, Body }
 public enum MarkdownYamlKind { Mapping, Sequence, Scalar }
 public enum MarkdownLinkKind { Inline, Autolink, ReferenceUse, ReferenceDefinition }
 public enum MarkdownLinkResolution { Inline, ResolvedReference, UnresolvedReference }
@@ -397,7 +398,7 @@ public sealed class MarkdownDocument
     }
 }
 
-/// <summary>Resource limits, profile and explicit editor recovery. Default option hashes retain contract-v1 identity.</summary>
+/// <summary>Resource limits, profile, input kind and editor recovery. Default option hashes retain contract-v1 identity.</summary>
 public sealed class MarkdownParseOptions
 {
     public MarkdownParseOptions(int maxInputUtf16 = 1048576, int maxOutputItems = 131072,
@@ -414,6 +415,14 @@ public sealed class MarkdownParseOptions
         Core = new MdOptions((MdFrontMatterRecovery)frontMatterRecovery, maxInputUtf16, maxOutputItems,
             maxNestingDepth, maxScanUnits, profileId, optionsSchemaVersion);
     }
+
+    public MarkdownParseOptions(MarkdownInputKind inputKind, MarkdownFrontMatterRecovery frontMatterRecovery = MarkdownFrontMatterRecovery.None,
+        int maxInputUtf16 = 1048576, int maxOutputItems = 131072, int maxNestingDepth = 200, int maxScanUnits = 16777216,
+        string profileId = "lithosharp-markdown/1", int optionsSchemaVersion = 1)
+    {
+        Core = new MdOptions((MdInputKind)inputKind, (MdFrontMatterRecovery)frontMatterRecovery, maxInputUtf16,
+            maxOutputItems, maxNestingDepth, maxScanUnits, profileId, optionsSchemaVersion);
+    }
     internal MdOptions Core { get; }
     public int MaxInputUtf16 => Core.MaxInputUtf16;
     public int MaxOutputItems => Core.MaxOutputItems;
@@ -422,6 +431,7 @@ public sealed class MarkdownParseOptions
     public string ProfileId => Core.ProfileId;
     public int OptionsSchemaVersion => Core.OptionsSchemaVersion;
     public MarkdownFrontMatterRecovery FrontMatterRecovery => (MarkdownFrontMatterRecovery)Core.FrontMatterRecovery;
+    public MarkdownInputKind InputKind => (MarkdownInputKind)Core.InputKind;
 }
 
 /// <summary>Parses owned text without rendering, site resolution, file access or user code.</summary>

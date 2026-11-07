@@ -117,6 +117,10 @@ internal static class MdSourceMapping
         }
         if (decoded.Length != length)
             return Unknown(decoded);
+        if (map.LocalStarts.Length == 1 && map.LocalStarts[0] == 0 && map.BodyStarts.Length == 1
+            && map.EscapedPipes.Length == 0 && from >= 0 && from <= map.TextLength && length <= map.TextLength - from)
+            return MdTextProjection.CreateOwned(decoded, new[] { new MdSourceSegment(new MdRawRange(0, length),
+                new MdRawRange(map.Global(from), length), MdSegmentKind.Linear) });
         var result = new List<MdSourceSegment>();
         var decodedStart = 0;
         while (decodedStart < length)

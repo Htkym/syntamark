@@ -21,6 +21,15 @@ internal static class MdInlineFacts
 
     internal static MdTextProjection Text(IReadOnlyList<LithoInline> inlines, CancellationToken cancellationToken, bool includeImageLabels = true)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (inlines.Count == 1 && LeafText(inlines[0]) is { } leafText)
+        {
+            var projection = inlines[0].Projection ?? MdSourceMapping.Unknown(leafText);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (projection.Text is null)
+                throw new InvalidOperationException("Cannot concatenate an unprojected region.");
+            return projection;
+        }
         var pieces = new List<MdTextProjection>();
         foreach (var (node, exit) in LithoInline.Walk(inlines, includeImageLabels, cancellationToken))
         {
@@ -38,6 +47,9 @@ internal static class MdInlineFacts
 
 internal static class MdParser
 {
+    internal static MdFrontMatterScanResult ScanFrontMatter(string raw, MdOptions options, CancellationToken cancellationToken)
+        => MdFrontMatterScan.AnalyzeHeader(raw, options, cancellationToken);
+
     internal static MdDocumentFacts Parse(string raw, string scopeId, string sourceId, string? sourceVersion,
         MdOptions options, CancellationToken cancellationToken)
         => ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, false, out _, out _, out _);
@@ -177,7 +189,9 @@ internal static class MdParser
                 {
                     var bodyText = raw.Substring(body.Value.Start, body.Value.Length);
                     var parsed = LithoBlockParser.ParseFactsBlocks(bodyText, context);
-                    if (includeSyntax || RetainBlocks)
+                    if (RetainBlocks)
+                        Blocks = parsed.Blocks;
+                    if (includeSyntax)
                         syntaxBlocks = parsed.Blocks;
                     if (WantsInlineTargets)
                     {
@@ -246,8 +260,6 @@ internal static class MdParser
                         ? MdSyntaxFactory.Create(syntaxBlocks, raw.Length, body!.Value.Start, cancellationToken, links, context, raw)
                         : MdSyntaxFactory.CreateWithTargets(syntaxBlocks, raw.Length, body!.Value.Start, cancellationToken,
                             syntaxTargets ?? new Dictionary<MdRawRange, MdRawRange?>(), context, raw);
-                if (RetainBlocks)
-                    Blocks = syntaxBlocks;
             }
             catch (MdResourceLimit limit)
             {

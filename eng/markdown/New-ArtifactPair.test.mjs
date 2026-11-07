@@ -45,18 +45,16 @@ test('release version policy and one private artifact pair', {timeout: 300_000},
   let previewNumber = 4;
   while (recorded.has('2.0.0-preview.' + previewNumber)) previewNumber++;
   const unusedPreview = '2.0.0-preview.' + previewNumber;
-  // After production records 1.1.0, private CI must respect its immutable status.
-  const pairVersion = recorded.has('1.1.0') ? unusedPreview : '1.1.0';
+  const pairVersion = unusedPreview;
   const stage = path.join(output, 'private-pair');
 
-  // An unissued 1.1.0 fails on the old allowlist before any pack work.
   const prepared = JSON.parse(success(cli('prepare', sourceCommit, pairVersion, stage)));
   assert.equal(prepared.state, 'PREPARED_NOT_PACKED');
   assert.equal(prepared.componentVersion, pairVersion);
   assert.equal(readJson(path.join(stage, 'prepared.json')).metadata.sourceCommit, sourceCommit);
 
   await t.test('prepare keeps supported versions and refuses unsupported boundaries and immutable stages', () => {
-    for (const version of ['1.0.0', '1.0.1', '1.1.0', unusedPreview, '2.0.0-preview.20261106']) {
+    for (const version of ['1.0.0', '1.0.1', '1.1.0', '1.2.0', unusedPreview, '2.0.0-preview.20261106']) {
       const candidate = path.join(output, 'accepted-' + version);
       if (recorded.has(version)) {
         failure(cli('prepare', sourceCommit, version, candidate), /Version is already immutable/);
@@ -67,7 +65,7 @@ test('release version policy and one private artifact pair', {timeout: 300_000},
       assert.equal(accepted.componentVersion, version);
       assert.equal(readJson(path.join(candidate, 'prepared.json')).metadata.sourceCommit, sourceCommit);
     }
-    for (const version of ['', '1.0.2', '1.1.1', '1.2.0', '2.0.0', '1.1', '01.1.0',
+    for (const version of ['', '1.0.2', '1.1.1', '1.2.1', '1.3.0', '2.0.0', '1.1', '01.1.0',
       '1.1.0-preview.1', '2.0.0-preview.0', '2.0.0-preview.01', '3.0.0']) {
       const candidate = path.join(output, 'rejected-' + (version || 'empty'));
       failure(cli('prepare', sourceCommit, version, candidate), /Require one new immutable/);
@@ -99,7 +97,7 @@ test('release version policy and one private artifact pair', {timeout: 300_000},
       return run(process.execPath, ['--input-type=module'], {cwd: guardDirectory, input: guard,
         env: {...env, COMPONENT_VERSION: version, GITHUB_RUN_ATTEMPT: attempt, GITHUB_RUN_ID: '1000'}});
     }
-    for (const version of ['1.0.0', '1.0.1', '1.1.0', '2.0.0-preview.4', '2.0.0-preview.20261106'])
+    for (const version of ['1.0.0', '1.0.1', '1.1.0', '1.2.0', '2.0.0-preview.4', '2.0.0-preview.20261106'])
       success(invoke(version));
     for (const version of ['1.0.2', '1.1.1', '2.0.0', '01.1.0', '1.1.0-preview.1', '2.0.0-preview.0'])
       failure(invoke(version), /Select a fresh supported version/);
@@ -128,7 +126,7 @@ test('release version policy and one private artifact pair', {timeout: 300_000},
     // A clone has committed files; exercise the current producer under review.
     const fixtureProducer = path.join(fixture, 'eng/markdown/New-ArtifactPair.mjs');
     fs.copyFileSync(producer, fixtureProducer);
-    for (const legacy of ['1.0.0', '1.0.1', '1.1.0', '2.0.0-preview.20261106']) {
+    for (const legacy of ['1.0.0', '1.0.1', '1.1.0', '1.2.0', '2.0.0-preview.20261106']) {
       const selected = legacy === pairVersion ? unusedPreview : pairVersion;
       const changed = originalReadme.toString()
         .replace(/(dotnet add package Syntamark --version )\S+/, (_, prefix) => prefix + legacy)

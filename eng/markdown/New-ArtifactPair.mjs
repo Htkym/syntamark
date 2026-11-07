@@ -68,7 +68,7 @@ function checkPublishedPackage(local,published){
 }
 function prepare(commit,version,out){
   assert(/^[0-9a-f]{40}$/.test(commit),'Require one full source commit');
-  assert(/^(?:1\.0\.[01]|1\.1\.0|2\.0\.0-preview\.[1-9][0-9]*)$/.test(version),'Require one new immutable 1.0.0, 1.0.1, 1.1.0 or 2.0.0-preview.N');
+  assert(/^(?:1\.0\.[01]|1\.[12]\.0|2\.0\.0-preview\.[1-9][0-9]*)$/.test(version),'Require one new immutable 1.0.0, 1.0.1, 1.1.0, 1.2.0 or 2.0.0-preview.N');
   assert(!json(path.join(root,'eng/markdown/immutable-versions.json')).some(a=>a.componentVersion===version),'Version is already immutable; choose an unused version');
   out=path.resolve(out);assert(!fs.existsSync(out),'Never overwrite an artifact stage; choose new output/version');
   assert(git(['rev-parse',commit+'^{commit}']).toString().trim()===commit,'Source commit mismatch');
@@ -136,7 +136,7 @@ function prepare(commit,version,out){
     write(target,text);
   }
   const readmeInput=blob(commit,'README.md');
-  const versionPattern='(?:1\\.0\\.[01]|1\\.1\\.0|2\\.0\\.0-preview\\.[1-9][0-9]*)';
+  const versionPattern='(?:1\\.0\\.[01]|1\\.[12]\\.0|2\\.0\\.0-preview\\.[1-9][0-9]*)';
   // Replace installation selections, not historical release statements.
   const readme=Buffer.from(readmeInput.toString()
     .replace(new RegExp('(dotnet add package Syntamark --version )'+versionPattern,'g'),(_,prefix)=>prefix+version)

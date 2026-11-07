@@ -158,11 +158,11 @@ internal static class AnalysisChecks
 
         SectionsOnly();
         YamlBarrier();
-        foreach (var invalid in new[] { (MarkdownAnalysisParts)128, (MarkdownAnalysisParts)(-1) })
+        foreach (var invalid in new[] { (MarkdownAnalysisParts)256, (MarkdownAnalysisParts)(-1) })
             Throws<ArgumentOutOfRangeException>(() => MarkdownParser.Analyze("plain", invalid, Scope, Source));
         var valid = MarkdownParser.Analyze("plain", MarkdownAnalysisParts.None, Scope, Source);
         foreach (var invalid in new[] { MarkdownAnalysisParts.None, MarkdownAnalysisParts.AllFacts, MarkdownAnalysisParts.All,
-            MarkdownAnalysisParts.Headings | MarkdownAnalysisParts.Links, (MarkdownAnalysisParts)128, (MarkdownAnalysisParts)(-1) })
+            MarkdownAnalysisParts.Headings | MarkdownAnalysisParts.Links, (MarkdownAnalysisParts)256, (MarkdownAnalysisParts)(-1) })
             Throws<ArgumentOutOfRangeException>(() => valid.GetAvailability(invalid));
         var failedNone = MarkdownParser.Analyze("\uD800", MarkdownAnalysisParts.None, Scope, "none-failed.md");
         Check(failedNone.Status == MarkdownParseStatus.Failed && failedNone.Diagnostics.Any(d => d.Id == "LMD001")

@@ -40,12 +40,12 @@ internal static class MdParser
 {
     internal static MdDocumentFacts Parse(string raw, string scopeId, string sourceId, string? sourceVersion,
         MdOptions options, CancellationToken cancellationToken)
-        => ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, false, out _);
+        => ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, false, out _, out _, out _);
 
     internal static MdSyntaxDocument ParseWithSyntax(string raw, string scopeId, string sourceId, string? sourceVersion,
         MdOptions options, CancellationToken cancellationToken)
     {
-        var facts = ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, true, out var root);
+        var facts = ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, true, out var root, out _, out _);
         return new MdSyntaxDocument(facts, root);
     }
 
@@ -54,13 +54,23 @@ internal static class MdParser
     {
         MdAnalysisResult.Validate(parts);
         var facts = ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken,
-            (parts & MdAnalysisParts.Syntax) != 0, out var root, parts);
-        return new MdAnalysisResult(facts, root, parts);
+            (parts & MdAnalysisParts.Syntax) != 0, out var root, out var candidates, out _, parts);
+        return new MdAnalysisResult(facts, root, parts, candidates, null);
+    }
+
+    internal static MdAnalysisResult AnalyzeWithBlocks(string raw, MdAnalysisParts parts, string scopeId, string sourceId,
+        string? sourceVersion, MdOptions options, CancellationToken cancellationToken)
+    {
+        MdAnalysisResult.Validate(parts);
+        var facts = ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken,
+            (parts & MdAnalysisParts.Syntax) != 0, out var root, out var candidates, out var blocks, parts, retainBlocks: true);
+        return new MdAnalysisResult(facts, root, parts, candidates, blocks);
     }
 
     private static MdDocumentFacts ParseCore(string raw, string scopeId, string sourceId, string? sourceVersion,
         MdOptions options, CancellationToken cancellationToken, bool includeSyntax, out MdSyntaxNode? syntaxRoot,
-        MdAnalysisParts requestedParts = MdAnalysisParts.AllFacts)
+        out IReadOnlyList<MdUnsupportedSyntaxCandidate> unsupportedSyntax, out IReadOnlyList<LithoBlock>? blocks,
+        MdAnalysisParts requestedParts = MdAnalysisParts.AllFacts, bool retainBlocks = false)
     {
         if (raw is null)
             throw new ArgumentNullException(nameof(raw));
@@ -72,6 +82,7 @@ internal static class MdParser
         var builder = new FactsBuilder(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, includeSyntax)
         {
             RequestedParts = requestedParts,
+            RetainBlocks = retainBlocks,
         };
         MdDocumentFacts facts;
         if (raw.Length > options.MaxInputUtf16)
@@ -86,6 +97,8 @@ internal static class MdParser
                 : builder.Parse();
         }
         syntaxRoot = builder.SyntaxRoot;
+        unsupportedSyntax = builder.UnsupportedSyntax;
+        blocks = builder.Blocks;
         return facts;
     }
 
@@ -99,7 +112,10 @@ internal static class MdParser
         MdOptions options, CancellationToken cancellationToken, bool includeSyntax)
     {
         internal MdAnalysisParts RequestedParts { get; init; } = MdAnalysisParts.AllFacts;
+        internal bool RetainBlocks { get; init; }
         internal MdSyntaxNode? SyntaxRoot { get; private set; }
+        internal IReadOnlyList<LithoBlock>? Blocks { get; private set; }
+        internal List<MdUnsupportedSyntaxCandidate> UnsupportedSyntax { get; } = new();
         private IReadOnlyList<LithoBlock>? syntaxBlocks;
         private readonly MdParseContext context = new(options, cancellationToken);
         private MdFrontMatter frontmatter = new(MdFrontMatterState.Unknown, null, null, null, null);
@@ -142,6 +158,7 @@ internal static class MdParser
 
         internal MdDocumentFacts Parse()
         {
+            context.CaptureUnsupportedSyntax = Wants(MdAnalysisParts.UnsupportedSyntax);
             textHash = MdHash.Compute(raw);
             try
             {
@@ -160,7 +177,7 @@ internal static class MdParser
                 {
                     var bodyText = raw.Substring(body.Value.Start, body.Value.Length);
                     var parsed = LithoBlockParser.ParseFactsBlocks(bodyText, context);
-                    if (includeSyntax)
+                    if (includeSyntax || RetainBlocks)
                         syntaxBlocks = parsed.Blocks;
                     if (WantsInlineTargets)
                     {
@@ -181,6 +198,8 @@ internal static class MdParser
                         }
                     }
                     PrepareOpaque(parsed.Blocks);
+                    if (Wants(MdAnalysisParts.UnsupportedSyntax))
+                        MdUnsupportedSyntax.Collect(bodyText, body.Value.Start, parsed.Blocks, opaqueRanges, context, UnsupportedSyntax);
                     if (Wants(MdAnalysisParts.Headings | MdAnalysisParts.Sections | MdAnalysisParts.Links
                         | MdAnalysisParts.Fences | MdAnalysisParts.TextRegions) || includeSyntax)
                     {
@@ -222,11 +241,13 @@ internal static class MdParser
                     else
                         Partial("decodedMapping");
                 }
-                if (syntaxBlocks is not null)
+                if (includeSyntax && syntaxBlocks is not null)
                     SyntaxRoot = Wants(MdAnalysisParts.Links)
                         ? MdSyntaxFactory.Create(syntaxBlocks, raw.Length, body!.Value.Start, cancellationToken, links, context, raw)
                         : MdSyntaxFactory.CreateWithTargets(syntaxBlocks, raw.Length, body!.Value.Start, cancellationToken,
                             syntaxTargets ?? new Dictionary<MdRawRange, MdRawRange?>(), context, raw);
+                if (RetainBlocks)
+                    Blocks = syntaxBlocks;
             }
             catch (MdResourceLimit limit)
             {

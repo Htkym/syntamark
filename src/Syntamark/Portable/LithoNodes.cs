@@ -131,6 +131,7 @@ internal sealed record LithoLineMap(int[] LocalStarts, int[] BodyStarts, int Tex
 {
     // Table preprocessing replaces each raw \| token with one local character.
     internal int[] EscapedPipes { get; init; } = [];
+    internal int[]? ParagraphIndentColumns { get; init; }
 
     internal int UnitLength(int local) => Array.BinarySearch(EscapedPipes, local) >= 0 ? 2 : 1;
 

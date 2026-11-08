@@ -12,6 +12,7 @@ var output = Path.GetFullPath(".local/commonmark");
 int? selected = null;
 var strict = false;
 var includeSyntax = false;
+var checkSessions = false;
 string? revision = null;
 string? assemblyPath = null;
 var profile = "lithosharp-markdown/1";
@@ -28,6 +29,10 @@ for (var i = 0; i < args.Length; i++)
         case "--strict":
             strict = true;
             break;
+        case "--sessions":
+            checkSessions = true;
+            includeSyntax = true;
+            break;
         case "--syntax":
             includeSyntax = true;
             break;
@@ -41,7 +46,7 @@ for (var i = 0; i < args.Length; i++)
             profile = args[++i];
             break;
         default:
-            throw new ArgumentException("Usage: [--example NUMBER] [--output DIRECTORY] [--revision LABEL] [--assembly DLL] [--profile ID] [--syntax] [--strict]");
+            throw new ArgumentException("Usage: [--example NUMBER] [--output DIRECTORY] [--revision LABEL] [--assembly DLL] [--profile ID] [--syntax] [--sessions] [--strict]");
     }
 }
 
@@ -69,6 +74,31 @@ var publicOptions = Activator.CreateInstance(assembly.GetType("Syntamark.Markdow
 var publicParse = assembly.GetType("Syntamark.MarkdownParser", true)!.GetMethod("Parse", BindingFlags.Static | BindingFlags.Public)!;
 var publicSyntaxParse = assembly.GetType("Syntamark.MarkdownParser", true)!.GetMethod("ParseWithSyntax", BindingFlags.Static | BindingFlags.Public);
 object ParseFacts(string raw, string id) => publicParse.Invoke(null, new[] { raw, "commonmark-inventory", id, null, publicOptions, CancellationToken.None })!;
+void CheckSession(string raw, string id)
+{
+    var create = assembly.GetType("Syntamark.MarkdownParser", true)!.GetMethod("CreateSession")!;
+    var session = create.Invoke(null, new[] { raw, "commonmark-inventory", id, null, publicOptions, CancellationToken.None })!;
+    var facts = session.GetType().GetProperty("Document")!.GetValue(session)!;
+    var editType = assembly.GetType("Syntamark.MarkdownTextEdit", true)!;
+    var position = Array.FindIndex(raw.ToCharArray(), c => c is >= 'a' and <= 'z' or >= 'A' and <= 'Z');
+    var edits = Array.CreateInstance(editType, position >= 0 ? 1 : 0);
+    var updated = raw;
+    if (position >= 0)
+    {
+        var replacement = raw[position] == 'Z' ? "A" : "Z";
+        var span = Activator.CreateInstance(assembly.GetType("Syntamark.RawSpan", true)!, new object[] { position, 1 });
+        edits.SetValue(Activator.CreateInstance(editType, new[] { span, replacement }), 0);
+        updated = raw.Remove(position, 1).Insert(position, replacement);
+    }
+    var next = session.GetType().GetMethod("ApplyEdits")!.Invoke(session,
+        new[] { facts.GetType().GetProperty("TextHash")!.GetValue(facts), edits, "session-conformance", null, CancellationToken.None })!;
+    var oracle = publicSyntaxParse!.Invoke(null,
+        new[] { updated, "commonmark-inventory", id, "session-conformance", publicOptions, CancellationToken.None })!;
+    string Json(object? value) => value is null ? "null" : JsonSerializer.Serialize(value, value.GetType());
+    foreach (var pair in new[] { ("Document", "Facts"), ("Root", "Root") })
+        if (Json(next.GetType().GetProperty(pair.Item1)!.GetValue(next)) != Json(oracle.GetType().GetProperty(pair.Item2)!.GetValue(oracle)))
+            throw new InvalidOperationException("Parser session differs from full oracle: " + pair.Item1);
+}
 var results = new List<Result>();
 foreach (var example in examples)
 {
@@ -87,6 +117,8 @@ foreach (var example in examples)
         try
         {
             CheckFacts(facts, example.Markdown);
+            if (checkSessions)
+                CheckSession(example.Markdown, example.Number.ToString());
         }
         catch (InvalidOperationException error)
         {

@@ -111,9 +111,18 @@ internal static partial class LithoBlockParser
         var resolved = new List<LithoBlock>(blocks.Count);
         foreach (var block in blocks)
         {
+            var scanBefore = context?.ScanUnits ?? 0;
+            var outputBefore = context?.OutputItems ?? 0;
+            if (context?.ParagraphReuse?.TryResolve(block, context, out var reused) == true)
+            {
+                resolved.Add(reused!);
+                continue;
+            }
             context?.Scan(8);
             cancellationToken.ThrowIfCancellationRequested();
-            resolved.Add(ResolveBlock(block, references, cancellationToken, context));
+            var result = ResolveBlock(block, references, cancellationToken, context);
+            resolved.Add(result);
+            context?.ParagraphReuse?.CaptureResolved(block, result, context, scanBefore, outputBefore);
         }
 
         return resolved;
@@ -214,6 +223,17 @@ internal static partial class LithoBlockParser
             var index = from;
             while (index < to)
             {
+                var scanBefore = context?.ScanUnits ?? 0;
+                var outputBefore = context?.OutputItems ?? 0;
+                var lineBefore = index;
+                var blockBefore = blocks.Count;
+                if (depth == 0 && context?.ParagraphReuse?.TryParse(Lines[index].Offset, context,
+                    out var reused, out var lineCount) == true)
+                {
+                    blocks.Add(reused!);
+                    index += lineCount;
+                    continue;
+                }
                 context?.Scan(8);
                 cancellationToken.ThrowIfCancellationRequested();
                 var line = Lines[index];
@@ -289,6 +309,9 @@ internal static partial class LithoBlockParser
                 {
                     blocks.AddRange(ParseParagraph(index, to, out index));
                 }
+                if (depth == 0 && blocks.Count == blockBefore + 1)
+                    context?.ParagraphReuse?.CaptureRaw(blocks[blockBefore], index - lineBefore, context,
+                        scanBefore, outputBefore);
             }
 
             return blocks;

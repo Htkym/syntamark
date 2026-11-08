@@ -119,6 +119,9 @@ internal sealed class MdParseContext(MdOptions options, CancellationToken cancel
 {
     private long scanUnits;
     private int outputItems;
+    internal long ScanUnits => scanUnits;
+    internal int OutputItems => outputItems;
+    internal MdParagraphReuse? ParagraphReuse { get; init; }
     internal MdOptions Options { get; } = options;
     internal CancellationToken CancellationToken { get; } = cancellationToken;
     internal bool CaptureUnsupportedSyntax { get; set; }

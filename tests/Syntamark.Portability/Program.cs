@@ -26,6 +26,11 @@ if (args is ["--review-fixes"])
     ReviewFixChecks.Run(runtime, portable);
     return;
 }
+if (args is ["--parser-session"])
+{
+    ParserSessionChecks.Run(portable);
+    return;
+}
 FactsSnapshotChecks.Run(runtime, portable, args);
 if (args.Length != 0)
     return;
@@ -98,6 +103,7 @@ EditorAnalysisChecks.Run(portable);
 UnsupportedSyntaxChecks.Run(portable);
 BodyAnalysisChecks.Run(portable);
 HeaderScanChecks.Run(portable);
+ParserSessionChecks.Run(portable);
 OwnedSliceChecks.Run(portable);
 MappingRegressionChecks.Run(portable);
 CommonMarkInlineChecks.Run(portable);

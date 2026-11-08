@@ -79,10 +79,18 @@ internal static class MdParser
         return new MdAnalysisResult(facts, root, parts, candidates, blocks);
     }
 
+    internal static MdSyntaxDocument ParseSession(string raw, string scopeId, string sourceId, string? sourceVersion,
+        MdOptions options, CancellationToken cancellationToken, MdParagraphReuse reuse)
+    {
+        var facts = ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, true,
+            out var root, out _, out _, paragraphReuse: reuse);
+        return new MdSyntaxDocument(facts, root);
+    }
+
     private static MdDocumentFacts ParseCore(string raw, string scopeId, string sourceId, string? sourceVersion,
         MdOptions options, CancellationToken cancellationToken, bool includeSyntax, out MdSyntaxNode? syntaxRoot,
         out IReadOnlyList<MdUnsupportedSyntaxCandidate> unsupportedSyntax, out IReadOnlyList<LithoBlock>? blocks,
-        MdAnalysisParts requestedParts = MdAnalysisParts.AllFacts, bool retainBlocks = false)
+        MdAnalysisParts requestedParts = MdAnalysisParts.AllFacts, bool retainBlocks = false, MdParagraphReuse? paragraphReuse = null)
     {
         if (raw is null)
             throw new ArgumentNullException(nameof(raw));
@@ -91,7 +99,7 @@ internal static class MdParser
         if (sourceVersion is not null && MdHash.InvalidUnicode(sourceVersion, cancellationToken) >= 0)
             throw new ArgumentException("SourceVersion must be well-formed Unicode.", nameof(sourceVersion));
         cancellationToken.ThrowIfCancellationRequested();
-        var builder = new FactsBuilder(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, includeSyntax)
+        var builder = new FactsBuilder(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, includeSyntax, paragraphReuse)
         {
             RequestedParts = requestedParts,
             RetainBlocks = retainBlocks,
@@ -108,6 +116,7 @@ internal static class MdParser
                     "Input contains an unpaired surrogate.", new MdRawRange(invalid, 1), "input", "invalidUnicode"))
                 : builder.Parse();
         }
+        builder.CaptureSessionTotals();
         syntaxRoot = builder.SyntaxRoot;
         unsupportedSyntax = builder.UnsupportedSyntax;
         blocks = builder.Blocks;
@@ -121,15 +130,22 @@ internal static class MdParser
     }
 
     private sealed class FactsBuilder(string raw, string scopeId, string sourceId, string? sourceVersion,
-        MdOptions options, CancellationToken cancellationToken, bool includeSyntax)
+        MdOptions options, CancellationToken cancellationToken, bool includeSyntax, MdParagraphReuse? paragraphReuse)
     {
+        internal FactsBuilder(string raw, string scopeId, string sourceId, string? sourceVersion,
+            MdOptions options, CancellationToken cancellationToken, bool includeSyntax)
+            : this(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, includeSyntax, null)
+        {
+        }
+
         internal MdAnalysisParts RequestedParts { get; init; } = MdAnalysisParts.AllFacts;
         internal bool RetainBlocks { get; init; }
         internal MdSyntaxNode? SyntaxRoot { get; private set; }
         internal IReadOnlyList<LithoBlock>? Blocks { get; private set; }
         internal List<MdUnsupportedSyntaxCandidate> UnsupportedSyntax { get; } = new();
         private IReadOnlyList<LithoBlock>? syntaxBlocks;
-        private readonly MdParseContext context = new(options, cancellationToken);
+        private readonly MdParseContext context = new(options, cancellationToken) { ParagraphReuse = paragraphReuse };
+        internal void CaptureSessionTotals() => paragraphReuse?.CaptureTotals(context);
         private MdFrontMatter frontmatter = new(MdFrontMatterState.Unknown, null, null, null, null);
         private MdRawRange? body;
         private string? textHash;

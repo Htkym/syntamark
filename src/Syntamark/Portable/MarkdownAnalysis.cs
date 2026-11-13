@@ -59,6 +59,7 @@ internal sealed class MdAnalysisResult
     internal string? SourceVersion => facts.SourceVersion;
     internal string ParserVersion => facts.ParserVersion;
     internal string ProfileId => facts.ProfileId;
+    internal string YamlProfileId => facts.YamlProfileId;
     internal string ContractVersion => facts.ContractVersion;
     internal string OptionsHash => facts.OptionsHash;
     internal string? TextHash => facts.TextHash;

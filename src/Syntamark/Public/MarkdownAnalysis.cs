@@ -55,6 +55,7 @@ public sealed class MarkdownAnalysisResult
     public string? SourceVersion => document.SourceVersion;
     public string ParserVersion => document.ParserVersion;
     public string ProfileId => document.ProfileId;
+    public string YamlProfileId => document.YamlProfileId;
     public string ContractVersion => document.ContractVersion;
     public string OptionsHash => document.OptionsHash;
     public string? TextHash => document.TextHash;

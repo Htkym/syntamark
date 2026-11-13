@@ -1,11 +1,8 @@
 using System.Collections;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Syntamark;
-using YamlDotNet.Core;
-using YamlDotNet.Core.Events;
 
 internal static class MarkdownFactsChecks
 {
@@ -70,15 +67,7 @@ internal static class MarkdownFactsChecks
         doc = Parse("# A![ALT](/x)B\n# A![ALT](/x)B\n");
         Check(doc.Headings.Select(h => h.Anchor).SequenceEqual(new[] { "ab", "ab-1" }), "Legacy image heading slug and duplicate suffix");
 
-        // Verify the installed library's actual Mark.Index/End boundaries around a surrogate pair.
         const string yaml = "title: 😀\r\nnext: Z\r\n";
-        var yamlParser = new Parser(new StringReader(yaml));
-        var scalars = new List<Scalar>();
-        while (yamlParser.MoveNext())
-            if (yamlParser.Current is Scalar scalar)
-                scalars.Add(scalar);
-        Check(scalars.Count == 4, "YAML event count");
-        Check(scalars[1].Start.Index == 7 && scalars[1].End.Index == 9 && scalars[2].Start.Index == 11 && scalars[3].End.Index == 18, "YamlDotNet 18.1.0 UTF-16 half-open marks");
         doc = Parse("---\r\n" + yaml + "---\r\n# A\r\n");
         Check(doc.Status == MarkdownParseStatus.Complete, "YAML emoji status");
         Span(doc.FrontMatter.Root!.Children[1].RawSpan, 12, 14);
@@ -147,8 +136,7 @@ internal static class MarkdownFactsChecks
             status = "PASS",
             checks = "UTF16 mapping/frontmatter/outline/reference/fence/identity/options/resources/cancellation",
             yamlMarkUnit = "UTF-16",
-            yamlAssembly = typeof(Parser).Assembly.FullName,
-            yamlInformationalVersion = typeof(Parser).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion,
+            yamlProfileId = "native-yaml/1",
             parserVersion = doc.ParserVersion
         }));
     }

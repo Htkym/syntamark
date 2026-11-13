@@ -10,6 +10,7 @@ internal enum MdSyntaxKind
     ThematicBreak, FencedCodeBlock, IndentedCodeBlock, HtmlBlock, Text, Emphasis, StrongEmphasis,
     CodeSpan, Link, Image, Autolink, HtmlInline, SoftLineBreak, HardLineBreak,
     Table, Strikethrough, Admonition, Directive, MathBlock, MathInline,
+    FootnoteDefinition, FootnoteReference,
 }
 
 internal sealed class MdSyntaxNode
@@ -17,7 +18,11 @@ internal sealed class MdSyntaxNode
     internal MdSyntaxNode(MdSyntaxKind kind, MdRawRange? rawSpan, IReadOnlyList<MdSyntaxNode> children,
         string? text = null, int? headingLevel = null, int? orderedListStart = null, bool? isTightList = null,
         bool? taskChecked = null, string? codeInfo = null, string? target = null, MdRawRange? targetRawSpan = null,
-        string? title = null, string? referenceLabel = null)
+        string? title = null, string? referenceLabel = null, MdRawRange? contentRawSpan = null,
+        MdTextProjection? content = null, MdRawRange? referenceLabelRawSpan = null,
+        MdDirectiveSyntax? directive = null, IReadOnlyList<MdTableCellSyntax>? tableCells = null,
+        int? footnoteNumber = null, int? footnoteOccurrence = null, string? footnoteNormalizedLabel = null,
+        bool? footnoteIsDuplicate = null)
     {
         Kind = kind;
         RawSpan = rawSpan;
@@ -32,6 +37,15 @@ internal sealed class MdSyntaxNode
         TargetRawSpan = targetRawSpan;
         Title = title;
         ReferenceLabel = referenceLabel;
+        ContentRawSpan = contentRawSpan;
+        Content = content;
+        ReferenceLabelRawSpan = referenceLabelRawSpan;
+        Directive = directive;
+        TableCells = tableCells is null ? MdFreeze.Empty<MdTableCellSyntax>() : MdFreeze.Copy(tableCells);
+        FootnoteNumber = footnoteNumber;
+        FootnoteOccurrence = footnoteOccurrence;
+        FootnoteNormalizedLabel = footnoteNormalizedLabel;
+        FootnoteIsDuplicate = footnoteIsDuplicate;
     }
     internal MdSyntaxKind Kind { get; }
     internal MdRawRange? RawSpan { get; }
@@ -46,8 +60,19 @@ internal sealed class MdSyntaxNode
     internal MdRawRange? TargetRawSpan { get; }
     internal string? Title { get; }
     internal string? ReferenceLabel { get; }
+    internal MdRawRange? ContentRawSpan { get; }
+    internal MdTextProjection? Content { get; }
+    internal MdRawRange? ReferenceLabelRawSpan { get; }
+    internal MdDirectiveSyntax? Directive { get; }
+    internal IReadOnlyList<MdTableCellSyntax> TableCells { get; }
+    internal int? FootnoteNumber { get; }
+    internal int? FootnoteOccurrence { get; }
+    internal string? FootnoteNormalizedLabel { get; }
+    internal bool? FootnoteIsDuplicate { get; }
     internal MdSyntaxNode WithoutRawSpan() => new(Kind, null, Children, Text, HeadingLevel, OrderedListStart,
-        IsTightList, TaskChecked, CodeInfo, Target, TargetRawSpan, Title, ReferenceLabel);
+        IsTightList, TaskChecked, CodeInfo, Target, TargetRawSpan, Title, ReferenceLabel,
+        ContentRawSpan, Content, ReferenceLabelRawSpan, Directive, TableCells, FootnoteNumber, FootnoteOccurrence,
+        FootnoteNormalizedLabel, FootnoteIsDuplicate);
     internal IEnumerable<MdSyntaxNode> DescendantsAndSelf(CancellationToken cancellationToken = default)
     {
         var pending = new Stack<MdSyntaxNode>();
@@ -136,6 +161,7 @@ internal static class MdSyntaxFactory
         LithoLink link => link.Label,
         LithoAdmonition admonition => admonition.Children,
         LithoDirective directive => directive.Children,
+        LithoFootnoteDefinition footnote => footnote.Children,
         LithoTable table => TableChildren(table, cancellationToken, context),
         _ => Array.Empty<LithoNode>(),
     };
@@ -212,7 +238,9 @@ internal static class MdSyntaxFactory
         switch (node)
         {
             case LithoHeading heading:
-                return new(MdSyntaxKind.Heading, raw, children, headingLevel: heading.Level);
+                return new(MdSyntaxKind.Heading, raw, children, headingLevel: heading.Level,
+                    contentRawSpan: MdSyntaxDetails.RawContent(heading.RawContent, bodyStart),
+                    content: MdSourceMapping.Shift(MdInlineFacts.Text(heading.Inlines, cancellationToken), bodyStart));
             case LithoList list:
                 return new(list.Ordered ? MdSyntaxKind.OrderedList : MdSyntaxKind.UnorderedList,
                     raw, children, orderedListStart: list.Ordered ? list.Start : null, isTightList: list.Tight);
@@ -220,12 +248,19 @@ internal static class MdSyntaxFactory
                 return new(MdSyntaxKind.ListItem, raw, children, taskChecked: item.Checked);
             case LithoCode code:
                 return new(code.Fenced ? MdSyntaxKind.FencedCodeBlock : MdSyntaxKind.IndentedCodeBlock,
-                    raw, children, code.Text, codeInfo: code.Info);
+                    raw, children, code.Text, codeInfo: code.Info,
+                    contentRawSpan: code.FenceSyntax is null ? null : Range(code.FenceSyntax.Content),
+                    content: code.FenceSyntax is null ? MdSourceMapping.Unknown(code.Text)
+                        : MdSourceMapping.Shift(code.FenceSyntax.Text, bodyStart));
             case LithoLink link:
                 var target = raw.HasValue && links.TryGetValue(raw.Value, out var fact)
                     ? fact : Range(link.LinkSyntax?.Target);
                 return new(link.Image ? MdSyntaxKind.Image : MdSyntaxKind.Link, raw, children,
-                    target: link.Url, targetRawSpan: target, title: link.Title, referenceLabel: link.LinkSyntax?.ReferenceLabel);
+                    target: link.Url, targetRawSpan: target, title: link.Title, referenceLabel: link.LinkSyntax?.ReferenceLabel,
+                    contentRawSpan: MdSyntaxDetails.LinkLabel(rawText, raw, false, context),
+                    content: MdSourceMapping.Shift(MdInlineFacts.Text(link.Label, cancellationToken), bodyStart),
+                    referenceLabelRawSpan: link.LinkSyntax?.Kind == MdLinkKind.ReferenceUse
+                        ? MdSyntaxDetails.LinkLabel(rawText, raw, true, context) : null);
             case LithoAutolink autolink:
                 var autolinkTarget = raw.HasValue && links.TryGetValue(raw.Value, out var autolinkFact)
                     ? autolinkFact : null;
@@ -249,14 +284,25 @@ internal static class MdSyntaxFactory
                 return Plain(MdSyntaxKind.HtmlInline, html.Text);
             case LithoLineBreak line:
                 return Plain(line.Hard ? MdSyntaxKind.HardLineBreak : MdSyntaxKind.SoftLineBreak, "\n");
-            case LithoTable:
-                return Plain(MdSyntaxKind.Table);
+            case LithoTable table:
+                return new(MdSyntaxKind.Table, raw, children,
+                    tableCells: MdSyntaxDetails.TableCells(table, bodyStart, cancellationToken, context));
             case LithoStrike:
                 return Plain(MdSyntaxKind.Strikethrough);
-            case LithoAdmonition:
-                return Plain(MdSyntaxKind.Admonition);
-            case LithoDirective:
-                return Plain(MdSyntaxKind.Directive);
+            case LithoAdmonition admonition:
+                return new(MdSyntaxKind.Admonition, raw, children,
+                    directive: MdDirectiveSyntax.Parse(rawText, raw, admonition.Kind, context));
+            case LithoDirective directive:
+                return new(MdSyntaxKind.Directive, raw, children,
+                    directive: MdDirectiveSyntax.Parse(rawText, raw, directive.Name, context));
+            case LithoFootnoteDefinition footnote:
+                return new(MdSyntaxKind.FootnoteDefinition, raw, children, referenceLabel: footnote.Label,
+                    referenceLabelRawSpan: Range(footnote.LabelSpan), footnoteNumber: footnote.Number,
+                    footnoteNormalizedLabel: footnote.NormalizedLabel, footnoteIsDuplicate: footnote.IsDuplicate);
+            case LithoFootnoteReference footnote:
+                return new(MdSyntaxKind.FootnoteReference, raw, children, referenceLabel: footnote.Label,
+                    referenceLabelRawSpan: Range(footnote.LabelSpan), footnoteNumber: footnote.Number,
+                    footnoteOccurrence: footnote.Occurrence, footnoteNormalizedLabel: footnote.NormalizedLabel);
             case LithoMath math:
                 return Plain(MdSyntaxKind.MathBlock, math.Content);
             case LithoMathInline math:

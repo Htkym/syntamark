@@ -12,6 +12,7 @@ public enum MarkdownSyntaxKind
     ThematicBreak, FencedCodeBlock, IndentedCodeBlock, HtmlBlock, Text, Emphasis, StrongEmphasis,
     CodeSpan, Link, Image, Autolink, HtmlInline, SoftLineBreak, HardLineBreak,
     Table, Strikethrough, Admonition, Directive, MathBlock, MathInline,
+    FootnoteDefinition, FootnoteReference,
 }
 
 /// <summary>An immutable syntax view over one owned document snapshot.</summary>
@@ -35,6 +36,15 @@ public sealed class MarkdownSyntaxNode
         TargetRawSpan = global::Syntamark.RawSpan.From(node.TargetRawSpan);
         Title = node.Title;
         ReferenceLabel = node.ReferenceLabel;
+        ContentRawSpan = global::Syntamark.RawSpan.From(node.ContentRawSpan);
+        Content = node.Content is null ? null : new MarkdownTextProjection(node.Content);
+        ReferenceLabelRawSpan = global::Syntamark.RawSpan.From(node.ReferenceLabelRawSpan);
+        Directive = node.Directive is null ? null : new MarkdownDirectiveSyntax(node.Directive);
+        TableCells = MarkdownCollections.Convert(node.TableCells, static cell => new MarkdownTableCellSyntax(cell));
+        FootnoteNumber = node.FootnoteNumber;
+        FootnoteOccurrence = node.FootnoteOccurrence;
+        FootnoteNormalizedLabel = node.FootnoteNormalizedLabel;
+        FootnoteIsDuplicate = node.FootnoteIsDuplicate;
     }
 
     public MarkdownSyntaxKind Kind { get; }
@@ -53,6 +63,18 @@ public sealed class MarkdownSyntaxNode
     public RawSpan? TargetRawSpan { get; }
     public string? Title { get; }
     public string? ReferenceLabel { get; }
+    /// <summary>Marker-free source content envelope, or null if no contiguous source range is known.</summary>
+    public RawSpan? ContentRawSpan { get; }
+    /// <summary>Decoded content and its original source segments; use Map before proposing a text edit.</summary>
+    public MarkdownTextProjection? Content { get; }
+    /// <summary>Reference-label content without square brackets, or null when not precisely known.</summary>
+    public RawSpan? ReferenceLabelRawSpan { get; }
+    public MarkdownDirectiveSyntax? Directive { get; }
+    public IReadOnlyList<MarkdownTableCellSyntax> TableCells { get; }
+    public int? FootnoteNumber { get; }
+    public int? FootnoteOccurrence { get; }
+    public string? FootnoteNormalizedLabel { get; }
+    public bool? FootnoteIsDuplicate { get; }
 
     /// <summary>Returns the exact raw envelope, or null for an unknown range. This is not an AST writer.</summary>
     public string? GetRawText() => RawSpan.HasValue ? rawText.Substring(RawSpan.Value.Start, RawSpan.Value.Length) : null;

@@ -49,7 +49,7 @@ internal static class AnalysisChecks
                 Check(selected.ScopeId == Scope && selected.SourceId == Source && selected.SourceVersion == Version
                     && selected.ParserVersion == full.ParserVersion && selected.ProfileId == profile
                     && selected.ContractVersion == ((selection & MarkdownAnalysisParts.AllFacts) == MarkdownAnalysisParts.AllFacts
-                        ? full.ContractVersion : "analysis/1") && selected.OptionsHash == full.OptionsHash
+                        ? full.ContractVersion : "analysis/2") && selected.OptionsHash == full.OptionsHash
                     && selected.TextHash == full.TextHash && selected.BodySpan == full.BodySpan,
                     profile + ": selected request preserves input and parser identity");
                 foreach (var part in Parts)

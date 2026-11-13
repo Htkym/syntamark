@@ -48,6 +48,15 @@ internal sealed record LithoAdmonition(string Kind, string Title, IReadOnlyList<
 /// <summary>A generic <c>:::name</c> container with an unrecognized name. Rendered as a div (Markdig parity); never silently dropped.</summary>
 internal sealed record LithoDirective(string Name, IReadOnlyList<LithoBlock> Children, SourceSpan Span) : LithoBlock(Span);
 
+/// <summary>A documentation-profile footnote definition. Labels retain their original spelling.</summary>
+internal sealed record LithoFootnoteDefinition(string Label, string NormalizedLabel, SourceSpan LabelSpan,
+    IReadOnlyList<LithoBlock> Children, SourceSpan Span) : LithoBlock(Span)
+{
+    internal MdFootnoteBinding Binding { get; init; } = new();
+    internal int? Number => Binding.Number;
+    internal bool IsDuplicate { get; init; }
+}
+
 /// <summary>Block math content. Renders as a div (Markdig parity).</summary>
 internal sealed record LithoMath(string Content, SourceSpan Span) : LithoBlock(Span);
 
@@ -69,7 +78,10 @@ internal sealed record LithoList(
 internal sealed record LithoTable(
     IReadOnlyList<string> Align,
     IReadOnlyList<IReadOnlyList<IReadOnlyList<LithoInline>>> Rows,
-    SourceSpan Span) : LithoBlock(Span);
+    SourceSpan Span) : LithoBlock(Span)
+{
+    internal IReadOnlyList<IReadOnlyList<SourceSpan?>> CellSpans { get; init; } = [];
+}
 
 /// <summary>A thematic break.</summary>
 internal sealed record LithoBreak(SourceSpan Span) : LithoBlock(Span);
@@ -183,6 +195,10 @@ internal sealed record LithoStrike(IReadOnlyList<LithoInline> Children, SourceSp
 
 /// <summary>A code span.</summary>
 internal sealed record LithoCodeSpan(string Code, SourceSpan Span) : LithoInline(Span);
+
+/// <summary>A footnote use. A null number represents an unresolved label.</summary>
+internal sealed record LithoFootnoteReference(string Label, string NormalizedLabel, int? Number, int Occurrence,
+    SourceSpan LabelSpan, SourceSpan Span) : LithoInline(Span);
 
 /// <summary>A link or image.</summary>
 internal sealed record LithoLink(

@@ -7,6 +7,7 @@
     <ProjectReference Include="../../src/Syntamark/Syntamark.csproj" />
     <None Include="../LithoSharp.Tests/Fixtures/MarkdigBaseline/body-basics.md" Link="Fixtures/body-basics.md" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Fixtures/facts-baseline-6120fc0.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../Fixtures/Yaml/**/*" Link="Fixtures/Yaml/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="CopyPortableMarkdownComponent" BeforeTargets="CopyFilesToOutputDirectory">
     <MSBuild Projects="$(MSBuildProjectDirectory)/../../src/Syntamark/Syntamark.csproj" Targets="Build" Properties="TargetFramework=netstandard2.0" BuildInParallel="false">

@@ -62,8 +62,8 @@ function Build([string[]] $DotnetArguments) {
 }
 Build (@($integration, '-c', 'Release', '--no-restore') + $properties)
 $runArguments = @('--project', $integration, '-c', 'Release', '--no-restore', '--no-build') + $properties
-if ($CandidateVersion) { $runArguments += @('--', '--candidate') }
-$mode = if ($CandidateVersion) { 'candidate' } else { 'published' }
+$runArguments += @('--', '--candidate')
+$mode = if ($CandidateVersion) { 'candidate' } else { 'local-source' }
 & dotnet run @runArguments | Tee-Object -FilePath (Join-Path $output "driver-$mode.jsonl")
 if ($LASTEXITCODE -ne 0) { throw 'Analyzer driver integration failed.' }
 
@@ -71,25 +71,20 @@ $markdown = Join-Path $output 'snapshot.md'
 $sarif = Join-Path $output 'compiler.sarif'
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $snapshot = "`u{FEFF}---`r`ntitle: 😀`r`n---`r`n# TODO &amp;😀`r`n[x]()`r`n"
-if ($CandidateVersion) {
-    $snapshot += "`r`n<div>`r`n# TODO Hidden`r`n[bad](/wrong)`r`n</div>`r`n`r`ntext <span>**bold** [x](/u)</span>`r`n"
-}
+$snapshot += "`r`n<div>`r`n# TODO Hidden`r`n[bad](/wrong)`r`n</div>`r`n`r`ntext <span>**bold** [x](/u)</span>`r`n"
 [System.IO.File]::WriteAllText($markdown, $snapshot, $utf8)
 Build @($compiler, '-c', 'Release', '--no-restore', '-t:Rebuild', "-p:CanaryMarkdown=$markdown", "-p:CanaryErrorLog=$sarif")
 $results = (Get-Content -LiteralPath $sarif -Raw | ConvertFrom-Json).runs[0].results
 $todo = @($results | Where-Object ruleId -eq 'SMC001')
 $identity = @($results | Where-Object ruleId -eq 'SMC000')
-if ($todo.Count -ne 1 -or $identity.Count -ne 1 -or $identity[0].message.text -notmatch 'status=Complete; YAML=18\.1\.0;') {
-    throw 'Real compiler host did not load source parser and YamlDotNet or emit the expected diagnostics.'
+if ($todo.Count -ne 1 -or $identity.Count -ne 1 -or $identity[0].message.text -notmatch 'status=Complete; YAML=native-yaml/1;') {
+    throw 'Real compiler host did not load the source parser and native YAML or emit the expected diagnostics.'
 }
 if ($ExpectedParserVersion -and !$identity[0].message.text.EndsWith("parser=$ExpectedParserVersion", [StringComparison]::Ordinal)) {
     throw 'Actual compiler loaded parser stamp differs from the prepared candidate.'
 }
-if ($CandidateVersion -and $identity[0].message.text -notmatch 'profile=commonmark/0\.31\.2; syntax=Document; nodes=[1-9][0-9]*; HTML=3; YAMLstate=Parsed;') {
-    throw 'Actual compiler did not execute the candidate standard syntax path and separate legacy YAML probe.'
-}
-if (!$CandidateVersion -and $identity[0].message.text -notmatch 'profile=lithosharp-markdown/1; syntax=not-requested; nodes=0; HTML=0; YAMLstate=Parsed;') {
-    throw 'Published 1.0.1 baseline did not retain its original facts-only profile.'
+if ($identity[0].message.text -notmatch 'profile=commonmark/0\.31\.2; syntax=Document; nodes=[1-9][0-9]*; HTML=3; YAMLstate=Parsed;') {
+    throw 'Actual compiler did not execute the candidate standard syntax path and separate native YAML probe.'
 }
 $region = $todo[0].locations[0].physicalLocation.region
 if ($region.startLine -ne 4 -or $region.startColumn -ne 3 -or $region.endColumn -ne 15) {
@@ -106,10 +101,10 @@ if (@($edited | Where-Object ruleId -eq 'SMC001').Count -ne 0) {
 }
 $sdk = & dotnet --version
 @{
-    status = 'PASS'; sdk = $sdk; sourcePackageVersion = $(if ($CandidateVersion) { $CandidateVersion } else { '1.0.1' })
+    status = 'PASS'; sdk = $sdk; sourcePackageVersion = $(if ($CandidateVersion) { $CandidateVersion } else { 'local Portable source' })
     compilerIdentityDiagnostic = $identity[0].message.text; originalRegion = $initial
-    profileId = $(if ($CandidateVersion) { 'commonmark/0.31.2' } else { 'lithosharp-markdown/1' })
-    syntaxRequested = [bool]$CandidateVersion; yamlProbeProfileId = 'lithosharp-markdown/1'
+    profileId = 'commonmark/0.31.2'
+    syntaxRequested = $true; yamlProbeProfileId = 'lithosharp-markdown/1'; yamlProfileId = 'native-yaml/1'
     driverRoslynVersion = '4.14.0'; host = 'dotnet build (UseSharedCompilation=false)'; ide = 'unverified'
 } | ConvertTo-Json | Tee-Object -FilePath (Join-Path $output 'result.json')
 Copy-Item -LiteralPath (Join-Path $output 'result.json') -Destination (Join-Path $output "$mode-result.json") -Force

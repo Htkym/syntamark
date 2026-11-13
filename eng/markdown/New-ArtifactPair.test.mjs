@@ -120,7 +120,6 @@ test('release version policy and one private artifact pair', {timeout: 300_000},
     for (const kind of ['runtime', 'source']) {
       const actual = fs.readFileSync(path.join(stage, kind, 'README.md'), 'utf8');
       installSelections(actual, pairVersion);
-      assert.ok(actual.includes('公開済み1.0.1'), 'Keep the actual historical release statement');
     }
     const fixture = path.join(output, 'readme-fixture');
     success(run('git', ['clone', '--local', '--no-hardlinks', '--quiet', root, fixture]));
@@ -172,6 +171,9 @@ test('release version policy and one private artifact pair', {timeout: 300_000},
     const manifestSha256 = hash(manifestBytes);
     const manifest = JSON.parse(manifestBytes);
     assert.equal(manifest.sourceCommit, sourceCommit);
+    assert.deepEqual(manifest.dependencies, [], 'Runtime and Source share a dependency-free parser contract');
+    assert.equal(manifest.yamlProfileId, 'native-yaml/1');
+    assert.ok(manifest.supportedProfileIds.includes('syntamark-docs/2'));
     assert.equal(manifest.componentVersion, pairVersion);
     const checked = JSON.parse(success(cli('check-pair', stage, manifestSha256)));
     assert.equal(checked.state, 'SEALED_PAIR_BYTES_PASS');

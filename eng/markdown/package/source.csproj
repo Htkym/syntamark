@@ -7,7 +7,7 @@
     <PackageId>Syntamark.Source</PackageId>
     <Version>__VERSION__</Version>
     <Authors>Htkym</Authors>
-    <Description>Explicitly selected portable Markdown source for compiler hosts.</Description>
+    <Description>Explicitly selected portable Markdown and native YAML source for compiler hosts.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>

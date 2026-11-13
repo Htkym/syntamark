@@ -1,12 +1,12 @@
 # Syntamark の限定 benchmark
 
-SM05 の公開 Map/行位置 query の比較用 runner。製品に新しい依存を追加しない。YamlDotNet は製品と同じ18.1.0を固定し、比較する Syntamark assembly は `SyntamarkAssembly` で指定する。比較対象を同時に load せず、各版を独立 process で動かす。
+SM05 の公開 Map/行位置 query の比較用 runner。製品に新しい依存を追加しない。比較する Syntamark assembly は `SyntamarkAssembly` で指定する。現在の runner は YamlDotNet を参照しない。保存済みの1.x測定結果では、当時の製品が YamlDotNet 18.1.0 を使用していた。比較対象を同時に load せず、各バージョンを独立 process で動かす。
 
 問い合わせの使い方と費用は [問い合わせと構文保持の費用](../../docs/performance.md)を参照する。選んだ版の全 sample は `Results/shared-helper`、採用しなかった二重保持 cache は `Results/lazy-cache` にある。
 
 ## 再実行
 
-リポジトリのルートから、書き込み可能な独立 clone を作る。既存の出力を上書きしない名前を使う。
+以下は保存済みの1.x測定を再現する手順であり、旧製品の依存も当時のまま restore する。現在の依存撤廃確認には使わない。リポジトリのルートから、書き込み可能な独立 clone を作る。既存の出力を上書きしない名前を使う。
 
 ```powershell
 git clone --shared . .local/perf-base

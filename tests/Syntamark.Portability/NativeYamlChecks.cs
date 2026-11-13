@@ -128,7 +128,10 @@ internal static class NativeYamlChecks
             {
                 case "complete":
                     Check(parsed.Status == MarkdownParseStatus.Complete, id + ": upstream YAML must parse: " + string.Join("; ", parsed.Diagnostics.Select(d => d.Message)));
-                    var expected = JsonNode.Parse(File.ReadAllText(Path.Combine(directory, id, "in.json")));
+                    var expectedBytes = File.ReadAllBytes(Path.Combine(directory, id, "in.json"));
+                    var expectedHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(expectedBytes)).ToLowerInvariant();
+                    Check(expectedHash == fixture.GetProperty("expectedJsonSha256").GetString(), id + ": pinned upstream expectation bytes");
+                    var expected = JsonNode.Parse(new UTF8Encoding(false, true).GetString(expectedBytes));
                     Check(JsonNode.DeepEquals(expected, JsonSerializer.SerializeToNode(Project(parsed.Root!))), id + ": upstream JSON tree/scalar expectation");
                     break;
                 case "syntax":

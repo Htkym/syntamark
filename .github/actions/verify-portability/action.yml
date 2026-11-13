@@ -23,7 +23,7 @@ runs:
       run: |
         dotnet restore samples/Syntamark.Prose --locked-mode
         dotnet run --project samples/Syntamark.Prose -c Release --no-restore > .local/prose.log
-    - name: Verify the published source-package baseline
+    - name: Verify the local portable source in the compiler host
       shell: pwsh
       run: |
         ./tests/Syntamark.Roslyn.Integration/Verify.ps1
@@ -50,7 +50,7 @@ runs:
     - name: Prepare a private source-package canary
       shell: bash
       run: |
-        node eng/markdown/New-ArtifactPair.mjs prepare "$GITHUB_SHA" 2.0.0-preview.20261106 "$RUNNER_TEMP/syntamark-canary"
+        node eng/markdown/New-ArtifactPair.mjs prepare "$GITHUB_SHA" 2.0.0-preview.20261113 "$RUNNER_TEMP/syntamark-canary"
         dotnet restore "$RUNNER_TEMP/syntamark-canary/source/source.csproj" --configfile "$RUNNER_TEMP/syntamark-canary/NuGet.Config" --packages "$RUNNER_TEMP/syntamark-canary/packages"
         dotnet pack "$RUNNER_TEMP/syntamark-canary/source/source.csproj" -c Release --no-restore -o "$RUNNER_TEMP/syntamark-canary/feed"
     - name: Verify the candidate in the compiler host
@@ -59,4 +59,4 @@ runs:
         $candidateRoot = Join-Path $env:RUNNER_TEMP 'syntamark-canary'
         $env:NUGET_PACKAGES = Join-Path $candidateRoot 'packages'
         $prepared = Get-Content -LiteralPath (Join-Path $candidateRoot 'prepared.json') -Raw | ConvertFrom-Json
-        ./tests/Syntamark.Roslyn.Integration/Verify.ps1 -CandidateVersion 2.0.0-preview.20261106 -CandidateFeed (Join-Path $candidateRoot 'feed') -ExpectedParserVersion $prepared.metadata.parserVersion
+        ./tests/Syntamark.Roslyn.Integration/Verify.ps1 -CandidateVersion 2.0.0-preview.20261113 -CandidateFeed (Join-Path $candidateRoot 'feed') -ExpectedParserVersion $prepared.metadata.parserVersion

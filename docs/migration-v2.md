@@ -1,6 +1,8 @@
 # Migrate to Syntamark 2.0
 
-Use the runtime and Source packages from the same immutable pair. The current candidate pair is `2.0.0-preview.2026111301`; its existence in a local candidate feed does not mean it has been published to NuGet.org. Existing published `1.2.0` packages remain unchanged. Compiler-host consumers opt in to `Syntamark.Source` as before and continue to use its internal portable API through their own adapter.
+Use the runtime and Source packages from the same immutable pair. The verified candidate pair is `2.0.0-preview.2026111303`; its existence in a local candidate feed does not mean it has been published to NuGet.org. Existing published `1.2.0` packages remain unchanged. Compiler-host consumers opt in to `Syntamark.Source` as before and continue to use its internal portable API through their own adapter.
+
+The planned stable pair is `2.0.0`. Its preparation guard accepts that exact stable version while retaining the preview versions. A private local check does not issue a formal pair. Formal preparation still requires reviewed current `main`, successful normal CI for that exact commit, an unused version and a first workflow attempt. Failed formal attempts consume their version. Publishing additionally requires the matching source tag, a successful reviewed producer run, the sealed manifest hash and explicit publication approval. Switch both package references and the expected parser stamp together when a formal pair is available.
 
 ## YAML dependencies and behavior
 

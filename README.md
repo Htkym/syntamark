@@ -4,7 +4,7 @@ Syntamark は Markdown と YAML の構文、見出し、リンク、本文、元
 
 ## 導入
 
-このソースの候補パッケージは `Syntamark` と `Syntamark.Source` の `2.0.0-preview.2026111303` です。NuGet.org への正式公開を示すものではありません。候補パッケージのある feed を指定し、必要な一方を追加してください。公開済みの `1.2.0` からの変更は[移行ガイド](docs/migration-v2.md)を参照してください。
+`Syntamark` と `Syntamark.Source` は内容を固定した同じバージョンの組として利用します。以下の例では利用するバージョンと feed を指定してください。バージョン番号だけで NuGet.org に公開されていると判断しないでください。公開済みの `1.2.0` からの変更は[移行ガイド](docs/migration-v2.md)を参照してください。
 
 ```powershell
 dotnet add package Syntamark --version 2.0.0-preview.2026111303 --source /path/to/candidate-feed
@@ -20,7 +20,7 @@ Console.WriteLine(document.Headings.Count);
 
 `scopeId` と `sourceId` は呼び出し元が指定する入力の識別子です。位置の offset と長さは元入力の UTF-16 code unit を使います。結果の `Status`、`Coverage`、`Diagnostics` を確認して、解析できた範囲を判断してください。
 
-`Syntamark.Source` は portable source を明示的に `Compile` へ取り込む package です。runtime の公開 facade と friend metadata は含みません。runtime と Source を同時に使う場合は、同じ候補の組を使用してください。YAML は同梱の実装で解析するため、YamlDotNet の参照は不要です。
+`Syntamark.Source` は portable source を明示的に `Compile` へ取り込む package です。runtime の公開 facade と friend metadata は含みません。runtime と Source を同時に使う場合は、同じバージョンの組を使用してください。YAML は同梱の実装で解析するため、YamlDotNet の参照は不要です。
 
 ```xml
 <PropertyGroup>

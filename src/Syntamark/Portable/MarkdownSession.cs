@@ -205,7 +205,7 @@ internal sealed class MdParseSession
             : null;
         var document = analysis is null
             ? MdParser.ParseSession(raw, scopeId, sourceId, version, options, cancellationToken, reuse)
-            : analysis.PublishSelected(facts => new MdSyntaxDocument(facts, analysis.Root));
+            : new MdSyntaxDocument(analysis.PublishSelected(static facts => facts), analysis.Root);
         if (previous is not null && document.Facts.Status != MdParseStatus.Complete)
         {
             var reason = MdSessionFallback.UnsupportedSyntax;

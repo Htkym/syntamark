@@ -56,7 +56,7 @@ runs:
       if: inputs.pair-stage == ''
       shell: bash
       run: |
-        node eng/markdown/New-ArtifactPair.mjs prepare "$GITHUB_SHA" 2.0.0-preview.2026111301 "$RUNNER_TEMP/syntamark-canary"
+        node eng/markdown/New-ArtifactPair.mjs prepare "$GITHUB_SHA" 2.0.0-preview.2026111302 "$RUNNER_TEMP/syntamark-canary"
         for kind in runtime source; do
           dotnet restore "$RUNNER_TEMP/syntamark-canary/$kind/$kind.csproj" --configfile "$RUNNER_TEMP/syntamark-canary/NuGet.Config" --packages "$RUNNER_TEMP/syntamark-canary/packages"
         done

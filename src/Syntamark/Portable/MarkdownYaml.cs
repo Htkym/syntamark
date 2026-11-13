@@ -1030,7 +1030,9 @@ internal static class MdYamlParser
                     return MdYamlScalarKind.String;
             return MdYamlScalarKind.Integer;
         }
-        for (; at < value.Length && value[at] is >= '0' and <= '9'; at++) { }
+        for (; at < value.Length && value[at] is >= '0' and <= '9'; at++)
+        {
+        }
         if (at == value.Length)
             return MdYamlScalarKind.Integer;
         if (value is ".inf" or ".Inf" or ".INF" or "+.inf" or "+.Inf" or "+.INF"
@@ -1051,7 +1053,9 @@ internal static class MdYamlParser
             if (at < value.Length && value[at] is '+' or '-')
                 at++;
             var exponent = at;
-            for (; at < value.Length && value[at] is >= '0' and <= '9'; at++) { }
+            for (; at < value.Length && value[at] is >= '0' and <= '9'; at++)
+            {
+            }
             if (at == exponent)
                 return MdYamlScalarKind.String;
         }

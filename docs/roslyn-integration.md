@@ -4,7 +4,7 @@
 
 ## source package と実行環境
 
-sample は `netstandard2.0`、C# 13、Roslyn API `4.14.0` を使います。標準の実行では作業中の `Portable/**/*.cs` を直接取り込みます。候補 package の消費を検査するときは `SyntamarkCandidateMode=true`、`SyntamarkIncludeSource=true` と正確な `SyntamarkSourceVersion` を指定し、package と source のバージョンを照合します。現在の候補は `2.0.0-preview.2026111301` です。正式公開済みのバージョンとは区別してください。
+sample は `netstandard2.0`、C# 13、Roslyn API `4.14.0` を使います。標準の実行では作業中の `Portable/**/*.cs` を直接取り込みます。候補 package の消費を検査するときは `SyntamarkCandidateMode=true`、`SyntamarkIncludeSource=true` と正確な `SyntamarkSourceVersion` を指定し、package と source のバージョンを照合します。現在の候補は `2.0.0-preview.2026111302` です。正式公開済みのバージョンとは区別してください。
 
 source package は portable source を analyzer assembly に一度だけ取り込みます。runtime の公開 facade と friend metadata は含みません。利用側から internal entry を呼びます。native YAML の実装も同じ source に含まれ、YamlDotNet DLL の配置や参照は不要です。Roslyn 自身の DLL は重複投入しません。
 
@@ -34,7 +34,7 @@ pwsh -File tests/Syntamark.Roslyn.Integration/Verify.ps1
 
 ```powershell
 $prepared = Get-Content /path/to/prepared.json -Raw | ConvertFrom-Json
-pwsh -File tests/Syntamark.Roslyn.Integration/Verify.ps1 -CandidateVersion 2.0.0-preview.2026111301 -CandidateFeed /path/to/candidate-feed -ExpectedParserVersion $prepared.metadata.parserVersion
+pwsh -File tests/Syntamark.Roslyn.Integration/Verify.ps1 -CandidateVersion 2.0.0-preview.2026111302 -CandidateFeed /path/to/candidate-feed -ExpectedParserVersion $prepared.metadata.parserVersion
 ```
 
 `prepared.json` と feed のパスを実際の候補の配置へ置き換えてください。スクリプトは manifest の `metadata.parserVersion` を実際に compiler が読み込んだ stamp と照合します。

@@ -87,6 +87,16 @@ internal static class MdParser
         return new MdSyntaxDocument(facts, root);
     }
 
+    internal static MdAnalysisResult AnalyzeSession(string raw, MdAnalysisParts parts, string scopeId, string sourceId,
+        string? sourceVersion, MdOptions options, CancellationToken cancellationToken, MdParagraphReuse reuse)
+    {
+        MdAnalysisResult.Validate(parts);
+        var facts = ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken,
+            (parts & MdAnalysisParts.Syntax) != 0, out var root, out var candidates, out var blocks,
+            parts, retainBlocks: true, paragraphReuse: reuse);
+        return new MdAnalysisResult(facts, root, parts, candidates, blocks);
+    }
+
     private static MdDocumentFacts ParseCore(string raw, string scopeId, string sourceId, string? sourceVersion,
         MdOptions options, CancellationToken cancellationToken, bool includeSyntax, out MdSyntaxNode? syntaxRoot,
         out IReadOnlyList<MdUnsupportedSyntaxCandidate> unsupportedSyntax, out IReadOnlyList<LithoBlock>? blocks,

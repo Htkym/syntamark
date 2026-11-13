@@ -69,3 +69,26 @@ Edit ranges use the complete previous input's UTF-16 coordinates, including any 
 `ReusedBlocks` and `RebasedBlocks` count reused eligible paragraphs, including those whose source offsets changed. `ParsedBlocks` counts newly parsed eligible paragraphs; it is not a total count of all document blocks. `ScanUnits` and `OutputItems` report logical resource-budget charges, including charges retained for reused paragraphs. They do not measure elapsed time, allocations, or the amount of work skipped. Measure those separately before claiming a performance improvement.
 
 Each result has positions and identities for its new input snapshot. Syntax node reference identity across sessions is not a public guarantee. Keep the parser/profile/options/input identities in caches and discard diagnostics or edits for a stale source version.
+
+### Retain analysis for editing and rendering
+
+Use `MarkdownParser.CreateAnalysisSession` when an editor needs selected facts and unsupported-syntax candidates from each edited snapshot. It returns `MarkdownAnalysisSession`, whose `Analysis` is an availability-aware `MarkdownAnalysisResult`. The requested parts remain fixed through both paragraph reuse and full-parse fallback. `Syntax` is not added implicitly; neither `All` nor `AllFacts` includes `UnsupportedSyntax`.
+
+```csharp
+var previous = MarkdownParser.CreateAnalysisSession("Alpha\n\nBeta\n\nGamma\n",
+    MarkdownAnalysisParts.UnsupportedSyntax, "docs", "guide.md", sourceVersion: "1");
+var next = previous.ApplyEdits(previous.Analysis.TextHash,
+    new[] { new MarkdownTextEdit(new RawSpan(7, 4), "Beta {#section}") }, sourceVersion: "2");
+if (next.Analysis.GetAvailability(MarkdownAnalysisParts.UnsupportedSyntax)
+    == MarkdownAnalysisAvailability.Complete)
+{
+    foreach (var candidate in next.Analysis.UnsupportedSyntax!)
+        Console.WriteLine(candidate.RawSpan);
+}
+```
+
+The portable/assembly-friend entry `MdParseSession.CreateForAnalysis(raw, parts, scopeId, sourceId, sourceVersion, options, cancellationToken)` returns `MdAnalysisSession`. Its `Analysis` also retains the same body-relative `Blocks` as `AnalyzeWithBlocks`, without another parse. Completed blocks can survive a later projection/resource stop; they are `null` if block parsing did not finish. Always inspect analysis status and availability. This legacy renderer payload remains internal; it does not introduce a second public AST. Public facts and unsupported candidates use complete-input UTF-16 offsets, while legacy block positions are relative to `Analysis.BodySpan.Start`.
+
+Unlike the original `MarkdownParseSession`, the analysis session has no full-document `Document` property: unrequested facts must not appear to be confirmed empty collections. Existing `CreateSession`, `Document`, `Root`, and edit signatures retain their behavior. Both session types report the same reuse/fallback and logical resource counters.
+
+Keep a document-editing session separate from a session over an included or transformed body. Use the correct `MarkdownInputKind`, profile, source/version and requested parts for each snapshot. Renderer adapters may require an unversioned body identity. LSP change ranges can be relative to successive buffers: apply them sequentially or normalize them to one previous snapshot before calling `ApplyEdits`. Publish an updated session with the same version/generation checks used to publish its diagnostics.

@@ -149,12 +149,16 @@ internal sealed class MdParseSession
 {
     private readonly MdOptions options;
     private readonly IReadOnlyDictionary<int, MdParagraphFragment>? fragments;
+    private readonly MdAnalysisParts? analysisParts;
 
     private MdParseSession(MdSyntaxDocument document, MdOptions options, MdParagraphReuse reuse,
-        bool supported, MdSessionMode mode, MdSessionFallback fallback)
+        bool supported, MdSessionMode mode, MdSessionFallback fallback, MdAnalysisResult? analysis,
+        MdAnalysisParts? analysisParts)
     {
         Document = document;
         this.options = options;
+        Analysis = analysis;
+        this.analysisParts = analysisParts;
         fragments = supported && document.Facts.Status == MdParseStatus.Complete ? reuse.Fragments : null;
         Mode = mode;
         Fallback = fallback;
@@ -166,6 +170,7 @@ internal sealed class MdParseSession
     }
 
     internal MdSyntaxDocument Document { get; }
+    internal MdAnalysisResult? Analysis { get; }
     internal MdSessionMode Mode { get; }
     internal MdSessionFallback Fallback { get; }
     internal int ReusedBlocks { get; }
@@ -178,16 +183,29 @@ internal sealed class MdParseSession
         MdOptions options, CancellationToken cancellationToken)
         => Parse(raw, scopeId, sourceId, version, options, cancellationToken, MdSessionFallback.InitialParse);
 
+    internal static MdAnalysisSession CreateForAnalysis(string raw, MdAnalysisParts parts, string scopeId,
+        string sourceId, string? sourceVersion, MdOptions options, CancellationToken cancellationToken)
+    {
+        MdAnalysisResult.Validate(parts);
+        return new MdAnalysisSession(Parse(raw, scopeId, sourceId, sourceVersion, options, cancellationToken,
+            MdSessionFallback.InitialParse, analysisParts: parts));
+    }
+
     private static MdParseSession Parse(string raw, string scopeId, string sourceId, string? version,
         MdOptions options, CancellationToken cancellationToken, MdSessionFallback fallback,
-        IReadOnlyDictionary<int, MdParagraphFragment>? previous = null)
+        IReadOnlyDictionary<int, MdParagraphFragment>? previous = null, MdAnalysisParts? analysisParts = null)
     {
         if (raw is null)
             throw new ArgumentNullException(nameof(raw));
         var supported = raw.Length <= options.MaxInputUtf16;
         var reuse = new MdParagraphReuse(supported ? previous : null, supported);
         // Unsupported input takes the unchanged parser path; only counter totals are retained.
-        var document = MdParser.ParseSession(raw, scopeId, sourceId, version, options, cancellationToken, reuse);
+        var analysis = analysisParts.HasValue
+            ? MdParser.AnalyzeSession(raw, analysisParts.Value, scopeId, sourceId, version, options, cancellationToken, reuse)
+            : null;
+        var document = analysis is null
+            ? MdParser.ParseSession(raw, scopeId, sourceId, version, options, cancellationToken, reuse)
+            : analysis.PublishSelected(facts => new MdSyntaxDocument(facts, analysis.Root));
         if (previous is not null && document.Facts.Status != MdParseStatus.Complete)
         {
             var reason = MdSessionFallback.UnsupportedSyntax;
@@ -197,12 +215,13 @@ internal sealed class MdParseSession
                     reason = MdSessionFallback.ResourceBoundary;
                     break;
                 }
-            return Parse(raw, scopeId, sourceId, version, options, cancellationToken, reason);
+            return Parse(raw, scopeId, sourceId, version, options, cancellationToken, reason, analysisParts: analysisParts);
         }
         var delta = previous is not null && reuse.ReusedBlocks > 0;
         return new MdParseSession(document, options, reuse, supported,
             delta ? MdSessionMode.Delta : MdSessionMode.Full,
-            delta ? MdSessionFallback.None : previous is not null ? MdSessionFallback.NoReusableBlocks : fallback);
+            delta ? MdSessionFallback.None : previous is not null ? MdSessionFallback.NoReusableBlocks : fallback,
+            analysis, analysisParts);
     }
 
     internal MdParseSession ApplyEdits(string? expectedTextHash, IReadOnlyList<MdTextEdit> edits, string? version,
@@ -252,7 +271,8 @@ internal sealed class MdParseSession
             : fragments is null ? MdSessionFallback.UnsupportedSyntax
             : MdSessionFallback.None;
         if (fallback != MdSessionFallback.None)
-            return Parse(updated, Document.Facts.ScopeId, Document.Facts.SourceId, version, effective, cancellationToken, fallback);
+            return Parse(updated, Document.Facts.ScopeId, Document.Facts.SourceId, version, effective, cancellationToken,
+                fallback, analysisParts: analysisParts);
         var starts = new int[fragments!.Count];
         var at = 0;
         foreach (var start in fragments.Keys)
@@ -269,7 +289,7 @@ internal sealed class MdParseSession
             var paragraph = found >= 0 ? found : ~found - 1;
             if (paragraph < 0 || edit.Span.End - bodyStart > fragments[starts[paragraph]].Raw.Span.End)
                 return Parse(updated, Document.Facts.ScopeId, Document.Facts.SourceId, version, effective,
-                    cancellationToken, MdSessionFallback.UnsupportedEdit);
+                    cancellationToken, MdSessionFallback.UnsupportedEdit, analysisParts: analysisParts);
             if (edit.Span.Length != 0 || edit.Replacement.Length != 0)
                 changed.Add(starts[paragraph]);
             shifts[i + 1] = checked(shifts[i] + edit.Replacement.Length - edit.Span.Length);
@@ -296,14 +316,14 @@ internal sealed class MdParseSession
             var rebased = entry.Value.Rebase(shifts[low], effective.IsCommonMark, cancellationToken);
             if (rebased is null)
                 return Parse(updated, Document.Facts.ScopeId, Document.Facts.SourceId, version, effective,
-                    cancellationToken, MdSessionFallback.UnsupportedSyntax);
+                    cancellationToken, MdSessionFallback.UnsupportedSyntax, analysisParts: analysisParts);
             if (!Isolated(updated, bodyStart + rebased.Raw.Span.Start, bodyStart + rebased.Raw.Span.End,
                 cancellationToken))
                 continue;
             reusable.Add(rebased.Raw.Span.Start, rebased);
         }
         return Parse(updated, Document.Facts.ScopeId, Document.Facts.SourceId, version, effective, cancellationToken,
-            MdSessionFallback.NoReusableBlocks, reusable.Count == 0 ? null : reusable);
+            MdSessionFallback.NoReusableBlocks, reusable.Count == 0 ? null : reusable, analysisParts);
     }
 
     private static bool HasLineBreak(string value, int start, int length, CancellationToken cancellationToken)
@@ -352,4 +372,30 @@ internal sealed class MdParseSession
         }
         return end == raw.Length || raw[end] is '\r' or '\n';
     }
+}
+
+// Selected facts remain behind an availability-aware result, never a complete-document facade.
+internal sealed class MdAnalysisSession
+{
+    private readonly MdParseSession session;
+
+    internal MdAnalysisSession(MdParseSession session)
+    {
+        if (session.Analysis is null)
+            throw new ArgumentException("An analysis session requires selected outputs.", nameof(session));
+        this.session = session;
+    }
+
+    internal MdAnalysisResult Analysis => session.Analysis!;
+    internal MdSessionMode Mode => session.Mode;
+    internal MdSessionFallback Fallback => session.Fallback;
+    internal int ReusedBlocks => session.ReusedBlocks;
+    internal int RebasedBlocks => session.RebasedBlocks;
+    internal int ParsedBlocks => session.ParsedBlocks;
+    internal long ScanUnits => session.ScanUnits;
+    internal int OutputItems => session.OutputItems;
+
+    internal MdAnalysisSession ApplyEdits(string? expectedTextHash, IReadOnlyList<MdTextEdit> edits,
+        string? sourceVersion, MdOptions? options, CancellationToken cancellationToken)
+        => new(session.ApplyEdits(expectedTextHash, edits, sourceVersion, options, cancellationToken));
 }

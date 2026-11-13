@@ -1,6 +1,6 @@
 # Migrate to Syntamark 2.0
 
-Use the runtime and Source packages from the same immutable pair. The current candidate pair is `2.0.0-preview.20261113`; its existence in a local candidate feed does not mean it has been published to NuGet.org. Existing published `1.2.0` packages remain unchanged. Compiler-host consumers opt in to `Syntamark.Source` as before and continue to use its internal portable API through their own adapter.
+Use the runtime and Source packages from the same immutable pair. The current candidate pair is `2.0.0-preview.2026111301`; its existence in a local candidate feed does not mean it has been published to NuGet.org. Existing published `1.2.0` packages remain unchanged. Compiler-host consumers opt in to `Syntamark.Source` as before and continue to use its internal portable API through their own adapter.
 
 ## YAML dependencies and behavior
 
@@ -34,5 +34,7 @@ Definition continuation supports indented text and blank-separated blocks. Escap
 ## Edited snapshots and proofreading
 
 Use [`CreateSession` and `ApplyEdits`](selective-analysis.md#analyze-edited-snapshots) for opt-in paragraph reuse. Existing parse methods keep their behavior. A session returns positions for the new snapshot and explains full-parse fallbacks; persistent syntax node IDs are not guaranteed. Logical resource counters do not establish a timing improvement.
+
+Editors that need selected facts and unsupported-syntax candidates should use `CreateAnalysisSession`. Its distinct `MarkdownAnalysisSession` exposes availability-aware `Analysis` rather than a full-document facade. The portable `MdParseSession.CreateForAnalysis` result also retains legacy rendering `Blocks` from that parse. Requested parts survive both delta and full-parse paths; request `UnsupportedSyntax` explicitly and keep document and transformed-body snapshots separate. The earlier `2.0.0-preview.20261113` pair retains the original session API and is not replaced with this implementation.
 
 The [prose sample](prose-consumer.md) can invoke a caller-supplied Yomiyasu lint CLI explicitly. It sends selected text segments, maps line diagnostics back to original source fragments, and performs no automatic edits. Python and proofreading remain optional consumer dependencies. Partial parse information, line-only lint positions and unknown source mappings must not be upgraded to exact edits.

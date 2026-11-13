@@ -113,6 +113,7 @@ FootnoteChecks.Run(portable);
 NativeYamlChecks.Run(portable);
 SyntaxPositionChecks.Run(portable);
 ParserSessionChecks.Run(portable);
+SessionAnalysisChecks.Run(portable);
 
 static object Parse(Assembly assembly, string input)
 {

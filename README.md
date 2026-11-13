@@ -4,10 +4,10 @@ Syntamark は Markdown と YAML の構文、見出し、リンク、本文、元
 
 ## 導入
 
-このソースの候補パッケージは `Syntamark` と `Syntamark.Source` の `2.0.0-preview.20261113` です。NuGet.org への正式公開を示すものではありません。候補パッケージのある feed を指定し、必要な一方を追加してください。公開済みの `1.2.0` からの変更は[移行ガイド](docs/migration-v2.md)を参照してください。
+このソースの候補パッケージは `Syntamark` と `Syntamark.Source` の `2.0.0-preview.2026111301` です。NuGet.org への正式公開を示すものではありません。候補パッケージのある feed を指定し、必要な一方を追加してください。公開済みの `1.2.0` からの変更は[移行ガイド](docs/migration-v2.md)を参照してください。
 
 ```powershell
-dotnet add package Syntamark --version 2.0.0-preview.20261113 --source /path/to/candidate-feed
+dotnet add package Syntamark --version 2.0.0-preview.2026111301 --source /path/to/candidate-feed
 ```
 
 ```csharp
@@ -25,10 +25,10 @@ Console.WriteLine(document.Headings.Count);
 ```xml
 <PropertyGroup>
   <SyntamarkIncludeSource>true</SyntamarkIncludeSource>
-  <SyntamarkSourceVersion>2.0.0-preview.20261113</SyntamarkSourceVersion>
+  <SyntamarkSourceVersion>2.0.0-preview.2026111301</SyntamarkSourceVersion>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="Syntamark.Source" Version="[2.0.0-preview.20261113]"
+  <PackageReference Include="Syntamark.Source" Version="[2.0.0-preview.2026111301]"
                     PrivateAssets="all" IncludeAssets="build" />
 </ItemGroup>
 ```

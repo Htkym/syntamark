@@ -63,8 +63,57 @@ public sealed class MarkdownParseSession
     }
 }
 
+/// <summary>An immutable editing session that retains the requested analysis outputs from the same parse.</summary>
+public sealed class MarkdownAnalysisSession
+{
+    private readonly MdAnalysisSession core;
+
+    internal MarkdownAnalysisSession(MdAnalysisSession core, CancellationToken cancellationToken)
+    {
+        this.core = core;
+        Analysis = new MarkdownAnalysisResult(core.Analysis, cancellationToken);
+    }
+
+    /// <summary>Inspect availability before drawing conclusions from missing selected outputs.</summary>
+    public MarkdownAnalysisResult Analysis { get; }
+    public MarkdownSessionMode Mode => (MarkdownSessionMode)core.Mode;
+    public MarkdownSessionFallback Fallback => (MarkdownSessionFallback)core.Fallback;
+    public int ReusedBlocks => core.ReusedBlocks;
+    public int RebasedBlocks => core.RebasedBlocks;
+    /// <summary>Parsed eligible plain paragraphs, excluding other blocks and document-wide projection.</summary>
+    public int ParsedBlocks => core.ParsedBlocks;
+    /// <summary>Canonical logical debits including replayed work, not timing or executed work.</summary>
+    public long ScanUnits => core.ScanUnits;
+    public int OutputItems => core.OutputItems;
+
+    /// <summary>Applies edits in the previous input's coordinates, preserving the original selection on reuse and fallback.</summary>
+    public MarkdownAnalysisSession ApplyEdits(string? expectedTextHash, IReadOnlyList<MarkdownTextEdit> edits,
+        string? sourceVersion = null, MarkdownParseOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        if (edits is null)
+            throw new ArgumentNullException(nameof(edits));
+        var converted = new MdTextEdit[edits.Count];
+        for (var i = 0; i < converted.Length; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var edit = edits[i];
+            converted[i] = new MdTextEdit(new MdRawRange(edit.Span.Start, edit.Span.Length), edit.Replacement);
+        }
+        return new MarkdownAnalysisSession(core.ApplyEdits(expectedTextHash, converted, sourceVersion,
+            options?.Core, cancellationToken), cancellationToken);
+    }
+}
+
 public static partial class MarkdownParser
 {
+    /// <summary>Creates a selected-analysis session. Include UnsupportedSyntax explicitly when candidate diagnostics are needed.</summary>
+    /// <remarks>Legacy rendering blocks remain available through the portable/assembly-friend analysis result; no second public AST is exposed.</remarks>
+    public static MarkdownAnalysisSession CreateAnalysisSession(string rawText, MarkdownAnalysisParts parts,
+        string scopeId, string sourceId, string? sourceVersion = null, MarkdownParseOptions? options = null,
+        CancellationToken cancellationToken = default)
+        => new(MdParseSession.CreateForAnalysis(rawText, (MdAnalysisParts)parts, scopeId, sourceId, sourceVersion,
+            options?.Core ?? defaultOptions, cancellationToken), cancellationToken);
+
     /// <summary>Creates an opt-in session without changing the existing Parse or ParseWithSyntax contracts.</summary>
     public static MarkdownParseSession CreateSession(string rawText, string scopeId, string sourceId,
         string? sourceVersion = null, MarkdownParseOptions? options = null, CancellationToken cancellationToken = default)

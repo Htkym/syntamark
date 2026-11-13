@@ -40,18 +40,72 @@ using Parser = Syntamark.Compilation.MdParser;
 using Parts = Syntamark.Compilation.MdAnalysisParts;
 using Options = Syntamark.Compilation.MdOptions;
 using Yaml = Syntamark.Compilation.MdYamlParser;
+using AnalysisResult = Syntamark.Compilation.MdAnalysisResult;
+using TextEdit = Syntamark.Compilation.MdTextEdit;
+using Span = Syntamark.Compilation.MdRawRange;
 #else
 using Parser = Syntamark.MarkdownParser;
 using Parts = Syntamark.MarkdownAnalysisParts;
 using Options = Syntamark.MarkdownParseOptions;
 using Yaml = Syntamark.YamlParser;
+using AnalysisResult = Syntamark.MarkdownAnalysisResult;
+using TextEdit = Syntamark.MarkdownTextEdit;
+using Span = Syntamark.RawSpan;
 #endif
 
-const string markdown = "---\r\ntitle: Pair\r\n---\r\n# Pair 😀\r\n\r\n[guide](guide.md)\r\n\r\nText[^note].\r\n\r\n[^note]: Footnote.\r\n";
+const string markdown = "---\r\ntitle: Pair\r\n---\r\n# Pair 😀\r\n\r\n[guide](guide.md)\r\n\r\nText[^note].\r\n\r\n[^note]: Footnote.\r\n\r\nAlpha\r\n\r\nBeta\r\n\r\nGamma\r\n\r\nTerm {#old}\r\n";
 var analysis = Parser.Analyze(markdown, Parts.All, "package-pair", "pair.md", "1",
     new Options(profileId: "syntamark-docs/2"), CancellationToken.None);
 if (analysis.Status.ToString() != "Complete" || analysis.Root is null || analysis.ProfileId != "syntamark-docs/2")
     throw new InvalidOperationException("The packaged Markdown documentation profile did not complete.");
+const Parts selection = Parts.UnsupportedSyntax;
+#if SOURCE_HOST
+var session = Syntamark.Compilation.MdParseSession.CreateForAnalysis(markdown, selection,
+    "package-pair", "pair.md", "1", new Options(profileId: "syntamark-docs/2"), CancellationToken.None);
+#else
+var session = Parser.CreateAnalysisSession(markdown, selection, "package-pair", "pair.md", "1",
+    new Options(profileId: "syntamark-docs/2"), CancellationToken.None);
+#endif
+var savedSelection = JsonSerializer.Serialize(SelectedSnapshot(session.Analysis));
+var betaStart = markdown.IndexOf("Beta", StringComparison.Ordinal);
+const string replacement = "Beta {#edit}";
+var changedText = markdown.Remove(betaStart, 4).Insert(betaStart, replacement);
+var updated = session.ApplyEdits(session.Analysis.TextHash,
+    new[] { new TextEdit(new Span(betaStart, 4), replacement) }, "2", null, CancellationToken.None);
+foreach (var selected in new[] { session.Analysis, updated.Analysis })
+    if ((int)selected.RequestedParts != 128 || selected.Root is not null
+        || selected.GetAvailability(Parts.Syntax).ToString() != "NotRequested"
+        || selected.GetAvailability(Parts.UnsupportedSyntax).ToString() != "Complete")
+        throw new InvalidOperationException("The analysis session lost its selected output mask or exposed an unrequested root.");
+if (updated.Mode.ToString() != "Delta" || updated.ReusedBlocks != 2 || updated.RebasedBlocks != 1)
+    throw new InvalidOperationException("The packaged analysis session did not reuse the isolated prefix and rebase the suffix.");
+var candidates = updated.Analysis.UnsupportedSyntax!;
+var expectedTokens = new[] { "{#edit}", "{#old}" };
+if (candidates.Count != expectedTokens.Length)
+    throw new InvalidOperationException("The delta did not retain both introduced and shifted unsupported candidates.");
+for (var i = 0; i < candidates.Count; i++)
+    if (candidates[i].RawSpan.Start != changedText.IndexOf(expectedTokens[i], StringComparison.Ordinal)
+        || candidates[i].RawSpan.Length != expectedTokens[i].Length
+        || changedText.Substring(candidates[i].RawSpan.Start, candidates[i].RawSpan.Length) != expectedTokens[i])
+        throw new InvalidOperationException("An unsupported candidate retained a stale source position.");
+if (savedSelection != JsonSerializer.Serialize(SelectedSnapshot(session.Analysis)))
+    throw new InvalidOperationException("Applying an edit mutated the previous selected snapshot.");
+#if SOURCE_HOST
+var bodyStart = updated.Analysis.BodySpan?.Start ?? throw new InvalidOperationException("The selected analysis lost its body envelope.");
+if (session.Analysis.Blocks is null || updated.Analysis.Blocks is null || bodyStart <= 0
+    || updated.Analysis.Blocks[0].Span.Start != 0
+    || !updated.Analysis.Blocks.OfType<Syntamark.Compilation.LithoParagraph>().Any(block =>
+        block.Span.Start == changedText.IndexOf("Gamma", StringComparison.Ordinal) - bodyStart))
+    throw new InvalidOperationException("The Source analysis session lost body-relative rendering blocks.");
+#endif
+var analysisSessionSnapshot = new
+{
+    mask = (int)selection,
+    initial = new { mode = session.Mode.ToString(), fallback = session.Fallback.ToString(), session.ReusedBlocks,
+        session.RebasedBlocks, session.ParsedBlocks, session.ScanUnits, session.OutputItems, analysis = SelectedSnapshot(session.Analysis) },
+    updated = new { mode = updated.Mode.ToString(), fallback = updated.Fallback.ToString(), updated.ReusedBlocks,
+        updated.RebasedBlocks, updated.ParsedBlocks, updated.ScanUnits, updated.OutputItems, analysis = SelectedSnapshot(updated.Analysis) },
+};
 var yamlSnapshots = new[] { "type: concept\nvalues: [\"false\", true, 0x2A]\n", "a: 1\na: 2\n", "a: *alias\n" }
     .Select(raw =>
     {
@@ -85,6 +139,7 @@ var snapshot = new
     status = analysis.Status.ToString(), syntax = analysis.Root.DescendantsAndSelf()
         .Select(node => new { kind = node.Kind.ToString(), start = node.RawSpan?.Start, length = node.RawSpan?.Length }),
     yaml = yamlSnapshots,
+    analysisSession = analysisSessionSnapshot,
 };
 #if SOURCE_HOST
 var sourceParseCompiled = parserAssembly.GetType("Syntamark.Compilation.MdParser") is not null;
@@ -96,6 +151,7 @@ Console.WriteLine(JsonSerializer.Serialize(new
 {
     status = "PASS", parserVersion = analysis.ParserVersion, yamlProfileId = analysis.YamlProfileId,
     sourceParseCompiled, noSourceFacade, noSourceFriendMetadata,
+    sourceBodyRelativeBlocks = true,
     noThirdPartyParserDependencies = noRetiredDependencies, snapshot,
 }));
 #else
@@ -109,6 +165,25 @@ Console.WriteLine(JsonSerializer.Serialize(new
     noThirdPartyParserDependencies = noRetiredDependencies, snapshot,
 }));
 #endif
+
+static object SelectedSnapshot(AnalysisResult result) => new
+{
+    result.ScopeId, result.SourceId, result.SourceVersion, result.ParserVersion, result.ProfileId, result.YamlProfileId,
+    result.ContractVersion, result.OptionsHash, result.TextHash, result.AnalysisHash, result.AnalysisSchemaVersion,
+    mask = (int)result.RequestedParts, status = result.Status.ToString(), rootAbsent = result.Root is null,
+    bodySpan = result.BodySpan is { } body ? new { body.Start, body.Length } : null,
+    availability = Enumerable.Range(0, 8).Select(bit => result.GetAvailability((Parts)(1 << bit)).ToString()).ToArray(),
+    candidates = result.UnsupportedSyntax?.Select(candidate => new
+    {
+        kind = candidate.Kind.ToString(), candidate.Reason, candidate.RawSpan.Start, candidate.RawSpan.Length,
+    }).ToArray(),
+    diagnostics = result.Diagnostics.Select(diagnostic => new
+    {
+        diagnostic.Id, severity = diagnostic.Severity.ToString(), diagnostic.Origin, diagnostic.Reason,
+        diagnostic.Message, start = diagnostic.RawSpan?.Start, length = diagnostic.RawSpan?.Length,
+    }).ToArray(),
+    coverage = new { raw = result.Coverage.RawPositions.ToString(), decoded = result.Coverage.DecodedMapping.ToString(), result.Coverage.Reasons },
+};
 '@
 
 try {
@@ -156,6 +231,8 @@ try {
         noSourceFriendMetadata = $results.source.noSourceFriendMetadata; expectedStampRejected = $true
         noThirdPartyParserDependencies = $results.runtime.noThirdPartyParserDependencies -and $results.source.noThirdPartyParserDependencies
         yamlProfileId = $results.runtime.yamlProfileId
+        sourceBodyRelativeBlocks = $results.source.sourceBodyRelativeBlocks
+        analysisSession = $results.runtime.snapshot.analysisSession
     }
     $canaryPath = Join-Path $consumers 'canary.json'
     [IO.File]::WriteAllText($canaryPath, ($canary | ConvertTo-Json -Depth 8), $utf8)

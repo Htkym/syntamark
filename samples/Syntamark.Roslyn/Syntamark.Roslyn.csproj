@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <SyntamarkIncludeSource Condition="'$(SyntamarkCandidateMode)' == 'true'">true</SyntamarkIncludeSource>
-    <SyntamarkSourceVersion Condition="'$(SyntamarkSourceVersion)' == ''">2.0.0-preview.20261113</SyntamarkSourceVersion>
+    <SyntamarkSourceVersion Condition="'$(SyntamarkSourceVersion)' == ''">2.0.0-preview.2026111301</SyntamarkSourceVersion>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <!-- This non-shipping canary declares only its tested C# host and has no analyzer release history. -->

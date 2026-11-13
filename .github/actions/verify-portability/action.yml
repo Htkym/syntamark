@@ -1,5 +1,10 @@
 name: Verify portability
 description: Verify facts, CommonMark inventory, comparison, and private compiler-host packages without publishing.
+inputs:
+  pair-stage:
+    description: Existing sealed private pair from the artifact tests; omitted for standalone verification.
+    required: false
+    default: ''
 runs:
   using: composite
   steps:
@@ -47,16 +52,23 @@ runs:
         # The immutable source dependency has its own historical style; check the authored sample only.
         dotnet format style samples/Syntamark.Roslyn/Syntamark.Roslyn.csproj --diagnostics IDE2001 --include samples/Syntamark.Roslyn/MarkdownTodoAnalyzer.cs --no-restore --verify-no-changes
         dotnet format whitespace samples/Syntamark.Roslyn/Syntamark.Roslyn.csproj --include samples/Syntamark.Roslyn/MarkdownTodoAnalyzer.cs --no-restore --verify-no-changes
-    - name: Prepare a private source-package canary
+    - name: Prepare a private runtime and Source pair
+      if: inputs.pair-stage == ''
       shell: bash
       run: |
         node eng/markdown/New-ArtifactPair.mjs prepare "$GITHUB_SHA" 2.0.0-preview.20261113 "$RUNNER_TEMP/syntamark-canary"
-        dotnet restore "$RUNNER_TEMP/syntamark-canary/source/source.csproj" --configfile "$RUNNER_TEMP/syntamark-canary/NuGet.Config" --packages "$RUNNER_TEMP/syntamark-canary/packages"
-        dotnet pack "$RUNNER_TEMP/syntamark-canary/source/source.csproj" -c Release --no-restore -o "$RUNNER_TEMP/syntamark-canary/feed"
-    - name: Verify the candidate in the compiler host
+        for kind in runtime source; do
+          dotnet restore "$RUNNER_TEMP/syntamark-canary/$kind/$kind.csproj" --configfile "$RUNNER_TEMP/syntamark-canary/NuGet.Config" --packages "$RUNNER_TEMP/syntamark-canary/packages"
+        done
+        node eng/markdown/New-ArtifactPair.mjs check-stage "$RUNNER_TEMP/syntamark-canary"
+        for kind in runtime source; do
+          dotnet pack "$RUNNER_TEMP/syntamark-canary/$kind/$kind.csproj" -c Release --no-restore -o "$RUNNER_TEMP/syntamark-canary/feed"
+        done
+        node eng/markdown/New-ArtifactPair.mjs seal "$RUNNER_TEMP/syntamark-canary"
+    - name: Verify restored packages and the compiler host
       shell: pwsh
+      env:
+        EXISTING_PAIR_STAGE: ${{ inputs.pair-stage }}
       run: |
-        $candidateRoot = Join-Path $env:RUNNER_TEMP 'syntamark-canary'
-        $env:NUGET_PACKAGES = Join-Path $candidateRoot 'packages'
-        $prepared = Get-Content -LiteralPath (Join-Path $candidateRoot 'prepared.json') -Raw | ConvertFrom-Json
-        ./tests/Syntamark.Roslyn.Integration/Verify.ps1 -CandidateVersion 2.0.0-preview.20261113 -CandidateFeed (Join-Path $candidateRoot 'feed') -ExpectedParserVersion $prepared.metadata.parserVersion
+        $stage = if ($env:EXISTING_PAIR_STAGE) { $env:EXISTING_PAIR_STAGE } else { Join-Path $env:RUNNER_TEMP 'syntamark-canary' }
+        ./eng/markdown/Verify-ArtifactPair.ps1 -Stage $stage

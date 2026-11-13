@@ -39,7 +39,8 @@ internal static class MdFrontMatterParser
             return (new MdFrontMatter(MdFrontMatterState.Empty, envelope.Opening, yaml, envelope.Closing, null) { YamlSyntax = parsed }, envelope.Body, null);
         var projected = root?.Kind == MdYamlKind.Mapping ? Project(root, yaml.Start, context) : null;
         return (new MdFrontMatter(diagnostic is null ? MdFrontMatterState.Parsed : MdFrontMatterState.Invalid,
-            envelope.Opening, yaml, envelope.Closing, projected) { YamlSyntax = parsed }, envelope.Body, diagnostic);
+            envelope.Opening, yaml, envelope.Closing, projected)
+        { YamlSyntax = parsed }, envelope.Body, diagnostic);
     }
 
     private static MdDiagnostic Diagnostic(string id, string message, MdRawRange? span, string reason) =>

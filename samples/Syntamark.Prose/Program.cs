@@ -24,8 +24,13 @@ if (args.Length is 3 or 4 && args[0] == "--yomiyasu")
     var diagnostics = await YomiyasuBridge.RunAsync(selected, python, lintScript, CancellationToken.None);
     Console.WriteLine(JsonSerializer.Serialize(new
     {
-        sourceId, sourceVersion, document.Facts.Status, document.Facts.Coverage,
-        checkedSegments = selected.Segments.Count, selected.Exclusions, diagnostics,
+        sourceId,
+        sourceVersion,
+        document.Facts.Status,
+        document.Facts.Coverage,
+        checkedSegments = selected.Segments.Count,
+        selected.Exclusions,
+        diagnostics,
         automaticEdits = false,
     }));
     return;

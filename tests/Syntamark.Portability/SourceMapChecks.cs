@@ -54,7 +54,11 @@ internal static class SourceMapChecks
         Check(cycle.Precision == MarkdownMappingPrecision.Unknown && !cycle.CanEdit, "A snapshot cycle must terminate without claiming an editable source.");
         using var cancelled = new CancellationTokenSource();
         cancelled.Cancel();
-        try { rendering.Map(new RawSpan(0, 1), cancelled.Token); throw new InvalidOperationException("Cancellation was ignored."); }
+        try
+        {
+            rendering.Map(new RawSpan(0, 1), cancelled.Token);
+            throw new InvalidOperationException("Cancellation was ignored.");
+        }
         catch (OperationCanceledException) { }
         Console.WriteLine("PASS composable source maps and versioned edits");
     }
@@ -63,6 +67,7 @@ internal static class SourceMapChecks
         => new(new RawSpan(start, length), new SourceRange(source, new RawSpan(origin, length)), MarkdownSegmentKind.Linear);
     private static void Check(bool valid, string message)
     {
-        if (!valid) throw new InvalidOperationException(message);
+        if (!valid)
+            throw new InvalidOperationException(message);
     }
 }

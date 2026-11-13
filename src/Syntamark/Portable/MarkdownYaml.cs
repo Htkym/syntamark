@@ -906,55 +906,55 @@ internal static class MdYamlParser
                 case MdYamlScalarKind.Boolean:
                     return "bool/" + value.ToLowerInvariant();
                 case MdYamlScalarKind.Integer:
-                {
-                    ChargeNumber(value.Length, key.RawSpan.Start);
-                    BigInteger number;
-                    if (value.StartsWith("0x", StringComparison.Ordinal))
-                        number = BigInteger.Parse("0" + value.Substring(2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
-                    else if (value.StartsWith("0o", StringComparison.Ordinal))
                     {
-                        number = BigInteger.Zero;
-                        for (var i = 2; i < value.Length; i++)
+                        ChargeNumber(value.Length, key.RawSpan.Start);
+                        BigInteger number;
+                        if (value.StartsWith("0x", StringComparison.Ordinal))
+                            number = BigInteger.Parse("0" + value.Substring(2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
+                        else if (value.StartsWith("0o", StringComparison.Ordinal))
                         {
-                            if ((i & 127) == 0)
-                                token.ThrowIfCancellationRequested();
-                            number = number * 8 + (value[i] - '0');
+                            number = BigInteger.Zero;
+                            for (var i = 2; i < value.Length; i++)
+                            {
+                                if ((i & 127) == 0)
+                                    token.ThrowIfCancellationRequested();
+                                number = number * 8 + (value[i] - '0');
+                            }
                         }
+                        else
+                            number = BigInteger.Parse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+                        return "int/" + number.ToString(CultureInfo.InvariantCulture);
                     }
-                    else
-                        number = BigInteger.Parse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
-                    return "int/" + number.ToString(CultureInfo.InvariantCulture);
-                }
                 case MdYamlScalarKind.Float:
-                {
-                    ChargeNumber(value.Length, key.RawSpan.Start);
-                    var lower = value.ToLowerInvariant();
-                    if (lower.EndsWith(".inf", StringComparison.Ordinal))
-                        return "float/" + (lower[0] == '-' ? "-inf" : "inf");
-                    if (lower == ".nan")
-                        return "float/nan";
-                    var negative = value[0] == '-';
-                    var unsigned = value[0] is '+' or '-' ? value.Substring(1) : value;
-                    var e = unsigned.IndexOfAny(new[] { 'e', 'E' });
-                    var exponent = e < 0 ? BigInteger.Zero : BigInteger.Parse(unsigned.Substring(e + 1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
-                    var coefficient = e < 0 ? unsigned : unsigned.Substring(0, e);
-                    var point = coefficient.IndexOf('.');
-                    if (point >= 0)
                     {
-                        exponent -= coefficient.Length - point - 1;
-                        coefficient = coefficient.Remove(point, 1);
+                        ChargeNumber(value.Length, key.RawSpan.Start);
+                        var lower = value.ToLowerInvariant();
+                        if (lower.EndsWith(".inf", StringComparison.Ordinal))
+                            return "float/" + (lower[0] == '-' ? "-inf" : "inf");
+                        if (lower == ".nan")
+                            return "float/nan";
+                        var negative = value[0] == '-';
+                        var unsigned = value[0] is '+' or '-' ? value.Substring(1) : value;
+                        var e = unsigned.IndexOfAny(new[] { 'e', 'E' });
+                        var exponent = e < 0 ? BigInteger.Zero : BigInteger.Parse(unsigned.Substring(e + 1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+                        var coefficient = e < 0 ? unsigned : unsigned.Substring(0, e);
+                        var point = coefficient.IndexOf('.');
+                        if (point >= 0)
+                        {
+                            exponent -= coefficient.Length - point - 1;
+                            coefficient = coefficient.Remove(point, 1);
+                        }
+                        coefficient = coefficient.TrimStart('0');
+                        if (coefficient.Length == 0)
+                            return "float/0";
+                        var last = coefficient.Length;
+                        while (last > 0 && coefficient[last - 1] == '0')
+                        {
+                            exponent++;
+                            last--;
+                        }
+                        return "float/" + (negative ? "-" : "") + coefficient.Substring(0, last) + "e" + exponent.ToString(CultureInfo.InvariantCulture);
                     }
-                    coefficient = coefficient.TrimStart('0');
-                    if (coefficient.Length == 0)
-                        return "float/0";
-                    var last = coefficient.Length;
-                    while (last > 0 && coefficient[last - 1] == '0')
-                    {
-                        exponent++;
-                        last--;
-                    }
-                    return "float/" + (negative ? "-" : "") + coefficient.Substring(0, last) + "e" + exponent.ToString(CultureInfo.InvariantCulture);
-                }
                 default:
                     return "str/" + value;
             }

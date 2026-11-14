@@ -116,6 +116,8 @@ test('release version policy and one private artifact pair', {timeout: 300_000},
     const historical = 'Historical 1.0.1 remains immutable; 2.0.0 is not an installation selection here; ![Historical 1.0.1 icon](images/icon.png?version=1.0.1)';
     const unsupportedExamples = ['2.0.0-preview.0', '2.0.0-preview.4.extra', '2.0.0+build']
       .map(version => 'Unsupported example: dotnet add package Syntamark --version ' + version).join('\n');
+    const documentLinks = '[English](README.en.md) [Install](README.en.md#installation) [Japanese](README.md) [Guide](docs/public-features.ja.md#facts)';
+    const unchangedLinks = '[External](https://example.invalid/README.en.md) [Local](#packages) [Other](README.en.md.extra)';
     function installSelections(readme, version) {
       assert.ok(readme.includes('dotnet add package Syntamark --version ' + version));
       assert.ok(readme.includes('<SyntamarkSourceVersion>' + version + '</SyntamarkSourceVersion>'));
@@ -136,7 +138,7 @@ test('release version policy and one private artifact pair', {timeout: 300_000},
         .replace(/(dotnet add package Syntamark --version )\S+/, (_, prefix) => prefix + legacy)
         .replace(/(<SyntamarkSourceVersion>)[^<]+/, (_, prefix) => prefix + legacy)
         .replace(/(<PackageReference Include="Syntamark.Source" Version="\[)[^\]]+/, (_, prefix) => prefix + legacy)
-        + '\n' + historical + '\n' + unsupportedExamples + '\n';
+        + '\n' + historical + '\n' + unsupportedExamples + '\n' + documentLinks + '\n' + unchangedLinks + '\n';
       fs.writeFileSync(path.join(fixture, 'README.md'), changed);
       success(run('git', ['add', '--', 'README.md'], {cwd: fixture}));
       const tree = success(run('git', ['write-tree'], {cwd: fixture}));
@@ -149,6 +151,11 @@ test('release version policy and one private artifact pair', {timeout: 300_000},
         installSelections(actual, selected);
         assert.ok(actual.includes(historical), 'Keep historical version and icon text byte-for-byte');
         assert.ok(actual.includes(unsupportedExamples), 'Never rewrite a supported prefix inside an unsupported version token');
+        for (const documentPath of ['README.en.md', 'README.en.md#installation', 'README.md', 'docs/public-features.ja.md#facts'])
+          assert.ok(actual.includes('](https://github.com/Htkym/syntamark/blob/' + fixtureCommit + '/' + documentPath + ')'),
+            'Pin each language and guide link to the exact source commit');
+        assert.doesNotMatch(actual, /\]\((?:README(?:\.en)?\.md(?:#|\))|docs\/)/, 'No package-local documentation links remain');
+        assert.ok(actual.includes(unchangedLinks), 'Keep absolute, local-anchor and non-README targets unchanged');
       }
     }
     assert.deepEqual(fs.readFileSync(path.join(root, 'README.md')), originalReadme);

@@ -148,7 +148,7 @@ function prepare(commit,version,out){
     .replace(new RegExp('(dotnet add package Syntamark --version )'+versionPattern+'(?=\\s|$)','g'),(_,prefix)=>prefix+version)
     .replace(new RegExp('(<SyntamarkSourceVersion>)'+versionPattern+'(?=</SyntamarkSourceVersion>)','g'),(_,prefix)=>prefix+version)
     .replace(new RegExp('(<PackageReference Include="Syntamark.Source" Version="\\[)'+versionPattern+'(?=\\]")','g'),(_,prefix)=>prefix+version)
-    .replace(/\]\((docs\/[^)]+)\)/g,(_,p)=>'](https://github.com/Htkym/syntamark/blob/'+commit+'/'+p+')'));
+    .replace(/\]\((docs\/[^)]+|README(?:\.en)?\.md(?:#[^)]*)?)\)/g,(_,p)=>'](https://github.com/Htkym/syntamark/blob/'+commit+'/'+p+')'));
   metadata.readme={sourcePath:'README.md',packagePath:'README.md',sourceSha256:sha(readmeInput),sha256:sha(readme)};
   for(const kind of ['runtime','source']){
     writeJson(path.join(out,kind,'markdown/manifest.json'),metadata);

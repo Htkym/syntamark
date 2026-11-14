@@ -2,6 +2,8 @@
 
 `commonmark/0.31.2` は明示して選ぶ profile である。既定の `lithosharp-markdown/1` は拡張を含む互換 profile として利用できる。選択方法と HTML・front matter の違いは [profile の使い方](profile-design.md)を参照。
 
+文書向けの `syntamark-docs/2` は互換 profile の拡張に脚注とディレクティブ属性を加える。CommonMark profile の意味と既定値は変わらない。脚注の元ラベル、定義、参照回数、位置は [2.0 への移行](migration-v2.md#markdown-profiles-and-footnotes)を参照する。
+
 ## 対応する構文
 
 CommonMark profile は次の標準カテゴリを扱う。
@@ -20,7 +22,7 @@ table、task list、strikethrough、裸 URL などの拡張は、この profile 
 
 ## 公式例と利用上の限界
 
-CommonMark 0.31.2 の公式652例に対する HTML 比較は次のとおり。
+1.x の基準実装で実行した CommonMark 0.31.2 の公式652例に対する HTML 比較は次のとおり。新しい文書向け profile の測定結果は含まない。
 
 | Profile | 一致 | 差分 | 比較用 renderer で観測不可 |
 |---|---:|---:|---:|

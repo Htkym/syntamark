@@ -1,6 +1,5 @@
 {
-  "contractVersion": "1.0",
-  "dependencies": {
-    "YamlDotNet": "18.1.0"
-  }
+  "contractVersion": "2.0",
+  "dependencies": {},
+  "yamlProfileId": "native-yaml/1"
 }

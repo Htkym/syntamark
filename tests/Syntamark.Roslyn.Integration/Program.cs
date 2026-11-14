@@ -13,10 +13,8 @@ var analyzer = new MarkdownTodoAnalyzer();
 var compilation = CSharpCompilation.Create("MarkdownCanary", [CSharpSyntaxTree.ParseText("class C {}")],
     [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)], new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 var host = typeof(DiagnosticAnalyzer).Assembly.GetName();
-var candidate = args.Contains("--candidate");
 var raw = "\uFEFF---\r\ntitle: 😀\r\n---\r\n# TODO &amp;😀\r\n[x]()\r\n";
-if (candidate)
-    raw += "\r\n<div>\r\n# TODO Hidden\r\n[bad](/wrong)\r\n</div>\r\n\r\ntext <span>**bold** [x](/u)</span>\r\n";
+raw += "\r\n<div>\r\n# TODO Hidden\r\n[bad](/wrong)\r\n</div>\r\n\r\ntext <span>**bold** [x](/u)</span>\r\n";
 var snapshot = new SnapshotFile("original.md", raw);
 var first = await Run([snapshot]);
 var todo = first.Single(d => d.Id == "SMC001");
@@ -25,32 +23,27 @@ Check(todo.Location.SourceSpan == new TextSpan(expectedStart, "TODO &amp;😀".L
 Check(todo.Location.GetLineSpan().StartLinePosition == new LinePosition(3, 2), "Roslyn zero-based UTF-16 line/column");
 Check(todo.Properties["precision"] == "CoveringTokens", "Entity is token-covering, not an exact edit");
 var identity = first.Single(d => d.Id == "SMC000");
-Check(identity.Properties["yamlVersion"]?.StartsWith("18.1.0", StringComparison.Ordinal) == true, "Actual YamlDotNet informational version");
-Check(identity.Properties["yamlAssembly"] == "YamlDotNet, Version=18.0.0.0, Culture=neutral, PublicKeyToken=ec19458f3c15af5e", "Actual YamlDotNet assembly identity");
+Check(identity.Properties["yamlProfileId"] == "native-yaml/1", "Actual native YAML profile identity");
+Check(!identity.Properties["parserReferences"]!.Split(';').Any(name => name is "YamlDotNet" or "SkiaSharp"),
+    "Compiler source host has no retired parser or image dependency");
 Check(identity.Properties["status"] == "Complete" && identity.Properties["yamlProbeState"] == "Parsed",
-    "Selected profile completed and the explicit legacy YAML dependency probe parsed front matter");
+    "Selected profile completed and the separate native YAML probe parsed front matter");
 Check(identity.Properties["yamlProbeProfileId"] == "lithosharp-markdown/1", "YAML probe profile is explicit");
-if (candidate)
-{
-    CheckAnalysis(identity, "Complete", "Complete");
-    Check(identity.Properties["emptyTargetSpans"] == "42:0", "Candidate empty destination has a known nonzero position");
-    Check(identity.Properties["profileId"] == "commonmark/0.31.2" && identity.Properties["standardFrontMatterState"] == "Absent",
-        "Candidate standard parse does not implicitly consume YAML");
-    Check(identity.Properties["syntaxState"] == "Document" && int.Parse(identity.Properties["syntaxNodes"]!) > 0,
-        "Candidate compiled and loaded the internal syntax entry");
-    Check(identity.Properties["syntaxRootSpan"] == "0:" + raw.Length, "Candidate syntax owns the original BOM/CRLF snapshot");
-    var marker = raw.IndexOf("# TODO", StringComparison.Ordinal);
-    var headingLength = raw.IndexOf('\r', marker) - marker;
-    Check(identity.Properties["syntaxHeadingSpans"]!.Split(';').Contains(marker + ":" + headingLength),
-        "TODO rule selects the raw heading range from the internal tree");
-    Check(identity.Properties["htmlSyntaxNodes"] == "3" && first.Count(d => d.Id == "SMC001") == 1,
-        "HTML block/inline syntax is present and hidden HTML heading is not diagnosed");
-    Check(!identity.Properties["linkTargets"]!.Contains("/wrong", StringComparison.Ordinal)
-        && identity.Properties["linkTargets"]!.Contains("/u", StringComparison.Ordinal), "HTML content has no fake link facts while inline Markdown remains parsed");
-}
-else
-    Check(identity.Properties["profileId"] == "lithosharp-markdown/1" && identity.Properties["syntaxState"] == "not-requested",
-        "Published baseline remains on its original facts-only profile");
+CheckAnalysis(identity, "Complete", "Complete");
+Check(identity.Properties["emptyTargetSpans"] == "42:0", "Candidate empty destination has a known nonzero position");
+Check(identity.Properties["profileId"] == "commonmark/0.31.2" && identity.Properties["standardFrontMatterState"] == "Absent",
+    "Candidate standard parse does not implicitly consume YAML");
+Check(identity.Properties["syntaxState"] == "Document" && int.Parse(identity.Properties["syntaxNodes"]!) > 0,
+    "Candidate compiled and loaded the internal syntax entry");
+Check(identity.Properties["syntaxRootSpan"] == "0:" + raw.Length, "Candidate syntax owns the original BOM/CRLF snapshot");
+var marker = raw.IndexOf("# TODO", StringComparison.Ordinal);
+var headingLength = raw.IndexOf('\r', marker) - marker;
+Check(identity.Properties["syntaxHeadingSpans"]!.Split(';').Contains(marker + ":" + headingLength),
+    "TODO rule selects the raw heading range from the internal tree");
+Check(identity.Properties["htmlSyntaxNodes"] == "3" && first.Count(d => d.Id == "SMC001") == 1,
+    "HTML block/inline syntax is present and hidden HTML heading is not diagnosed");
+Check(!identity.Properties["linkTargets"]!.Contains("/wrong", StringComparison.Ordinal)
+    && identity.Properties["linkTargets"]!.Contains("/u", StringComparison.Ordinal), "HTML content has no fake link facts while inline Markdown remains parsed");
 
 var edited = await Run([new SnapshotFile("original.md", "# Done\n")]);
 Check(edited.All(d => d.Id != "SMC001"), "Edited snapshot clears old TODO");
@@ -64,24 +57,21 @@ Check(unreadable.Length == 1 && unreadable[0].Id == "SMC002" && unreadable[0].Lo
 var partial = await Run([snapshot], new GlobalOptions("1"));
 Check(partial.Single(d => d.Id == "SMC000").Properties["status"] == "Partial" && partial.All(d => d.Id != "SMC001"),
     "Budget stop cannot fabricate missing facts or absence diagnostics");
-if (candidate)
-{
-    var partialIdentity = partial.Single(d => d.Id == "SMC000");
-    Check(partialIdentity.Properties["syntaxState"] == "unavailable", "Early scan stop does not fabricate an empty tree");
-    CheckAnalysis(partialIdentity, "Partial", "Unavailable");
-    var outputLimited = await Run([snapshot], new GlobalOptions(null, "1"));
-    var outputIdentity = outputLimited.Single(d => d.Id == "SMC000");
-    Check(outputIdentity.Properties["status"] == "Partial"
-        && outputIdentity.Properties["syntaxState"] == "unavailable"
-        && outputLimited.All(d => d.Id != "SMC001"), "Output stop preserves partial/null-root handling in the compiler consumer");
-    CheckAnalysis(outputIdentity, "Partial", "Unavailable");
-    var failed = await Run([new SnapshotFile("invalid.md", "\uD800")]);
-    var failedIdentity = failed.Single(d => d.Id == "SMC000");
-    Check(failedIdentity.Properties["status"] == "Failed" && failedIdentity.Properties["standardFrontMatterState"] == "Unknown"
-        && failedIdentity.Properties["syntaxState"] == "unavailable" && failed.All(d => d.Id != "SMC001"),
-        "Failed input keeps unavailable outputs explicit while diagnostic properties remain readable");
-    CheckAnalysis(failedIdentity, "Unavailable", "Unavailable");
-}
+var partialIdentity = partial.Single(d => d.Id == "SMC000");
+Check(partialIdentity.Properties["syntaxState"] == "unavailable", "Early scan stop does not fabricate an empty tree");
+CheckAnalysis(partialIdentity, "Partial", "Unavailable");
+var outputLimited = await Run([snapshot], new GlobalOptions(null, "1"));
+var outputIdentity = outputLimited.Single(d => d.Id == "SMC000");
+Check(outputIdentity.Properties["status"] == "Partial"
+    && outputIdentity.Properties["syntaxState"] == "unavailable"
+    && outputLimited.All(d => d.Id != "SMC001"), "Output stop preserves partial/null-root handling in the compiler consumer");
+CheckAnalysis(outputIdentity, "Partial", "Unavailable");
+var failed = await Run([new SnapshotFile("invalid.md", "\uD800")]);
+var failedIdentity = failed.Single(d => d.Id == "SMC000");
+Check(failedIdentity.Properties["status"] == "Failed" && failedIdentity.Properties["standardFrontMatterState"] == "Unknown"
+    && failedIdentity.Properties["syntaxState"] == "unavailable" && failed.All(d => d.Id != "SMC001"),
+    "Failed input keeps unavailable outputs explicit while diagnostic properties remain readable");
+CheckAnalysis(failedIdentity, "Unavailable", "Unavailable");
 Check((await Run([snapshot])).Count(d => d.Id == "SMC001") == 1, "Options change does not cache a partial snapshot");
 
 var fragments = (await Run([new SnapshotFile("quote.md", "> TODO\r\n> continuation\r\n> ===\r\n")]))
@@ -114,13 +104,13 @@ Console.WriteLine(JsonSerializer.Serialize(new
     host = host.FullName,
     target = assembly.GetCustomAttribute<System.Runtime.Versioning.TargetFrameworkAttribute>()?.FrameworkName,
     parser = identity.Properties["parserVersion"],
-    yaml = identity.Properties["yamlVersion"],
+    yaml = identity.Properties["yamlProfileId"],
     profileId = identity.Properties["profileId"],
-    analysis = candidate ? new { parts = identity.Properties["analysisParts"], hash = identity.Properties["analysisHash"], schemaVersion = identity.Properties["analysisSchemaVersion"] } : null,
+    analysis = new { parts = identity.Properties["analysisParts"], hash = identity.Properties["analysisHash"], schemaVersion = identity.Properties["analysisSchemaVersion"] },
     syntax = new { state = identity.Properties["syntaxState"], nodes = identity.Properties["syntaxNodes"], htmlNodes = identity.Properties["htmlSyntaxNodes"], rootSpan = identity.Properties["syntaxRootSpan"] },
     yamlProbe = new { profileId = identity.Properties["yamlProbeProfileId"], state = identity.Properties["yamlProbeState"], status = identity.Properties["yamlProbeStatus"] },
     location = new { todo.Location.SourceSpan.Start, todo.Location.SourceSpan.Length, line = 3, column = 2 },
-    cases = "snapshot/edit/delete/rename/exclusion/options/unreadable/partial/multifragment/parallel/pre-cancel/cancel-at-read" + (candidate ? "/standard-syntax/HTML/source-span/output-budget/explicit-legacy-YAML-probe/selective-analysis-75/failed-input-availability" : ""),
+    cases = "snapshot/edit/delete/rename/exclusion/options/unreadable/partial/multifragment/parallel/pre-cancel/cancel-at-read" + "/standard-syntax/HTML/source-span/output-budget/native-YAML-probe/selective-analysis-75/failed-input-availability",
 }));
 
 async Task<ImmutableArray<Diagnostic>> Run(ImmutableArray<AdditionalText> files, GlobalOptions? global = null,
@@ -145,7 +135,7 @@ static async Task Canceled(Func<Task<ImmutableArray<Diagnostic>>> action)
 static void CheckAnalysis(Diagnostic identity, string expectedFactsAvailability, string expectedSyntaxAvailability)
 {
     Check(identity.Properties["analysisParts"] == "75" && identity.Properties["analysisSchemaVersion"] == "1"
-        && identity.Properties["analysisContractVersion"] == "analysis/1",
+        && identity.Properties["analysisContractVersion"] == "analysis/2",
         "Candidate source consumer requests FrontMatter, Headings, Links and Syntax explicitly");
     var optionsHash = identity.Properties["analysisOptionsHash"];
     Check(optionsHash is { Length: 64 }, "Candidate records actual options identity");

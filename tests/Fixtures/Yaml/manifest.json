@@ -1,0 +1,91 @@
+{
+  "specification": "https://yaml.org/spec/1.2.2/",
+  "repository": "https://github.com/yaml/yaml-test-suite",
+  "tag": "data-2022-01-17",
+  "commit": "6e6c296ae9c9d2d5c4134b4b64d01b29ac19ff6f",
+  "licenseSource": "https://github.com/yaml/yaml-test-suite/blob/da267a5c4782e7361e82889e76c0dc7df0e1e870/License",
+  "fixtures": [
+    {
+      "id": "3ALJ",
+      "title": "Block Sequence in Block Sequence",
+      "expectation": "complete",
+      "inputSha256": "33436b922e695a9b0cb99649f0abf77ed5cc0cb468a94a4ca5868fdee2d5154b",
+      "expectedJsonSha256": "3c71936e362793c4fdbaa00c9c244fe0519d512474bde170f4b241a677528e0f"
+    },
+    {
+      "id": "4GC6",
+      "title": "Spec Example 7.7. Single Quoted Characters",
+      "expectation": "complete",
+      "inputSha256": "9678b72281065a69263fefe2fa807c90c2e4413b0dab6702e07a6f6ec3985f0b",
+      "expectedJsonSha256": "b5ffe987e17b5c17a321c18add90c823f3555afdedf3d193fbe726a1d3460fd6"
+    },
+    {
+      "id": "4WA9",
+      "title": "Literal scalars",
+      "expectation": "complete",
+      "inputSha256": "3741922158781ae5489f78566310c49159c267853cfbb8a5953f92f0a03d9554",
+      "expectedJsonSha256": "fb55b225310233c390d1d45442833c5b80e39086a4d47273e2eec45d20b93190"
+    },
+    {
+      "id": "54T7",
+      "title": "Flow Mapping",
+      "expectation": "complete",
+      "inputSha256": "9df0817968115471bbc73ae8d1de75b754fc52a483c14e8427ab18660911fa4b",
+      "expectedJsonSha256": "3e44ac2fbc32afdc45e7d0173004d549ff5b1dfdd940ca6ec0fc048a5e937fad"
+    },
+    {
+      "id": "5KJE",
+      "title": "Spec Example 7.13. Flow Sequence",
+      "expectation": "complete",
+      "inputSha256": "3143c6b9c4140e71172e69e866f30a99e404ec5be6f8aa2e4a4a9745c9d39bb2",
+      "expectedJsonSha256": "050445dc04e185a9f2209ad362366ab4a48bc53e33a06cb12f90917e5db0f985"
+    },
+    {
+      "id": "6JQW",
+      "title": "Spec Example 2.13. In literals, newlines are preserved",
+      "expectation": "complete",
+      "inputSha256": "02c77855cdee7139f5d50291cec89f21d67082639194e08c542f12159395d917",
+      "expectedJsonSha256": "6884f62664cdfb64bc2c40fdf3d128ff78dac7b1c75c347823b14eef23f11e36"
+    },
+    {
+      "id": "6VJK",
+      "title": "Spec Example 2.15. Folded newlines are preserved for \"more indented\" and blank lines",
+      "expectation": "complete",
+      "inputSha256": "61621332dd475100a09bc58b1d00189450ef6da09922d344664d22a194786df8",
+      "expectedJsonSha256": "7f1cefbaa437c4f22a752e2f583dbfd5de963c7a8ea1de1a2e4468fe45df8604"
+    },
+    {
+      "id": "7ZZ5",
+      "title": "Empty flow collections",
+      "expectation": "complete",
+      "inputSha256": "e13d6825a8ab51d3c92a181946a4eaa5ddc0e7af29b2ba9db4a1d91ec2000fc0",
+      "expectedJsonSha256": "c2780bba80b9b2079a4023ced9e8b592ecb62c4f15a4cc24679034db6fa5a221"
+    },
+    {
+      "id": "8QBE",
+      "title": "Block Sequence in Block Mapping",
+      "expectation": "complete",
+      "inputSha256": "50f6f34916c2702ad1c20bb0b257128e1b2230cee8a013fac17737c3d2872320",
+      "expectedJsonSha256": "d75404113836beceb581f527b02e0bf3664555f0977877dcdc15e4ca51bc7ee3"
+    },
+    {
+      "id": "3UYS",
+      "title": "Escaped slash in double quotes",
+      "expectation": "complete",
+      "inputSha256": "7ed1b010ae7f894e7fce88f12c3a22808dc750cb009e78f55d4ed5edad3f69a2",
+      "expectedJsonSha256": "aeaab4b8fa999eeb2f53101d27da7e26b5259bd164ac6b40f95adacd56578828"
+    },
+    {
+      "id": "55WF",
+      "title": "Invalid escape in double quoted string",
+      "expectation": "syntax",
+      "inputSha256": "2b84fef10ddcb1bb5f13da8a1edd286ec6f96bcbda5106cb2040d333ad2586dd"
+    },
+    {
+      "id": "3R3P",
+      "title": "Single block sequence with anchor",
+      "expectation": "unsupported",
+      "inputSha256": "5f0ee21ec824abd26a7179058ed6ae4a83b57ddbe947e301e8a2ad289f7ddbaf"
+    }
+  ]
+}

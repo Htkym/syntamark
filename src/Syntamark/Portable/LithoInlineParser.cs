@@ -210,6 +210,8 @@ internal static class LithoInlineParser
 
                         break;
                     case '[':
+                        if (ScanFootnote())
+                            break;
                         FlushText();
                         context?.Depth(_stack.Count);
                         _stack.Add(new BracketFrame { Image = false, Span = SpanLocal(_position, 1) });
@@ -340,6 +342,22 @@ internal static class LithoInlineParser
 
         private SourceSpan SpanAt(int local, int length) =>
             Glob(new SourceSpan(local, length));
+
+        private bool ScanFootnote()
+        {
+            if (context?.Options.HasFootnotes != true || _position < _opaqueUntil
+                || !MdFootnotes.TryMarker(text, _position, context, out var label, out var end))
+                return false;
+            FlushText();
+            var labelSpan = SpanAt(_position + 2, end - _position - 3);
+            var span = SpanAt(_position, end - _position);
+            var normalized = LithoBlockParser.NormalizeLabel(DecodeEscapesAndEntities(label, context), context);
+            context.Emit();
+            var reference = context.Footnotes.Reference(label, normalized, labelSpan, span, context);
+            Current.Add(reference);
+            _position = end;
+            return true;
+        }
 
         private static SourceSpan SpanLocal(int local, int length) =>
             new(local, length);

@@ -39,7 +39,7 @@ internal sealed class MdOptions
             throw new ArgumentOutOfRangeException(nameof(frontMatterRecovery));
         if (maxInputUtf16 < 1 || maxOutputItems < 1 || maxNestingDepth < 1 || maxScanUnits < 1)
             throw new ArgumentOutOfRangeException(nameof(maxInputUtf16), "Resource limits must be positive integers.");
-        if ((profileId != "lithosharp-markdown/1" && profileId != "commonmark/0.31.2") || optionsSchemaVersion != 1)
+        if ((profileId != "lithosharp-markdown/1" && profileId != "commonmark/0.31.2" && profileId != "syntamark-docs/2") || optionsSchemaVersion != 1)
             throw new ArgumentException("Unknown Markdown profile or options schema.");
         MaxInputUtf16 = maxInputUtf16;
         MaxOutputItems = maxOutputItems;
@@ -56,6 +56,7 @@ internal sealed class MdOptions
     internal int MaxScanUnits { get; }
     internal string ProfileId { get; }
     internal bool IsCommonMark => ProfileId == "commonmark/0.31.2";
+    internal bool HasFootnotes => ProfileId == "syntamark-docs/2";
     internal int OptionsSchemaVersion { get; }
     internal MdFrontMatterRecovery FrontMatterRecovery { get; }
     internal MdInputKind InputKind { get; }
@@ -124,6 +125,10 @@ internal sealed class MdParseContext(MdOptions options, CancellationToken cancel
     internal bool CaptureUnsupportedSyntax { get; set; }
     internal System.Collections.Generic.List<MdLink> Definitions { get; } = new();
     internal System.Collections.Generic.List<MdRawRange> OpaqueTokens { get; } = new();
+    internal MdFootnoteState Footnotes { get; } = new();
+    internal long ScanUnits => scanUnits;
+    internal int OutputItems => outputItems;
+    internal MdParagraphReuse? ParagraphReuse { get; init; }
     internal void Scan(long units = 1)
     {
         CancellationToken.ThrowIfCancellationRequested();

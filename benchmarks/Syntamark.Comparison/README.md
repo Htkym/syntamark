@@ -1,6 +1,6 @@
 # Bounded Markdig comparison
 
-This non-shipping .NET 10 runner pins Markdig 1.5.1, Roslyn Common 4.14.0 and Syntamark's required YamlDotNet 18.1.0. It references an explicit isolated Syntamark DLL, with no product ProjectReference. It does not measure a compiler/analyzer host or a formal package release.
+This non-shipping .NET 10 runner pins Markdig 1.5.1 and Roslyn Common 4.14.0. It references an explicit isolated Syntamark DLL, with no product ProjectReference or YamlDotNet dependency. The saved 1.x results retain their historical YamlDotNet 18.1.0 environment; they do not measure the native YAML candidate. This runner does not measure a compiler/analyzer host or a formal package release.
 
 From the repository root, copy a verified Release build first:
 

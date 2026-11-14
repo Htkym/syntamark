@@ -12,16 +12,26 @@
     1,
     2147483647
   ],
-  "supportedProfiles": ["lithosharp-markdown/1", "commonmark/0.31.2"],
+  "supportedProfiles": [
+    "lithosharp-markdown/1",
+    "commonmark/0.31.2",
+    "syntamark-docs/2"
+  ],
   "canonicalization": "ASCII ordinal keys, no whitespace, decimal integers, actual supported profile and optionsSchemaVersion; legacy default hash is unchanged",
   "frontMatterRecovery": {
     "default": "none",
-    "values": ["none", "treatAsBody"],
-    "canonicalization": "Include frontMatterRecovery:treatAsBody only when effective for document input in lithosharp-markdown/1; none, body input and CommonMark omit it"
+    "values": [
+      "none",
+      "treatAsBody"
+    ],
+    "canonicalization": "Include frontMatterRecovery:treatAsBody only when effective for document input in non-CommonMark profiles; none, body input and CommonMark omit it"
   },
   "inputKind": {
     "default": "document",
-    "values": ["document", "body"],
+    "values": [
+      "document",
+      "body"
+    ],
     "canonicalization": "Include inputKind:body for explicit body input; document preserves its existing hash"
   }
 }

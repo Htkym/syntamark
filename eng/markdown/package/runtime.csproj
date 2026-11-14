@@ -8,7 +8,7 @@
     <PackageId>Syntamark</PackageId>
     <Version>__VERSION__</Version>
     <Authors>Htkym</Authors>
-    <Description>Parse-only Markdown facts and original UTF-16 source positions.</Description>
+    <Description>Parse-only Markdown and native YAML facts with original UTF-16 source positions.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
@@ -19,7 +19,6 @@
     <Deterministic>true</Deterministic>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="YamlDotNet" Version="[18.1.0]" />
     <None Include="LICENSE;README.md;icon.png" Pack="true" PackagePath="/" />
     <None Include="licenses/*" Pack="true" PackagePath="licenses/" />
     <None Include="markdown/manifest.json" Pack="true" PackagePath="markdown/" />

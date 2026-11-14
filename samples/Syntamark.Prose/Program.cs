@@ -11,6 +11,32 @@ var raw = string.Join("\r\n", new[]
     "文<span>中</span>末。", "", "```txt", "隠すコード", "```", "",
     "    隠す字下げ", "", "<div>", "隠すHTML", "</div>", "", "[参照][r]。", "", "[r]: /target", "",
 });
+if (args.Length is 3 or 4 && args[0] == "--yomiyasu")
+{
+    var python = args[1];
+    var lintScript = args[2];
+    var sourceId = args.Length == 4 ? args[3] : "synthetic.md";
+    if (args.Length == 4)
+        raw = new System.Text.UTF8Encoding(false, true).GetString(File.ReadAllBytes(sourceId));
+    var sourceVersion = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(raw)));
+    var document = MarkdownParser.ParseWithSyntax(raw, "prose-sample", sourceId, sourceVersion);
+    var selected = ProsePolicy.Select(document);
+    var diagnostics = await YomiyasuBridge.RunAsync(selected, python, lintScript, CancellationToken.None);
+    Console.WriteLine(JsonSerializer.Serialize(new
+    {
+        sourceId,
+        sourceVersion,
+        document.Facts.Status,
+        document.Facts.Coverage,
+        checkedSegments = selected.Segments.Count,
+        selected.Exclusions,
+        diagnostics,
+        automaticEdits = false,
+    }));
+    return;
+}
+if (args.Length != 0)
+    throw new ArgumentException("Use --yomiyasu <python-executable> <yomiyasu_lint.py> [input.md], or no arguments for self-checks.");
 var options = new MarkdownParseOptions(profileId: "commonmark/0.31.2");
 var syntax = MarkdownParser.ParseWithSyntax(raw, "prose-sample", "japanese.md", options: options);
 var selection = ProsePolicy.Select(syntax);
@@ -84,6 +110,12 @@ Check(coordinates.Text == "A😀\nB\nC\n"
 Throws<ArgumentException>(() => coordinates.ToPython(new RawSpan(3, 1))); // Inside the surrogate pair.
 Throws<ArgumentException>(() => coordinates.ToPython(new RawSpan(5, 1))); // Inside CRLF.
 Throws<ArgumentException>(() => coordinates.ToPython(new RawSpan(0, 1))); // Removed BOM.
+Check(coordinates.ToRawLine(1) == new RawSpan(1, 3)
+    && coordinates.ToRawLine(2) == new RawSpan(6, 1), "A lint line maps through BOM, CRLF and supplementary characters.");
+using var lineFinding = JsonDocument.Parse("{\"rule\":\"fixture\",\"severity\":\"info\",\"message\":\"line only\",\"line\":1}");
+var mappedLine = YomiyasuBridge.Map(quote, lineFinding.RootElement);
+Check(mappedLine.RawFragments.Count != 0 && mappedLine.Precision == MarkdownMappingPrecision.CoveringTokens
+    && string.Concat(mappedLine.RawFragments.Select(Slice)) == "引用の文。", "Line-only lint diagnostics retain diagnostic precision and the original quote text.");
 Console.WriteLine(JsonSerializer.Serialize(new
 {
     status = "PASS",
@@ -91,7 +123,7 @@ Console.WriteLine(JsonSerializer.Serialize(new
     parserVersion = syntax.Facts.ParserVersion,
     prose = selection.Segments.Select(segment => segment.Text),
     exclusions = selection.Exclusions.Select(item => new { item.Reason, item.RawSpan }),
-    checks = "Japanese/CRLF/entity/escape/emoji/quote fragments/code/image/HTML/reference/frontmatter/table/gaps/cancel/Python-coordinate boundaries",
+    checks = "Japanese/CRLF/entity/escape/emoji/quote fragments/code/image/HTML/reference/frontmatter/table/gaps/cancel/Python-coordinate boundaries/lint-line mapping",
     actualYomiyasuAdoption = false,
 }));
 

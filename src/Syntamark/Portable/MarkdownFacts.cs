@@ -135,6 +135,7 @@ internal sealed class MdFrontMatter
     internal MdRawRange? YamlSpan { get; }
     internal MdRawRange? ClosingSpan { get; }
     internal MdYamlNode? Root { get; }
+    internal MdYamlDocument? YamlSyntax { get; init; }
     internal MdRawRange? FailureSpan { get; }
     internal int? FailureLine { get; }
 }
@@ -319,6 +320,7 @@ internal sealed class MdDocumentFacts
     internal string? SourceVersion { get; }
     internal string ContractVersion { get; }
     internal string ProfileId { get; }
+    internal string YamlProfileId => "native-yaml/1";
     internal string ParserVersion { get; }
     internal string OptionsHash { get; }
     internal string? TextHash { get; }

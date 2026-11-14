@@ -13,6 +13,12 @@ var portableContext = new AssemblyLoadContext("MD-03 portable canary", isCollect
 portableContext.Resolving += (_, name) => AssemblyLoadContext.Default.LoadFromAssemblyName(name);
 var portable = portableContext.LoadFromAssemblyPath(Path.Combine(AppContext.BaseDirectory, "Portable", "Syntamark.dll"));
 var portableTarget = portable.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName;
+DependencyChecks.Run(portable);
+if (args is ["--parser-session"])
+{
+    ParserSessionChecks.Run(portable);
+    return;
+}
 if (args is ["--editor-analysis"])
 {
     EditorAnalysisChecks.Run(portable);
@@ -102,6 +108,12 @@ OwnedSliceChecks.Run(portable);
 MappingRegressionChecks.Run(portable);
 CommonMarkInlineChecks.Run(portable);
 ReviewFixChecks.Run(runtime, portable);
+SourceMapChecks.Run();
+FootnoteChecks.Run(portable);
+NativeYamlChecks.Run(portable);
+SyntaxPositionChecks.Run(portable);
+ParserSessionChecks.Run(portable);
+SessionAnalysisChecks.Run(portable);
 
 static object Parse(Assembly assembly, string input)
 {

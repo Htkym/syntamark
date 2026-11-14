@@ -3,7 +3,7 @@
   "commonMark": "0.31.2",
   "gfm": "0.29",
   "grammar": "existing Litho parser",
-  "frontMatter": "strict optional delimiter, single mapping YAML document, anchors/aliases forbidden",
+  "frontMatter": "optional delimiter, native-yaml/1 single mapping document; unsupported constructs are diagnosed",
   "slug": "existing Litho pure slug with duplicate suffix",
   "sourcePositions": "raw UTF16 half-open",
   "mapping": [
@@ -24,14 +24,29 @@
     },
     {
       "profileId": "commonmark/0.31.2",
-      "contractVersion": "1.0",
+      "contractVersion": "2.0",
       "commonMark": "0.31.2",
       "status": "opt-in implementation; see versioned official-example inventory for remaining differences",
       "frontMatter": false,
       "extensions": [],
       "html": "native block and inline recognition, raw UTF16 spans; no HTML rendering, DOM, or MDX execution",
       "slug": "derived Litho slug policy; not a CommonMark requirement",
-      "mapping": ["Linear", "Atomic", "Unknown"]
+      "mapping": [
+        "Linear",
+        "Atomic",
+        "Unknown"
+      ]
+    },
+    {
+      "profileId": "syntamark-docs/2",
+      "role": "opt-in documentation extensions",
+      "baseProfileId": "lithosharp-markdown/1",
+      "extensions": [
+        "footnotes",
+        "directiveAttributes"
+      ],
+      "yamlProfileId": "native-yaml/1"
     }
-  ]
+  ],
+  "yamlProfileId": "native-yaml/1"
 }

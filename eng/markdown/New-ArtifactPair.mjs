@@ -51,6 +51,13 @@ function checkLicenses(z,metadata){
   for(const license of metadata.licenses)
     assert(z.has(license.packagePath)&&sha(z.get(license.packagePath))===license.sha256,'License mismatch: '+license.packagePath);
 }
+function checkParserDependencies(z,nuspec){
+  assert(!/<dependency\s/.test(nuspec),'Parser package must have no third-party package dependencies');
+  for(const [name,bytes] of z){
+    assert(!/(?:^|\/)(?:YamlDotNet|SkiaSharp)[^/]*\.(?:dll|so|dylib)$/i.test(name),'Retired dependency payload: '+name);
+    if(name.endsWith('.cs'))assert(!/\b(?:using\s+YamlDotNet|YamlDotNet\.|SkiaSharp\.)/.test(bytes.toString()),'Source imports a retired dependency: '+name);
+  }
+}
 function checkIcon(z,metadata,nuspec){
   if(!metadata.icon)return;
   const {packagePath,sha256}=metadata.icon;
@@ -68,7 +75,7 @@ function checkPublishedPackage(local,published){
 }
 function prepare(commit,version,out){
   assert(/^[0-9a-f]{40}$/.test(commit),'Require one full source commit');
-  assert(/^(?:1\.0\.[01]|1\.[12]\.0|2\.0\.0-preview\.[1-9][0-9]*)$/.test(version),'Require one new immutable 1.0.0, 1.0.1, 1.1.0, 1.2.0 or 2.0.0-preview.N');
+  assert(/^(?:1\.0\.[01]|1\.[12]\.0|2\.0\.0(?:-preview\.[1-9][0-9]*)?)$/.test(version),'Require one new immutable 1.0.0, 1.0.1, 1.1.0, 1.2.0, 2.0.0 or 2.0.0-preview.N');
   assert(!json(path.join(root,'eng/markdown/immutable-versions.json')).some(a=>a.componentVersion===version),'Version is already immutable; choose an unused version');
   out=path.resolve(out);assert(!fs.existsSync(out),'Never overwrite an artifact stage; choose new output/version');
   assert(git(['rev-parse',commit+'^{commit}']).toString().trim()===commit,'Source commit mismatch');
@@ -79,7 +86,8 @@ function prepare(commit,version,out){
   const stampBytes=blob(commit,stamp),parserVersion='1/'+hash;
   assert(stampBytes.toString().includes('"'+parserVersion+'"'),'Canonical hash differs from the selected Git stamp');
   const dependencies=JSON.parse(blob(commit,component+'Contracts/markdown-dependencies.json'));
-  assert(JSON.stringify(dependencies.dependencies)===JSON.stringify({YamlDotNet:'18.1.0'}),'Unexpected portable dependencies');
+  assert(JSON.stringify(dependencies.dependencies)===JSON.stringify({}),'Portable parser must have no third-party dependencies');
+  assert(dependencies.yamlProfileId==='native-yaml/1','Unexpected YAML profile');
   const profile=JSON.parse(blob(commit,component+'Contracts/markdown-profile.json'));
   const defaultProfileId=profile.defaultProfileId??profile.profileId;
   const supportedProfileIds=(profile.availableProfiles??[{profileId:profile.profileId}]).map(p=>p.profileId);
@@ -87,12 +95,10 @@ function prepare(commit,version,out){
   const metadata={
     componentVersion:version,sourceCommit:commit,canonicalSourceHash:hash,parserVersion,
     sourceRepository:{kind:'git',url:'https://github.com/Htkym/syntamark',component:'Syntamark',historyMap:'eng/markdown/source-history.json'},
-    contractVersion:'1.0',profileId:defaultProfileId,defaultProfileId,supportedProfileIds,
+    contractVersion:dependencies.contractVersion,profileId:defaultProfileId,defaultProfileId,supportedProfileIds,
     hashEncoding:'UTF8 path byte order + uint64 BE path/content lengths + Git blob bytes',
     excludedGeneratedStamp:stamp,
-    dependencies:[{packageId:'YamlDotNet',version:'18.1.0',range:'[18.1.0]',
-      assemblyFullName:'YamlDotNet, Version=18.0.0.0, Culture=neutral, PublicKeyToken=ec19458f3c15af5e',
-      informationalVersion:'18.1.0',identityRole:'expected; actual loaded metadata must be verified by consumer'}],
+    dependencies:[],yamlProfileId:dependencies.yamlProfileId,
     canonicalFiles:entries.map(e=>({path:e.path,byteLength:e.bytes.length,sha256:sha(e.bytes)})),
     generatedStamp:{packagePath:'src/Portable/MarkdownParserVersion.g.cs',sha256:sha(stampBytes)},
     licenses:[],runtimeFiles:[],packagingInputs:[]
@@ -101,10 +107,10 @@ function prepare(commit,version,out){
   metadata.icon={sourcePath:'images/icon.png',packagePath:'icon.png',sha256:sha(icon)};
   for(const kind of ['runtime','source'])write(path.join(out,kind,metadata.icon.packagePath),icon);
   const retainedLicenses=git(['ls-tree','-r','--name-only',commit,'--','licenses']).toString().trim().split('\n');
-  const licenseMap=[['LICENSE','LICENSE'],['licenses/YamlDotNet.LICENSE.txt','licenses/YamlDotNet.LICENSE.txt'],
+  const licenseMap=[['LICENSE','LICENSE'],
     ...['licenses/WHATWG.LICENSE.txt','licenses/Unicode.LICENSE.txt'].filter(p=>retainedLicenses.includes(p)).map(p=>[p,p])];
   // Keep notices specific to the portable component; site-only dependencies are not distributed.
-  const notice=Buffer.from('Syntamark and Syntamark.Source include YamlDotNet 18.1.0 (MIT).\nSee licenses/YamlDotNet.LICENSE.txt. Portable parser author/license are preserved in LICENSE.\n'
+  const notice=Buffer.from('Portable parser author/license are preserved in LICENSE.\n'
     +(retainedLicenses.includes('licenses/WHATWG.LICENSE.txt')?'CommonMark named entity data derives from WHATWG HTML source portions (BSD-3-Clause); see licenses/WHATWG.LICENSE.txt.\n':'')
     +(retainedLicenses.includes('licenses/Unicode.LICENSE.txt')?'CommonMark Unicode case folding data is covered by the Unicode data license; see licenses/Unicode.LICENSE.txt.\n':''));
   for(const [original,packagePath] of licenseMap){
@@ -136,13 +142,13 @@ function prepare(commit,version,out){
     write(target,text);
   }
   const readmeInput=blob(commit,'README.md');
-  const versionPattern='(?:1\\.0\\.[01]|1\\.[12]\\.0|2\\.0\\.0-preview\\.[1-9][0-9]*)';
+  const versionPattern='(?:1\\.0\\.[01]|1\\.[12]\\.0|2\\.0\\.0(?:-preview\\.[1-9][0-9]*)?)';
   // Replace installation selections, not historical release statements.
   const readme=Buffer.from(readmeInput.toString()
-    .replace(new RegExp('(dotnet add package Syntamark --version )'+versionPattern,'g'),(_,prefix)=>prefix+version)
+    .replace(new RegExp('(dotnet add package Syntamark --version )'+versionPattern+'(?=\\s|$)','g'),(_,prefix)=>prefix+version)
     .replace(new RegExp('(<SyntamarkSourceVersion>)'+versionPattern+'(?=</SyntamarkSourceVersion>)','g'),(_,prefix)=>prefix+version)
     .replace(new RegExp('(<PackageReference Include="Syntamark.Source" Version="\\[)'+versionPattern+'(?=\\]")','g'),(_,prefix)=>prefix+version)
-    .replace(/\]\((docs\/[^)]+)\)/g,(_,p)=>'](https://github.com/Htkym/syntamark/blob/'+commit+'/'+p+')'));
+    .replace(/\]\((docs\/[^)]+|README(?:\.en)?\.md(?:#[^)]*)?)\)/g,(_,p)=>'](https://github.com/Htkym/syntamark/blob/'+commit+'/'+p+')'));
   metadata.readme={sourcePath:'README.md',packagePath:'README.md',sourceSha256:sha(readmeInput),sha256:sha(readme)};
   for(const kind of ['runtime','source']){
     writeJson(path.join(out,kind,'markdown/manifest.json'),metadata);
@@ -203,9 +209,10 @@ function seal(out){
     assert(z.has(metadata.readme.packagePath)&&sha(z.get(metadata.readme.packagePath))===metadata.readme.sha256,'Packaged README changed');
     const nuspec=z.get(ids[i]+'.nuspec').toString();
     checkIcon(z,metadata,nuspec);
+    checkParserDependencies(z,nuspec);
     assert(nuspec.includes('<id>'+ids[i]+'</id>')&&nuspec.includes('<version>'+metadata.componentVersion+'</version>'),'Package identity mismatch');
     if(kind==='runtime'){
-      assert(/<dependency id="YamlDotNet" version="\[18\.1\.0\]"/.test(nuspec),'Runtime dependency is not exact');
+      assert(!/<dependency\s/.test(nuspec),'Runtime parser must have no third-party package dependencies');
       assert(z.has('lib/net10.0/Syntamark.dll'),'Runtime facade DLL missing');
     }else{
       assert(![...z.keys()].some(p=>p.startsWith('lib/')||p.startsWith('buildTransitive/')||p.startsWith('contentFiles/')||p.includes('/Public/')||p.includes('/Properties/')||p.endsWith('AssemblyInfo.cs')),'Forbidden source payload');
@@ -218,7 +225,7 @@ function seal(out){
         assert(z.has('contracts/'+path.basename(e.path))&&sha(z.get('contracts/'+path.basename(e.path)))===e.sha256,'Contract byte mismatch');
       const targets=z.get('build/Syntamark.Source.targets').toString();
       assert(targets.includes('SYNTAMARK_SOURCE')&&targets.includes(metadata.parserVersion),'Source target/stamp missing');
-      assert(!/<dependencies>[\s\S]*<dependency /.test(nuspec),'Source hosts must directly reference their dependencies');
+      assert(!/<dependencies>[\s\S]*<dependency /.test(nuspec),'Source parser must have no third-party package dependencies');
     }
     artifacts[kind]={packageId:ids[i],componentVersion:metadata.componentVersion,fileName:path.basename(p),sha256:sha(bytes),byteLength:bytes.length};
     if(kind==='runtime')artifacts[kind].assemblySha256=sha(z.get('lib/net10.0/Syntamark.dll'));
@@ -230,8 +237,8 @@ function verifyRestored(out,canaryPath){
   out=path.resolve(out);const m=json(path.join(out,'pair-manifest.json')),c=json(canaryPath);
   assert(c.status==='PASS'&&c.componentVersion===m.componentVersion&&c.parserVersion===m.parserVersion,'Canary metadata mismatch');
   assert(c.runtimeAssemblySha256===m.artifacts.runtime.assemblySha256,'Runtime loaded DLL differs from nupkg');
-  assert(c.sourceParseCompiled&&c.noSourceFacade&&c.noSourceFriendMetadata&&c.expectedStampRejected&&c.expectedDependencyRejected,'Required source host guards missing');
-  assert(c.yamlAssembly===m.dependencies[0].assemblyFullName&&c.yamlInformation===m.dependencies[0].informationalVersion&&c.sourceYamlAssembly===m.dependencies[0].assemblyFullName&&c.sourceYamlInformation===m.dependencies[0].informationalVersion,'Actual runtime/source loaded dependency differs');
+  assert(c.sourceParseCompiled&&c.noSourceFacade&&c.noSourceFriendMetadata&&c.expectedStampRejected&&c.noThirdPartyParserDependencies,'Required source host guards missing');
+  assert(m.dependencies.length===0&&c.yamlProfileId===m.yamlProfileId,'Actual runtime/source YAML profile differs');
   const restored={};
   for(const [kind,a] of Object.entries(m.artifacts)){
     const p=path.join(out,'packages',a.packageId.toLowerCase(),m.componentVersion,a.packageId.toLowerCase()+'.'+m.componentVersion+'.nupkg');
@@ -261,6 +268,7 @@ function checkPair(out,expectedManifestHash){
     assert(JSON.stringify(JSON.parse(z.get('markdown/manifest.json').toString()))===JSON.stringify(metadata),'Packaged metadata mismatch');
     const nuspec=z.get(ids[i]+'.nuspec').toString();
     checkIcon(z,metadata,nuspec);
+    checkParserDependencies(z,nuspec);
     assert(nuspec.includes('<id>'+ids[i]+'</id>')&&nuspec.includes('<version>'+metadata.componentVersion+'</version>'),'Packaged version mismatch');
     checkLicenses(z,metadata);
     assert(z.has(metadata.readme.packagePath)&&sha(z.get(metadata.readme.packagePath))===metadata.readme.sha256,'Packaged README mismatch');
@@ -279,4 +287,4 @@ else if(action==='seal'&&args.length===1)seal(args[0]);
 else if(action==='verify-restored'&&args.length===2)verifyRestored(...args);
 else if(action==='check-pair'&&args.length===2)checkPair(...args);
 else if(action==='check-published-package'&&args.length===2)checkPublishedPackage(...args);
-else throw Error('Usage: New-ArtifactPair.mjs prepare <source SHA> <1.0.0|1.0.1|1.1.0|2.0.0-preview.N> <new absolute stage>; check-stage <stage>; seal <stage>; verify-restored <stage> <canary JSON>; check-pair <artifact directory> <manifest SHA256>; check-published-package <sealed nupkg> <published nupkg>');
+else throw Error('Usage: New-ArtifactPair.mjs prepare <source SHA> <1.0.0|1.0.1|1.1.0|1.2.0|2.0.0|2.0.0-preview.N> <new absolute stage>; check-stage <stage>; seal <stage>; verify-restored <stage> <canary JSON>; check-pair <artifact directory> <manifest SHA256>; check-published-package <sealed nupkg> <published nupkg>');

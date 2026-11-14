@@ -111,9 +111,18 @@ internal static partial class LithoBlockParser
         var resolved = new List<LithoBlock>(blocks.Count);
         foreach (var block in blocks)
         {
+            var scanBefore = context?.ScanUnits ?? 0;
+            var outputBefore = context?.OutputItems ?? 0;
+            if (context?.ParagraphReuse?.TryResolve(block, context, out var reused) == true)
+            {
+                resolved.Add(reused!);
+                continue;
+            }
             context?.Scan(8);
             cancellationToken.ThrowIfCancellationRequested();
-            resolved.Add(ResolveBlock(block, references, cancellationToken, context));
+            var result = ResolveBlock(block, references, cancellationToken, context);
+            resolved.Add(result);
+            context?.ParagraphReuse?.CaptureResolved(block, result, context, scanBefore, outputBefore);
         }
 
         return resolved;
@@ -145,6 +154,10 @@ internal static partial class LithoBlockParser
             LithoDirective directive => directive with
             {
                 Children = ResolveInlines([.. directive.Children], references, cancellationToken, context),
+            },
+            LithoFootnoteDefinition footnote => footnote with
+            {
+                Children = ResolveInlines([.. footnote.Children], references, cancellationToken, context),
             },
             LithoList list => list with
             {
@@ -214,6 +227,17 @@ internal static partial class LithoBlockParser
             var index = from;
             while (index < to)
             {
+                var scanBefore = context?.ScanUnits ?? 0;
+                var outputBefore = context?.OutputItems ?? 0;
+                var lineBefore = index;
+                var blockBefore = blocks.Count;
+                if (depth == 0 && context?.ParagraphReuse?.TryParse(Lines[index].Offset, context,
+                    out var reused, out var lineCount) == true)
+                {
+                    blocks.Add(reused!);
+                    index += lineCount;
+                    continue;
+                }
                 context?.Scan(8);
                 cancellationToken.ThrowIfCancellationRequested();
                 var line = Lines[index];
@@ -281,6 +305,11 @@ internal static partial class LithoBlockParser
                     blocks.Add(code!);
                     index = next;
                 }
+                else if (TryParseFootnote(index, to, depth, out var footnote, out next))
+                {
+                    blocks.Add(footnote!);
+                    index = next;
+                }
                 else if (TryParseReference(index, to, out next))
                 {
                     index = next;
@@ -289,6 +318,9 @@ internal static partial class LithoBlockParser
                 {
                     blocks.AddRange(ParseParagraph(index, to, out index));
                 }
+                if (depth == 0 && blocks.Count == blockBefore + 1)
+                    context?.ParagraphReuse?.CaptureRaw(blocks[blockBefore], index - lineBefore, context,
+                        scanBefore, outputBefore);
             }
 
             return blocks;
@@ -333,6 +365,7 @@ internal static partial class LithoBlockParser
                     || IsThematicInterrupting(line.Text)
                     || (TryParseListStart(line, out var marker) && CanInterruptParagraph(marker))
                     || (!CommonMark && IsReferenceStart(index, to))
+                    || (context?.Options.HasFootnotes == true && IsFootnoteStart(line))
                     || (!CommonMark && IsMathBlockStart(index, to))
                     || (CommonMark && HtmlStartKind(line) is > 0 and < 7)))
                 {
@@ -2009,7 +2042,10 @@ internal static partial class LithoBlockParser
             return SplitRow(acc[^1].Text)?.Count == cells.Count;
         }
 
-        private sealed record TableCell(string Text, int RawStart, int[] EscapedPipes);
+        private sealed record TableCell(string Text, int RawStart, int[] EscapedPipes)
+        {
+            internal bool Synthetic { get; init; }
+        }
 
         private List<TableCell>? SplitRow(string text)
         {
@@ -2104,6 +2140,10 @@ internal static partial class LithoBlockParser
             {
                 ParseRowCells(headerCells, headerLines[^1].Offset),
             };
+            var cellSpans = new List<IReadOnlyList<SourceSpan?>>
+            {
+                RowCellSpans(headerCells, headerLines[^1].Offset),
+            };
             var cursor = delimiterIndex + 1;
             while (cursor < to)
             {
@@ -2125,7 +2165,7 @@ internal static partial class LithoBlockParser
                 while (cells.Count < headerCells.Count)
                 {
                     context?.Scan(8);
-                    cells.Add(new TableCell(string.Empty, line.Text.Length, []));
+                    cells.Add(new TableCell(string.Empty, line.Text.Length, []) { Synthetic = true });
                 }
 
                 if (cells.Count > headerCells.Count)
@@ -2134,14 +2174,48 @@ internal static partial class LithoBlockParser
                 }
 
                 rows.Add(ParseRowCells(cells, line.Offset));
+                cellSpans.Add(RowCellSpans(cells, line.Offset));
                 cursor++;
             }
 
             next = cursor;
             var start = headerLines[^1].Offset;
             var end = Lines[cursor - 1].Offset + Lines[cursor - 1].Text.Length;
-            table = new LithoTable(align, rows, new SourceSpan(start, end - start));
+            table = new LithoTable(align, rows, new SourceSpan(start, end - start)) { CellSpans = cellSpans };
             return true;
+        }
+
+        private IReadOnlyList<SourceSpan?> RowCellSpans(List<TableCell> cells, int lineOffset)
+        {
+            var result = new SourceSpan?[cells.Count];
+            for (var index = 0; index < cells.Count; index++)
+            {
+                context?.Scan();
+                var cell = cells[index];
+                if (cell.Synthetic)
+                    continue;
+                var start = 0;
+                var end = cell.Text.Length;
+                while (start < end && char.IsWhiteSpace(cell.Text[start]))
+                {
+                    context?.Scan();
+                    start++;
+                }
+                while (end > start && char.IsWhiteSpace(cell.Text[end - 1]))
+                {
+                    context?.Scan();
+                    end--;
+                }
+                var escaped = 0;
+                foreach (var pipe in cell.EscapedPipes)
+                {
+                    context?.Scan();
+                    if (pipe >= start && pipe < end)
+                        escaped++;
+                }
+                result[index] = new SourceSpan(lineOffset + cell.RawStart + start, end - start + escaped);
+            }
+            return result;
         }
 
         private List<IReadOnlyList<LithoInline>> ParseRowCells(List<TableCell> cells, int lineOffset)

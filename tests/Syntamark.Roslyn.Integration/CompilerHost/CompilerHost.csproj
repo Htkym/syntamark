@@ -7,7 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Analyzer Include="../../../samples/Syntamark.Roslyn/bin/Release/netstandard2.0/Syntamark.Roslyn.dll" />
-    <Analyzer Include="../../../samples/Syntamark.Roslyn/bin/Release/netstandard2.0/YamlDotNet.dll" />
     <AdditionalFiles Include="$(CanaryMarkdown)" Condition="'$(CanaryMarkdown)' != ''" />
     <CompilerVisibleProperty Include="SyntamarkMaxScanUnits" />
     <CompilerVisibleProperty Include="SyntamarkMaxOutputItems" />

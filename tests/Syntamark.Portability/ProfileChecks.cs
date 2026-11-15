@@ -16,7 +16,7 @@ internal static class ProfileChecks
         Check(defaultDocument.ProfileId == Legacy && defaultDocument.OptionsHash == DefaultHash, "Legacy default profile/hash changed.");
         var standard = new MarkdownParseOptions(profileId: CommonMark);
         var standardDocument = MarkdownParser.Parse("# H", "profile", "standard.md", options: standard);
-        Check(standardDocument.ProfileId == CommonMark && standardDocument.ContractVersion == "1.0"
+        Check(standardDocument.ProfileId == CommonMark && standardDocument.ContractVersion == "2.0"
             && standardDocument.OptionsHash != DefaultHash, "Selected profile was not propagated or hashed.");
         Check(standardDocument.Capabilities.Single(c => c.Feature == "markdownSyntax").State == MarkdownFeatureState.Partial,
             "The profile must not claim full standard conformance without the complete gate.");

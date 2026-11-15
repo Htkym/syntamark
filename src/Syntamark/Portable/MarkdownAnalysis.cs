@@ -59,6 +59,7 @@ internal sealed class MdAnalysisResult
     internal string? SourceVersion => facts.SourceVersion;
     internal string ParserVersion => facts.ParserVersion;
     internal string ProfileId => facts.ProfileId;
+    internal string YamlProfileId => facts.YamlProfileId;
     internal string ContractVersion => facts.ContractVersion;
     internal string OptionsHash => facts.OptionsHash;
     internal string? TextHash => facts.TextHash;
@@ -75,7 +76,7 @@ internal sealed class MdAnalysisResult
     internal IReadOnlyList<MdTextRegion>? TextRegions => HasOutput(MdAnalysisParts.TextRegions) ? facts.TextRegions : null;
     internal MdSyntaxNode? Root { get; }
     internal IReadOnlyList<MdUnsupportedSyntaxCandidate>? UnsupportedSyntax { get; }
-    // Body-relative legacy rendering blocks are retained only by AnalyzeWithBlocks.
+    // Body-relative legacy rendering blocks are retained by AnalyzeWithBlocks and analysis sessions.
     internal IReadOnlyList<LithoBlock>? Blocks { get; }
     internal MdAnalysisParts RequestedParts { get; }
     internal string AnalysisHash { get; }

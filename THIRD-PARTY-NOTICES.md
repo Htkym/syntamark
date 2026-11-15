@@ -1,10 +1,16 @@
-LithoSharp.Markdown and LithoSharp.Markdown.Source include YamlDotNet 18.1.0 (MIT).
-See licenses/YamlDotNet.LICENSE.txt. Original parser authors and MIT terms are preserved in LICENSE.
+Earlier Markdown packages used YamlDotNet 18.1.0 (MIT). Its license remains in
+licenses/YamlDotNet.LICENSE.txt as historical attribution. The native-yaml/1
+implementation does not depend on or include that package. Original parser
+authors and MIT terms are preserved in LICENSE.
 
 The test fixture tests/Fixtures/CommonMark/0.31.2/spec.json is the unmodified CommonMark
 Spec 0.31.2 example set by John MacFarlane, licensed under CC BY-SA 4.0.
 See tests/Fixtures/CommonMark/0.31.2/README.md for its source, checksum, and attribution.
 This test data is not included in the runtime or source NuGet packages.
+
+The pinned YAML Test Suite subset in tests/Fixtures/Yaml uses its upstream MIT
+license. See that directory's README, manifest and LICENSE.txt for provenance.
+These fixtures are not included in the runtime or source NuGet packages.
 
 CommonMark HTML named character references are generated from WHATWG HTML
 entities.json (downloaded 2026-11-06, SHA-256

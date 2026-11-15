@@ -9,7 +9,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Syntamark" HintPath="$(SyntamarkAssembly)" />
-    <PackageReference Include="YamlDotNet" Version="[18.1.0]" />
     <Compile Include="../../tests/Syntamark.Portability/QueryChecks.cs" Link="QueryChecks.cs" />
   </ItemGroup>
 </Project>

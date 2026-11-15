@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
@@ -61,7 +60,6 @@ public sealed class MarkdownTodoAnalyzer : DiagnosticAnalyzer
         var htmlNodes = 0;
         var syntaxRootSpan = "unknown";
         var headingSpans = new List<string>();
-#if SYNTAMARK_CANDIDATE
         const MdAnalysisParts requested = MdAnalysisParts.FrontMatter | MdAnalysisParts.Headings | MdAnalysisParts.Links | MdAnalysisParts.Syntax;
         var parsed = MdParser.Analyze(rawText, requested, "roslyn-sample", context.AdditionalFile.Path,
             sourceVersion: null, new MdOptions(maxScanUnits: scan, maxOutputItems: output, profileId: "commonmark/0.31.2"), context.CancellationToken);
@@ -88,40 +86,26 @@ public sealed class MarkdownTodoAnalyzer : DiagnosticAnalyzer
             syntaxState = "unavailable";
         var headings = facts.GetAvailability(MdAnalysisParts.Headings) == MdAnalysisAvailability.Complete && facts.Headings is { } availableHeadings
             ? availableHeadings.Where(heading => recognizedHeadings.Contains(heading.RawSpan)) : Enumerable.Empty<MdHeading>();
-        // A second profile is intentional: YAML belongs to the legacy dependency probe, not CommonMark.
+        // A second profile is intentional: YAML belongs to the separate native YAML probe, not CommonMark.
         var yamlProbe = MdParser.Parse(rawText, "roslyn-yaml-probe", context.AdditionalFile.Path,
             sourceVersion: null, new MdOptions(maxScanUnits: scan, maxOutputItems: output, profileId: legacyProfile), context.CancellationToken);
         var standardFrontMatter = facts.FrontMatter?.State.ToString() ?? "Unknown";
-#else
-        var facts = MdParser.Parse(rawText, "roslyn-sample", context.AdditionalFile.Path,
-            sourceVersion: null, new MdOptions(maxScanUnits: scan, maxOutputItems: output), context.CancellationToken);
-        selectedProfile = legacyProfile;
-        var headings = facts.Headings;
-        var yamlProbe = facts;
-        var standardFrontMatter = "not-selected";
-#endif
-#if SYNTAMARK_CANDIDATE
         IReadOnlyList<MdLink> links = facts.GetAvailability(MdAnalysisParts.Links) == MdAnalysisAvailability.Complete && facts.Links is { } availableLinks
             ? availableLinks : Array.Empty<MdLink>();
-#else
-        var links = facts.Links;
-#endif
-        var yaml = typeof(YamlDotNet.Core.Parser).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown";
+        var yaml = MdYamlParser.Parse("title: canary", cancellationToken: context.CancellationToken).ProfileId;
         var properties = ImmutableDictionary<string, string?>.Empty
-            .Add("parserVersion", facts.ParserVersion).Add("yamlVersion", yaml).Add("status", facts.Status.ToString())
+            .Add("parserVersion", facts.ParserVersion).Add("yamlProfileId", yaml).Add("status", facts.Status.ToString())
             .Add("profileId", selectedProfile).Add("syntaxState", syntaxState)
             .Add("syntaxNodes", syntaxNodes.ToString(CultureInfo.InvariantCulture)).Add("htmlSyntaxNodes", htmlNodes.ToString(CultureInfo.InvariantCulture))
             .Add("syntaxRootSpan", syntaxRootSpan).Add("syntaxHeadingSpans", string.Join(";", headingSpans))
             .Add("yamlProbeProfileId", legacyProfile).Add("yamlProbeState", yamlProbe.FrontMatter.State.ToString())
             .Add("yamlProbeStatus", yamlProbe.Status.ToString()).Add("standardFrontMatterState", standardFrontMatter)
             .Add("linkTargets", string.Join(";", links.Where(link => link.Resolution != MdLinkResolution.UnresolvedReference).Select(link => link.Target)))
-            .Add("yamlAssembly", typeof(YamlDotNet.Core.Parser).Assembly.FullName)
+            .Add("parserReferences", string.Join(";", typeof(MdParser).Assembly.GetReferencedAssemblies().Select(reference => reference.Name)))
             .Add("emptyTargetSpans", string.Join(";", links.Where(link => link.Target == "")
                 .Select(link => link.TargetRawSpan.HasValue
                     ? link.TargetRawSpan.Value.Start.ToString(CultureInfo.InvariantCulture) + ":" + link.TargetRawSpan.Value.Length.ToString(CultureInfo.InvariantCulture)
                     : "unknown")));
-#if SYNTAMARK_CANDIDATE
         properties = properties.Add("analysisParts", ((int)parsed.RequestedParts).ToString(CultureInfo.InvariantCulture))
             .Add("analysisSchemaVersion", parsed.AnalysisSchemaVersion.ToString(CultureInfo.InvariantCulture))
             .Add("analysisHash", parsed.AnalysisHash).Add("analysisOptionsHash", facts.OptionsHash)
@@ -133,7 +117,6 @@ public sealed class MarkdownTodoAnalyzer : DiagnosticAnalyzer
             .Add("analysisFencesAvailability", parsed.GetAvailability(MdAnalysisParts.Fences).ToString())
             .Add("analysisTextRegionsAvailability", parsed.GetAvailability(MdAnalysisParts.TextRegions).ToString())
             .Add("analysisSyntaxAvailability", parsed.GetAvailability(MdAnalysisParts.Syntax).ToString());
-#endif
         context.ReportDiagnostic(Diagnostic.Create(Identity, Location.None, properties,
             facts.Status, yaml, facts.ParserVersion, selectedProfile, syntaxState, syntaxNodes, htmlNodes, yamlProbe.FrontMatter.State));
         foreach (var heading in headings)

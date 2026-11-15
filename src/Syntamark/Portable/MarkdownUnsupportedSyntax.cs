@@ -173,6 +173,9 @@ internal static class MdUnsupportedSyntax
                         case LithoDirective directive:
                             pending.Push(directive.Children);
                             break;
+                        case LithoFootnoteDefinition footnote:
+                            pending.Push(footnote.Children);
+                            break;
                         case LithoList list:
                             foreach (var item in list.Items)
                             {
@@ -206,7 +209,8 @@ internal static class MdUnsupportedSyntax
                 context.Scan();
                 if (text[index] is '\r' or '\n')
                     lineStart = index + 1;
-                if (text[index] is not ('[' or '{') || Escaped(text, index))
+                if (text[index] is not ('[' or '{') || Escaped(text, index)
+                    || (text[index] == '[' && context.Options.HasFootnotes))
                     continue;
                 var end = text[index] == '[' ? FootnoteEnd(text, index, text.Length) : AttributeEnd(text, index);
                 if (end <= index)

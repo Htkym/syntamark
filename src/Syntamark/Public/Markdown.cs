@@ -130,8 +130,11 @@ public sealed class MarkdownYamlNode
 /// <summary>Immutable parse-only FrontMatter facts; positions refer to the original UTF-16 input.</summary>
 public sealed class MarkdownFrontMatter
 {
+    private readonly MdYamlDocument? nativeYaml;
+    private YamlDocument? yamlSyntax;
     internal MarkdownFrontMatter(MdFrontMatter facts)
     {
+        nativeYaml = facts.YamlSyntax;
         State = (MarkdownFrontMatterState)facts.State;
         OpeningSpan = global::Syntamark.RawSpan.From(facts.OpeningSpan);
         YamlSpan = global::Syntamark.RawSpan.From(facts.YamlSpan);
@@ -149,6 +152,19 @@ public sealed class MarkdownFrontMatter
     public RawSpan? FailureSpan { get; }
     /// <summary>The one-based line where delimiter scanning expected another line, including an unterminated final line.</summary>
     public int? FailureLine { get; }
+
+    /// <summary>Returns the already parsed native YAML. Its ranges are local to YamlSpan, unlike the compatibility Root's document ranges.</summary>
+    public YamlDocument? GetYamlSyntax(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (nativeYaml is null)
+            return null;
+        var cached = Volatile.Read(ref yamlSyntax);
+        if (cached is not null)
+            return cached;
+        var created = new YamlDocument(nativeYaml, cancellationToken);
+        return Interlocked.CompareExchange(ref yamlSyntax, created, null) ?? created;
+    }
 }
 
 /// <summary>Immutable parse-only Heading facts; positions refer to the original UTF-16 input.</summary>
@@ -350,6 +366,7 @@ public sealed class MarkdownDocument
     public MarkdownCoverage Coverage { get; }
     public string ContractVersion { get; }
     public string ProfileId { get; }
+    public string YamlProfileId => "native-yaml/1";
     public MarkdownLinePosition GetLinePosition(int rawOffset)
     {
         if (rawOffset < 0 || rawOffset > RawText.Length)

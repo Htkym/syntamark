@@ -25,16 +25,9 @@
           "Microsoft.CodeAnalysis.Analyzers": "3.11.0"
         }
       },
-      "YamlDotNet": {
-        "type": "Transitive",
-        "resolved": "18.1.0",
-        "contentHash": "5K+9KFg2TdTl7VXv88Qzi/0lqK6JFoNP3lRuImPYGRV7K/QYklDyTrj4+A+KAki1JsQi6qKY+hDyY7d6WRqjrw=="
-      },
       "syntamark.roslyn": {
         "type": "Project",
-        "dependencies": {
-          "YamlDotNet": "[18.1.0, 18.1.0]"
-        }
+        "dependencies": {}
       }
     }
   }

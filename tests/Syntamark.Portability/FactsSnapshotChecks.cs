@@ -50,7 +50,7 @@ internal static class FactsSnapshotChecks
             baselineCommit = BaselineCommit,
             fixtures = Inputs().Count,
             comparison = "all facts, segments, mapping queries and facade line positions; runtime/portable equal",
-            semanticExclusions = new[] { "ParserVersion" }
+            semanticExclusions = new[] { "ParserVersion", "YamlProfileId", "v2 contract identity", "additive footnotes capability", "native YAML view" }
         }));
     }
 
@@ -120,11 +120,13 @@ internal static class FactsSnapshotChecks
         if (type.IsEnum)
             return value.ToString();
         if (value is IEnumerable sequence)
-            return sequence.Cast<object?>().Select(Snapshot).ToArray();
+            return sequence.Cast<object?>().Where(item => item is null
+                || item.GetType().Name is not ("MdCapability" or "MarkdownCapability")
+                || !Equals(Get(item, "Feature"), "footnotes")).Select(Snapshot).ToArray();
         var result = new SortedDictionary<string, object?>(StringComparer.Ordinal);
         foreach (var property in type.GetProperties(Instance))
         {
-            if (property.GetIndexParameters().Length != 0 || property.Name is "ParserVersion" or "EqualityContract")
+            if (property.GetIndexParameters().Length != 0 || property.Name is "ParserVersion" or "EqualityContract" or "YamlProfileId" or "YamlSyntax")
                 continue;
             // The v1 core had no identity properties; the same values are already hashed on its public facade.
             if (type.Name == "MdDocumentFacts" && (property.Name is "ContractVersion" or "ProfileId"))
@@ -132,7 +134,9 @@ internal static class FactsSnapshotChecks
             // Recovery metadata is additive and checked independently from the historical facts baseline.
             if (type.Name is "MdFrontMatter" or "MarkdownFrontMatter" && property.Name is "FailureSpan" or "FailureLine")
                 continue;
-            result[property.Name] = Snapshot(property.GetValue(value));
+            // The major changes contract identity; the historical gate still compares every v1 fact.
+            result[property.Name] = property.Name == "ContractVersion" && type.Name == "MarkdownDocument"
+                ? "1.0" : Snapshot(property.GetValue(value));
         }
         if (type.Name is "MdTextProjection" or "MarkdownTextProjection")
         {

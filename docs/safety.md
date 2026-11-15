@@ -1,7 +1,7 @@
 # Resource limits and cancellation
 
 `tests/Syntamark.Safety` compiles the exact `Portable/**/*.cs` files into its own
-net10.0, C# 13 executable with YamlDotNet 18.1.0. It has no runtime project
+net10.0, C# 13 executable with the native YAML parser. It has no runtime project
 reference, friend assembly grant, copied parser implementation, or production test
 hook. Run it with:
 
@@ -10,7 +10,7 @@ dotnet restore tests/Syntamark.Safety --locked-mode
 dotnet run --project tests/Syntamark.Safety -c Release --no-restore
 ```
 
-Both profiles exercise input UTF-16 length immediately below, at, and above its
+The legacy and CommonMark profiles exercise input UTF-16 length immediately below, at, and above its
 configured threshold. All four limits reject zero and negative values. Output,
 scan, and depth cases discover the smallest limit that completes a fixed input,
 then check the adjacent limits. This tests the
@@ -50,3 +50,15 @@ latency or prove interruption inside every regex/library call, hashing, YAML
 parsing, fact freezing, or public-facade conversion. Pre-cancellation and Roslyn
 snapshot-read cancellation are covered separately by Portability and the Roslyn
 canary. Runtime/netstandard2.0 equivalence remains the Portability gate.
+
+Native YAML has separate byte, UTF-16, nesting, node, scalar and scan limits.
+Its generic entry reports cancellation in diagnostics; Markdown entries retain
+the exception behavior described above. Read [Native YAML](native-yaml.md) before
+using a partial tree for schema validation. Input byte retention and a recovered
+tree do not establish complete syntax or a safe editing range.
+
+Parser sessions preserve these checks when reusing paragraphs. Replayed logical
+budget charges prevent reuse from turning a resource-limited input into a
+complete result solely by skipping parser work. Position maps and proposed edits
+also retain snapshot identities; an earlier document version must not receive
+an edit prepared for another snapshot.

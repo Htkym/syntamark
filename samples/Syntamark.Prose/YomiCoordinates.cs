@@ -35,6 +35,28 @@ internal sealed class YomiCoordinates
         rawBoundaries = boundaries.ToArray();
     }
     internal string Text { get; }
+    internal RawSpan ToRawLine(int oneBasedLine)
+    {
+        if (oneBasedLine < 1)
+            throw new ArgumentOutOfRangeException(nameof(oneBasedLine));
+        var line = 1;
+        var start = 0;
+        var position = 0;
+        foreach (var rune in Text.EnumerateRunes())
+        {
+            if (rune.Value == '\n')
+            {
+                if (line == oneBasedLine)
+                    return ToRaw(new(start, position - start));
+                line++;
+                start = position + 1;
+            }
+            position++;
+        }
+        if (line == oneBasedLine)
+            return ToRaw(new(start, position - start));
+        throw new ArgumentOutOfRangeException(nameof(oneBasedLine));
+    }
     internal RawSpan ToRaw(CodePointRange range)
     {
         if (range.Start < 0 || range.Length < 0 || (long)range.Start + range.Length >= rawBoundaries.Length)

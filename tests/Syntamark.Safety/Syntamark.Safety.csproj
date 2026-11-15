@@ -9,6 +9,5 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/Syntamark/Portable/**/*.cs" Link="Portable/%(RecursiveDir)%(Filename)%(Extension)" />
-    <PackageReference Include="YamlDotNet" Version="[18.1.0]" />
   </ItemGroup>
 </Project>

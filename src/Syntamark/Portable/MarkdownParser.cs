@@ -79,10 +79,28 @@ internal static class MdParser
         return new MdAnalysisResult(facts, root, parts, candidates, blocks);
     }
 
+    internal static MdSyntaxDocument ParseSession(string raw, string scopeId, string sourceId, string? sourceVersion,
+        MdOptions options, CancellationToken cancellationToken, MdParagraphReuse reuse)
+    {
+        var facts = ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, true,
+            out var root, out _, out _, paragraphReuse: reuse);
+        return new MdSyntaxDocument(facts, root);
+    }
+
+    internal static MdAnalysisResult AnalyzeSession(string raw, MdAnalysisParts parts, string scopeId, string sourceId,
+        string? sourceVersion, MdOptions options, CancellationToken cancellationToken, MdParagraphReuse reuse)
+    {
+        MdAnalysisResult.Validate(parts);
+        var facts = ParseCore(raw, scopeId, sourceId, sourceVersion, options, cancellationToken,
+            (parts & MdAnalysisParts.Syntax) != 0, out var root, out var candidates, out var blocks,
+            parts, retainBlocks: true, paragraphReuse: reuse);
+        return new MdAnalysisResult(facts, root, parts, candidates, blocks);
+    }
+
     private static MdDocumentFacts ParseCore(string raw, string scopeId, string sourceId, string? sourceVersion,
         MdOptions options, CancellationToken cancellationToken, bool includeSyntax, out MdSyntaxNode? syntaxRoot,
         out IReadOnlyList<MdUnsupportedSyntaxCandidate> unsupportedSyntax, out IReadOnlyList<LithoBlock>? blocks,
-        MdAnalysisParts requestedParts = MdAnalysisParts.AllFacts, bool retainBlocks = false)
+        MdAnalysisParts requestedParts = MdAnalysisParts.AllFacts, bool retainBlocks = false, MdParagraphReuse? paragraphReuse = null)
     {
         if (raw is null)
             throw new ArgumentNullException(nameof(raw));
@@ -91,7 +109,7 @@ internal static class MdParser
         if (sourceVersion is not null && MdHash.InvalidUnicode(sourceVersion, cancellationToken) >= 0)
             throw new ArgumentException("SourceVersion must be well-formed Unicode.", nameof(sourceVersion));
         cancellationToken.ThrowIfCancellationRequested();
-        var builder = new FactsBuilder(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, includeSyntax)
+        var builder = new FactsBuilder(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, includeSyntax, paragraphReuse)
         {
             RequestedParts = requestedParts,
             RetainBlocks = retainBlocks,
@@ -108,6 +126,7 @@ internal static class MdParser
                     "Input contains an unpaired surrogate.", new MdRawRange(invalid, 1), "input", "invalidUnicode"))
                 : builder.Parse();
         }
+        builder.CaptureSessionTotals();
         syntaxRoot = builder.SyntaxRoot;
         unsupportedSyntax = builder.UnsupportedSyntax;
         blocks = builder.Blocks;
@@ -121,15 +140,22 @@ internal static class MdParser
     }
 
     private sealed class FactsBuilder(string raw, string scopeId, string sourceId, string? sourceVersion,
-        MdOptions options, CancellationToken cancellationToken, bool includeSyntax)
+        MdOptions options, CancellationToken cancellationToken, bool includeSyntax, MdParagraphReuse? paragraphReuse)
     {
+        internal FactsBuilder(string raw, string scopeId, string sourceId, string? sourceVersion,
+            MdOptions options, CancellationToken cancellationToken, bool includeSyntax)
+            : this(raw, scopeId, sourceId, sourceVersion, options, cancellationToken, includeSyntax, null)
+        {
+        }
+
         internal MdAnalysisParts RequestedParts { get; init; } = MdAnalysisParts.AllFacts;
         internal bool RetainBlocks { get; init; }
         internal MdSyntaxNode? SyntaxRoot { get; private set; }
         internal IReadOnlyList<LithoBlock>? Blocks { get; private set; }
         internal List<MdUnsupportedSyntaxCandidate> UnsupportedSyntax { get; } = new();
         private IReadOnlyList<LithoBlock>? syntaxBlocks;
-        private readonly MdParseContext context = new(options, cancellationToken);
+        private readonly MdParseContext context = new(options, cancellationToken) { ParagraphReuse = paragraphReuse };
+        internal void CaptureSessionTotals() => paragraphReuse?.CaptureTotals(context);
         private MdFrontMatter frontmatter = new(MdFrontMatterState.Unknown, null, null, null, null);
         private MdRawRange? body;
         private string? textHash;
@@ -141,6 +167,7 @@ internal static class MdParser
         private readonly List<MdFence> fences = new();
         private readonly List<MdTextRegion> regions = new();
         private readonly List<MdDiagnostic> diagnostics = new();
+        private List<MdDiagnostic>? directiveDiagnostics;
         private readonly List<MdTextRegion> unprojected = new();
         private readonly HashSet<string> reasons = new(StringComparer.Ordinal);
         private LithoAnchorIds? anchorIds;
@@ -189,6 +216,21 @@ internal static class MdParser
                 {
                     var bodyText = raw.Substring(body.Value.Start, body.Value.Length);
                     var parsed = LithoBlockParser.ParseFactsBlocks(bodyText, context);
+                    foreach (var diagnostic in context.Footnotes.Diagnostics)
+                    {
+                        diagnostics.Add(new MdDiagnostic(diagnostic.Id, diagnostic.Severity, diagnostic.Message,
+                            ShiftRaw(diagnostic.RawSpan, body.Value.Start), diagnostic.Origin, diagnostic.Reason));
+                        Partial(diagnostic.Reason);
+                    }
+                    if (options.ProfileId == "syntamark-docs/2" && !includeSyntax)
+                        foreach (var block in Walk(parsed.Blocks))
+                        {
+                            var name = block is LithoDirective directive ? directive.Name
+                                : block is LithoAdmonition admonition ? admonition.Kind : null;
+                            if (name is not null && MdDirectiveSyntax.Parse(raw, Range(block.Span), name, context) is { } directiveSyntax)
+                                if (directiveSyntax.Diagnostics.Count != 0)
+                                    (directiveDiagnostics ??= new List<MdDiagnostic>()).AddRange(directiveSyntax.Diagnostics);
+                        }
                     if (RetainBlocks)
                         Blocks = parsed.Blocks;
                     if (includeSyntax)
@@ -255,11 +297,22 @@ internal static class MdParser
                     else
                         Partial("decodedMapping");
                 }
+                if (directiveDiagnostics is not null)
+                    foreach (var diagnostic in directiveDiagnostics)
+                    {
+                        diagnostics.Add(diagnostic);
+                        Partial(diagnostic.Reason);
+                    }
                 if (includeSyntax && syntaxBlocks is not null)
+                {
                     SyntaxRoot = Wants(MdAnalysisParts.Links)
                         ? MdSyntaxFactory.Create(syntaxBlocks, raw.Length, body!.Value.Start, cancellationToken, links, context, raw)
                         : MdSyntaxFactory.CreateWithTargets(syntaxBlocks, raw.Length, body!.Value.Start, cancellationToken,
                             syntaxTargets ?? new Dictionary<MdRawRange, MdRawRange?>(), context, raw);
+                    foreach (var node in SyntaxRoot.DescendantsAndSelf(cancellationToken))
+                        if (node.Directive is not null)
+                            AddDirectiveDiagnostics(node.Directive);
+                }
             }
             catch (MdResourceLimit limit)
             {
@@ -284,6 +337,14 @@ internal static class MdParser
         {
             status = MdParseStatus.Partial;
             reasons.Add(reason);
+        }
+        private void AddDirectiveDiagnostics(MdDirectiveSyntax directive)
+        {
+            foreach (var diagnostic in directive.Diagnostics)
+            {
+                diagnostics.Add(diagnostic);
+                Partial(diagnostic.Reason);
+            }
         }
         private MdRawRange Range(SourceSpan span) => new(checked((body?.Start ?? 0) + span.Start), span.Length);
         private MdRawRange? Range(SourceSpan? span) => span.HasValue ? Range(span.Value) : null;
@@ -408,6 +469,7 @@ internal static class MdParser
                     LithoQuote quote => quote.Children,
                     LithoAdmonition admonition => admonition.Children,
                     LithoDirective directive => directive.Children,
+                    LithoFootnoteDefinition footnote => footnote.Children,
                     _ => null,
                 };
                 if (children is not null)
@@ -830,11 +892,12 @@ internal static class MdParser
                 new[] {
                     new MdCapability("markdownSyntax", options.IsCommonMark ? MdFeatureState.Partial : MdFeatureState.Supported),
                     new MdCapability("frontmatterSyntax", options.IsCommonMark ? MdFeatureState.Unsupported : MdFeatureState.Supported),
+                    new MdCapability("footnotes", options.HasFootnotes ? MdFeatureState.Supported : MdFeatureState.Unsupported),
                     new MdCapability("decodedSourceMapping", MdFeatureState.Partial),
                     new MdCapability("rawHtmlMdxProjection", MdFeatureState.Unsupported),
                     new MdCapability("siteResolution", MdFeatureState.Unsupported),
                 }, coverage, (RequestedParts & MdAnalysisParts.AllFacts) == MdAnalysisParts.AllFacts
-                    ? "1.0" : "analysis/1", options.ProfileId);
+                    ? "2.0" : "analysis/2", options.ProfileId);
         }
     }
 }

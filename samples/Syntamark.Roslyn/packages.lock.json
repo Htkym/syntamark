@@ -28,18 +28,6 @@
           "Microsoft.NETCore.Platforms": "1.1.0"
         }
       },
-      "Syntamark.Source": {
-        "type": "Direct",
-        "requested": "[1.0.1, 1.0.1]",
-        "resolved": "1.0.1",
-        "contentHash": "MKVLliFWNRifHGtTDzq3p59I9ENRAUcBTQ4hvP7FX4+izCskOdSyg+TbVN1faE7g9Hu/dkPglT7QYCWIRndCVA=="
-      },
-      "YamlDotNet": {
-        "type": "Direct",
-        "requested": "[18.1.0, 18.1.0]",
-        "resolved": "18.1.0",
-        "contentHash": "5K+9KFg2TdTl7VXv88Qzi/0lqK6JFoNP3lRuImPYGRV7K/QYklDyTrj4+A+KAki1JsQi6qKY+hDyY7d6WRqjrw=="
-      },
       "Microsoft.CodeAnalysis.Analyzers": {
         "type": "Transitive",
         "resolved": "3.11.0",

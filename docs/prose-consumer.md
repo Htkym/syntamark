@@ -24,9 +24,17 @@ front matter は互換 profile の認識済み facts だけを使います。`co
 
 位置不明の除外対象があれば選択を止め、理由と null range を返します。未知の投影部分は選びません。tree が得られなければ `HasSyntax=false` と `syntax-unavailable` を返します。元の `Facts.Status` と `Facts.Coverage` を確認し、空の結果を完全な本文の不在とみなさないでください。既存の `TextRegions` は変更しません。
 
-## Yomiyasu と組み合わせる場合
+## Yomiyasu の実行
 
-Yomiyasu 2.5.0 は Python 標準ライブラリで動き、Syntamark を参照していません。このサンプルを採用済みの実装や、そのまま差し替えられる処理として扱わないでください。
+Python と Yomiyasu を利用側で用意した場合、次の明示的な操作で校正対象を lint CLI へ渡せます。Syntamark 本体は Python や Yomiyasu を参照せず、通常のサンプル実行でも外部プロセスを起動しません。
+
+```powershell
+dotnet run --project samples/Syntamark.Prose/Syntamark.Prose.csproj -c Release -- --yomiyasu python /path/to/yomiyasu_lint.py guide.md
+```
+
+`python` とスクリプトのパスは実際の配置へ置き換えてください。入力ファイルを省略すると、サンプルに含まれる架空の日本語原稿を使用します。ファイルは厳密な UTF-8 として読み、先頭 BOM を元文字列に残します。
+
+`YomiyasuBridge` は `ProsePolicy.Select` が選んだ各 segment を別々の標準入力として渡します。除外部分をまたいだ文章を作らず、コード、リンク先、HTML、front matter も送りません。各呼び出しには `--json --no-words -` を指定し、プロジェクトの用語一覧を自動では読み込みません。複数 segment にまたがる段落や文書全体の規則は、この経路では検査できません。
 
 | 対象 | Yomiyasu の可視範囲 | このサンプル |
 |---|---|---|
@@ -38,6 +46,8 @@ Yomiyasu 2.5.0 は Python 標準ライブラリで動き、Syntamark を参照�
 
 Yomiyasu の `decode_source` は厳密に UTF-8 を解き、先頭 BOM を1個除去し、CRLF/CR を LF にそろえます。Syntamark の raw 位置と直接交換することはできません。
 
-任意の座標変換例 `YomiCoordinates` は decode 済みの .NET string を受け取り、同じ BOM・改行変換の境界を記録します。正規化後の Python code-point 範囲と元の UTF-16 範囲を変換し、surrogate pair の内部、CRLF の内部、除去した BOM の範囲は逆変換を拒否します。例えば `BOM + A😀 + CRLF + B + CR + C + LF` では、絵文字の Python `[1,2)` は元 UTF-16 `[2,4)`、次の LF の Python `[2,3)` は元 CRLF `[4,6)` です。byte decode や Yomiyasu の実行は行いません。
+座標変換例 `YomiCoordinates` は decode 済みの .NET string を受け取り、同じ BOM・改行変換の境界を記録します。正規化後の Python code-point 範囲と元の UTF-16 範囲を変換し、surrogate pair の内部、CRLF の内部、除去した BOM の範囲は逆変換を拒否します。例えば `BOM + A😀 + CRLF + B + CR + C + LF` では、絵文字の Python `[1,2)` は元 UTF-16 `[2,4)`、次の LF の Python `[2,3)` は元 CRLF `[4,6)` です。
 
-実際に組み合わせる場合は、利用側の保護規則、座標変換、配布と .NET 依存の要否を決めてください。Yomiyasu の採用、lint/diff/check CLI、実文書での利用、網羅的な互換性は確認していません。
+lint の JSON format 2 は行番号を返すため、サンプルはその行全体を segment の投影で元位置へ戻します。元位置が複数に分かれる場合は `RawFragments` を保ち、行だけが分かる診断を `Exact` として返しません。診断は `CoveringTokens` 以下の精度であり、自動置換には使いません。出力には入力の識別子、内容から計算した `sourceVersion`、解析状態、除外理由、診断を含めます。同じ入力スナップショットに対する診断として扱ってください。
+
+各 CLI 呼び出しは30秒で中止し、非0の終了状態、対応外の JSON 形式、不正な行番号を成功として扱いません。この経路が実行するのは lint だけです。Yomiyasu 自体の diff/check 手順や文章の意味の確認、修正の適用は利用側で行ってください。

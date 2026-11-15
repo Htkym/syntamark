@@ -2,9 +2,9 @@
 
 [日本語](migration-v2.ja.md)
 
-Use the runtime and Source packages from the same immutable pair. The verified candidate pair is `2.0.0-preview.2026111303`; its existence in a local candidate feed does not mean it has been published to NuGet.org. Existing published `1.2.0` packages remain unchanged. Compiler-host consumers opt in to `Syntamark.Source` as before and continue to use its internal portable API through their own adapter.
+Use the runtime and Source packages from the same immutable pair. The installation examples use `2.0.0-preview.2026111303`; select a pair that includes the APIs you need. A pair in a local candidate feed has not necessarily been published to NuGet.org. Existing published `1.2.0` packages remain unchanged. Compiler-host consumers opt in to `Syntamark.Source` as before and continue to use its internal portable API through their own adapter.
 
-The planned stable pair is `2.0.0`. Its preparation guard accepts that exact stable version while retaining the preview versions. A private local check does not issue a formal pair. Formal preparation still requires reviewed current `main`, successful normal CI for that exact commit, an unused version and a first workflow attempt. Failed formal attempts consume their version. Publishing additionally requires the matching source tag, a successful reviewed producer run, the sealed manifest hash and explicit publication approval. Switch both package references and the expected parser stamp together when a formal pair is available.
+The planned stable pair is `2.0.0`. Switch both package references and the expected parser stamp together when a formal pair is available.
 
 ## YAML dependencies and behavior
 
@@ -164,6 +164,6 @@ The Source package provides the same operation as `Syntamark.Compilation.MdLinkE
 
 Use [`CreateSession` and `ApplyEdits`](selective-analysis.md#analyze-edited-snapshots) for opt-in paragraph reuse. Existing parse methods keep their behavior. A session returns positions for the new snapshot and explains full-parse fallbacks; persistent syntax node IDs are not guaranteed. Logical resource counters do not establish a timing improvement.
 
-Editors that need selected facts and unsupported-syntax candidates should use `CreateAnalysisSession`. Its distinct `MarkdownAnalysisSession` exposes availability-aware `Analysis` rather than a full-document facade. The portable `MdParseSession.CreateForAnalysis` result also retains legacy rendering `Blocks` from that parse. Requested parts survive both delta and full-parse paths; request `UnsupportedSyntax` explicitly and keep document and transformed-body snapshots separate. The earlier `2.0.0-preview.20261113` pair retains the original session API and is not replaced with this implementation.
+Editors that need selected facts and unsupported-syntax candidates should use `CreateAnalysisSession`. Its distinct `MarkdownAnalysisSession` exposes availability-aware `Analysis` rather than a full-document facade. The portable `MdParseSession.CreateForAnalysis` result also retains legacy rendering `Blocks` from that parse. Requested parts survive both delta and full-parse paths; request `UnsupportedSyntax` explicitly and keep document and transformed-body snapshots separate. The earlier `2.0.0-preview.20261113` pair remains unchanged with its original session API. To use selected-analysis sessions, update both package references and the expected parser stamp to a pair containing that API.
 
 The [prose sample](prose-consumer.md) can invoke a caller-supplied Yomiyasu lint CLI explicitly. It sends selected text segments, maps line diagnostics back to original source fragments, and performs no automatic edits. Python and proofreading remain optional consumer dependencies. Partial parse information, line-only lint positions and unknown source mappings must not be upgraded to exact edits.

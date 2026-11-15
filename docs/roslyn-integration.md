@@ -4,7 +4,7 @@
 
 ## source package と実行環境
 
-sample は `netstandard2.0`、C# 13、Roslyn API `4.14.0` を使います。標準の実行では作業中の `Portable/**/*.cs` を直接取り込みます。候補 package の消費を検査するときは `SyntamarkCandidateMode=true`、`SyntamarkIncludeSource=true` と正確な `SyntamarkSourceVersion` を指定し、package と source のバージョンを照合します。現在の候補は `2.0.0-preview.2026111303` です。正式公開済みのバージョンとは区別してください。
+sample は `netstandard2.0`、C# 13、Roslyn API `4.14.0` を使います。標準の実行では作業中の `Portable/**/*.cs` を直接取り込みます。候補 package の消費を検査するときは `SyntamarkCandidateMode=true`、`SyntamarkIncludeSource=true` と正確な `SyntamarkSourceVersion` を指定し、package と source のバージョンを照合します。以下の実行例では候補バージョン `2.0.0-preview.2026111303` を使います。利用する候補のバージョンに置き換え、正式公開済みのバージョンとは区別してください。
 
 source package は portable source を analyzer assembly に一度だけ取り込みます。runtime の公開 facade と friend metadata は含みません。利用側から internal entry を呼びます。native YAML の実装も同じ source に含まれ、YamlDotNet DLL の配置や参照は不要です。Roslyn 自身の DLL は重複投入しません。
 

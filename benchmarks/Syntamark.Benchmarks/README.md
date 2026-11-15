@@ -1,6 +1,6 @@
 # Syntamark の限定 benchmark
 
-SM05 の公開 Map/行位置 query の比較用 runner。製品に新しい依存を追加しない。比較する Syntamark assembly は `SyntamarkAssembly` で指定する。現在の runner は YamlDotNet を参照しない。保存済みの1.x測定結果では、当時の製品が YamlDotNet 18.1.0 を使用していた。比較対象を同時に load せず、各バージョンを独立 process で動かす。
+公開 Map/行位置 query の比較用 runner。製品に新しい依存を追加しない。比較する Syntamark assembly は `SyntamarkAssembly` で指定する。現在の runner は YamlDotNet を参照しない。保存済みの1.x測定結果では、当時の製品が YamlDotNet 18.1.0 を使用していた。比較対象を同時に load せず、各バージョンを独立 process で動かす。
 
 問い合わせの使い方と費用は [問い合わせと構文保持の費用](../../docs/performance.md)を参照する。選んだ版の全 sample は `Results/shared-helper`、採用しなかった二重保持 cache は `Results/lazy-cache` にある。
 
@@ -32,7 +32,7 @@ dotnet .local/perf-run-helper/Syntamark.Benchmarks.dll helper-b de0a642+query.pa
 dotnet .local/perf-run-base/Syntamark.Benchmarks.dll baseline-b de0a642 baseline-b.json
 ```
 
-`dotnet build` 等は環境の通常の検証 wrapper から呼んでもよい。sandbox の user NuGet.Config/lock へのアクセスが制限される場合は、承認された実行環境または明示した独立 NuGet.Config/cache を使う。依存版は変えない。
+再現時は依存パッケージのバージョンを変えない。
 
 runner の引数は `<label> <source-commit-or-label> <new-results.json>`。出力は `CreateNew` のため既存結果を上書きしない。`--snapshot` は query fixture の semantic hash だけを表示する。label/source は記録情報であり、assembly の正体は出力内の SHA-256 と合わせて確認する。
 
@@ -43,7 +43,7 @@ dotnet <runner>/Syntamark.Benchmarks.dll --syntax <source-label> <new-syntax-res
 dotnet <runner>/Syntamark.Benchmarks.dll --list <source-label> <new-list-results.json>
 ```
 
-`--syntax` は同じDLLの `Parse` と `ParseWithSyntax` を比較し、facts一致、node数、時間、allocation、32 documentの保持量を保存する。reflectionはsetup時だけで、timed範囲では事前に構築したdelegateを呼ぶ。`--list` はCommonMarkのlazy continuation 200/400/800行がCompleteであることを確認して測る。1600行の既定予算の結果は分類だけを保存し、timed結果に含めない。実測の私有snapshotは `Results/syntax-retention` と `Results/list-tail` にあり、source labelと実ロードassembly hashで区別する。
+`--syntax` は同じDLLの `Parse` と `ParseWithSyntax` を比較し、facts一致、node数、時間、allocation、32 documentの保持量を保存する。reflectionはsetup時だけで、timed範囲では事前に構築したdelegateを呼ぶ。`--list` はCommonMarkのlazy continuation 200/400/800行がCompleteであることを確認して測る。1600行の既定予算の結果は分類だけを保存し、timed結果に含めない。保存済みの測定結果は `Results/syntax-retention` と `Results/list-tail` にあり、source labelと実ロードassembly hashで区別する。
 
 ## workload と比較条件
 

@@ -7,7 +7,7 @@ From the repository root, copy a verified Release build first:
 ```powershell
 New-Item -ItemType Directory .local/comparison-benchmark-current -Force
 Copy-Item src/Syntamark/bin/Release/net10.0/Syntamark.dll .local/comparison-benchmark-current/Syntamark.dll
-$env:NUGET_PACKAGES = 'C:\Users\h_tky\AppData\Local\Temp\syntamark-nuget-packages'
+$env:NUGET_PACKAGES = Join-Path (Get-Location) '.local/comparison-benchmark-nuget-packages'
 $env:NUGET_SCRATCH = Join-Path (Get-Location) '.local/comparison-benchmark-nuget-scratch'
 $env:NUGET_HTTP_CACHE_PATH = Join-Path (Get-Location) '.local/comparison-benchmark-nuget-http'
 dotnet restore benchmarks/Syntamark.Comparison --locked-mode
@@ -16,7 +16,7 @@ pwsh -NoProfile -File benchmarks/Syntamark.Comparison/Run.ps1 -OutputDirectory .
 pwsh -NoProfile -File benchmarks/Syntamark.Comparison/Summarize.ps1 -ResultsDirectory .local/comparison-benchmark-results/new-run
 ```
 
-Use the repository's applicable build wrapper when required by local instructions. `SyntamarkAssembly` can override the HintPath. The default copy is intentional: rebuilding another project cannot silently change the benchmark input after copying. Each result records actual assembly hashes and informational versions, so a stale generated parser stamp cannot identify a modified candidate alone.
+`SyntamarkAssembly` can override the HintPath. The default copy is intentional: rebuilding another project cannot silently change the benchmark input after copying. Each result records actual assembly hashes and informational versions, so a stale generated parser stamp cannot identify a modified candidate alone.
 
 To compare `Analyze(Headings | Links | Fences)` with the same bounded Markdig records, use a DLL with the analysis API and enable its optional benchmark code:
 

@@ -2,7 +2,7 @@
 
 [English](native-yaml.md) | [日本語](native-yaml.ja.md)
 
-`YamlParser` provides the single-document `native-yaml/1` syntax profile without a YamlDotNet dependency. The runtime API is in `Syntamark`; the same implementation is included as internal `MdYamlParser` and related types in `Syntamark.Source`. This API parses syntax and scalar meaning. It does not construct C# objects, validate an OKF document, or apply a site's content schema.
+`YamlParser` provides the single-document `native-yaml/1` syntax profile without a YamlDotNet dependency. The runtime API is in `Syntamark`; the same implementation is included as internal `MdYamlParser` and related types in `Syntamark.Source`. This API parses syntax and scalar meaning. It does not construct C# objects or validate content against a consumer's schema.
 
 ```csharp
 using System;

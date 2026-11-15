@@ -43,6 +43,8 @@ using Yaml = Syntamark.Compilation.MdYamlParser;
 using AnalysisResult = Syntamark.Compilation.MdAnalysisResult;
 using TextEdit = Syntamark.Compilation.MdTextEdit;
 using Span = Syntamark.Compilation.MdRawRange;
+using SourceSnapshot = Syntamark.Compilation.MdSourceSnapshot;
+using LinkEdits = Syntamark.Compilation.MdLinkEdits;
 #else
 using Parser = Syntamark.MarkdownParser;
 using Parts = Syntamark.MarkdownAnalysisParts;
@@ -51,6 +53,8 @@ using Yaml = Syntamark.YamlParser;
 using AnalysisResult = Syntamark.MarkdownAnalysisResult;
 using TextEdit = Syntamark.MarkdownTextEdit;
 using Span = Syntamark.RawSpan;
+using SourceSnapshot = Syntamark.SourceSnapshot;
+using LinkEdits = Syntamark.MarkdownLinkEdits;
 #endif
 
 const string markdown = "---\r\ntitle: Pair\r\n---\r\n# Pair 😀\r\n\r\n[guide](guide.md)\r\n\r\nText[^note].\r\n\r\n[^note]: Footnote.\r\n\r\nAlpha\r\n\r\nBeta\r\n\r\nGamma\r\n\r\nTerm {#old}\r\n";
@@ -128,6 +132,30 @@ var yamlSnapshots = new[] { "type: concept\nvalues: [\"false\", true, 0x2A]\n", 
     }).ToArray();
 if (yamlSnapshots[0].status != "Complete" || yamlSnapshots[1].status != "Partial" || yamlSnapshots[2].status == "Complete")
     throw new InvalidOperationException("The packaged YAML parser lost complete, duplicate or unsupported states.");
+var linkEditSnapshots = new List<object>();
+foreach (var profile in new[] { "lithosharp-markdown/1", "commonmark/0.31.2", "syntamark-docs/2" })
+{
+    const string raw = "\uFEFF[a][r] ![b][r]\r\n\r\n[r]: <old.md> \"keep\"\r\n";
+    const string destination = "https://example.test/a (b)<c>\\😀?x=1&copy;=2|3%2f#節";
+    var source = new SourceSnapshot("links.md", "r1", raw);
+    var options = new Options(profileId: profile);
+    var links = Parser.Analyze(raw, Parts.Links, "pair-edits", source.SourceId, source.Version, options, CancellationToken.None);
+    if (!LinkEdits.TryCreateDestinationEdit(source, links, 0, destination, out var edit, out var reason)
+        || reason.ToString() != "None" || !edit!.IsApplicable(source))
+        throw new InvalidOperationException("The packaged destination editor did not create an applicable edit.");
+    var range = edit.Target.Span;
+    var changed = raw.Remove(range.Start, range.Length).Insert(range.Start, edit.Replacement);
+    var reparsed = Parser.Analyze(changed, Parts.Links, "pair-edits", source.SourceId, "r2", options, CancellationToken.None);
+    if (reparsed.Links!.Count != 3 || reparsed.Links.Any(link => link.Target != destination || link.Title != "keep"))
+        throw new InvalidOperationException("The packaged edit changed a shared reference or its decoded destination.");
+    if (LinkEdits.TryCreateDestinationEdit(new SourceSnapshot("links.md", "r2", raw), links, 0, destination, out _, out var stale)
+        || stale.ToString() != "SnapshotMismatch")
+        throw new InvalidOperationException("The packaged destination editor accepted a stale snapshot.");
+    if (LinkEdits.TryCreateDestinationEdit(source, links, 0, "", out _, out var empty) || empty.ToString() != "EmptyDestination")
+        throw new InvalidOperationException("The packaged destination editor lost its empty-destination policy.");
+    linkEditSnapshots.Add(new { profile, range.Start, range.Length, edit.ExpectedText, edit.Replacement,
+        stale = stale.ToString(), empty = empty.ToString(), links = reparsed.Links.Select(link => new { link.Target, link.Title }) });
+}
 var parserAssembly = typeof(Parser).Assembly;
 var noRetiredDependencies = !parserAssembly.GetReferencedAssemblies().Any(reference =>
     reference.Name is "YamlDotNet" or "SkiaSharp" || reference.Name?.StartsWith("SkiaSharp.NativeAssets", StringComparison.Ordinal) == true);
@@ -140,6 +168,7 @@ var snapshot = new
         .Select(node => new { kind = node.Kind.ToString(), start = node.RawSpan?.Start, length = node.RawSpan?.Length }),
     yaml = yamlSnapshots,
     analysisSession = analysisSessionSnapshot,
+    linkEdits = linkEditSnapshots,
 };
 #if SOURCE_HOST
 var sourceParseCompiled = parserAssembly.GetType("Syntamark.Compilation.MdParser") is not null;

@@ -125,6 +125,41 @@ Console.WriteLine(mapped.Precision); // CoveringTokens
 Console.WriteLine(mapped.CanEdit); // False
 ```
 
+## Editing link destinations
+
+`MarkdownLinkEdits.TryCreateDestinationEdit` accepts a `SourceSnapshot`, its `MarkdownAnalysisResult`, an index into that result's `Links`, and a destination before Markdown escaping. The returned `SourceEdit` replaces only the destination contents; it preserves labels, image alt text, titles, reference labels and surrounding delimiters. It does not read or write files, resolve site routes, normalize URIs, or parse the document again. This API requires a candidate containing the destination editor; the earlier `2.0.0-preview.2026111303` pair does not contain it.
+
+Request `Links` explicitly. The source ID, explicit source version and text hash must match the analysis; both analysis status and Links availability must be `Complete`. The index selects a link from that exact result, so a detached link cannot be paired with an unrelated snapshot. No syntax output is required for this operation. Null arguments throw; a cancelled token throws `OperationCanceledException`. Other refusals return false, a null edit and a `MarkdownLinkEditFailure` value.
+
+```csharp
+using System;
+using Syntamark;
+
+var source = new SourceSnapshot("guide.md", "1", "[Guide](old.md \"Title\")");
+var options = new MarkdownParseOptions(profileId: "commonmark/0.31.2");
+var analysis = MarkdownParser.Analyze(source.Text, MarkdownAnalysisParts.Links,
+    "docs", source.SourceId, source.Version, options);
+if (!MarkdownLinkEdits.TryCreateDestinationEdit(source, analysis, 0,
+    "https://example.test/a(b)?x=1&y=2", out var edit, out var failure))
+    throw new InvalidOperationException(failure.ToString());
+if (!edit!.IsApplicable(source))
+    throw new InvalidOperationException("The source changed.");
+var span = edit.Target.Span;
+var revised = source.Text.Remove(span.Start, span.Length).Insert(span.Start, edit.Replacement);
+var checkedResult = MarkdownParser.Analyze(revised, MarkdownAnalysisParts.Links,
+    "docs", source.SourceId, "2", options);
+Console.WriteLine(checkedResult.Links![0].Target); // https://example.test/a(b)?x=1&y=2
+Console.WriteLine(checkedResult.Links[0].Title); // Title
+```
+
+Inline links, images and resolved reference uses/definitions support bare and angle-delimited destinations in all three Markdown profiles. Character references protect Markdown delimiters, backslashes, ampersands, whitespace and table pipes while preserving the decoded destination, including Unicode, query, fragment and existing percent escapes. An empty original destination can be replaced. A new empty destination is rejected as `EmptyDestination`; malformed Unicode and control characters, including tabs and newlines, are `InvalidDestination`. Autolinks are `UnsupportedLinkKind` because their label and destination are coupled. Unresolved references and unknown destination ranges are rejected separately. An unchanged unresolved literal can remain in the caller's output without being edited.
+
+`SnapshotMismatch`, `AnalysisIncomplete`, `LinksUnavailable` and `LinkNotFound` identify input or analysis failures. `UnsupportedProfile` prevents applying these rules to an unknown profile. A complete parse alone does not make a null position editable, and `SourceEdit.IsApplicable` alone does not validate Markdown syntax.
+
+A reference use points to its shared definition. Multiple uses can therefore produce the same edit. Collect proposals against one snapshot, collapse identical target/replacement pairs, reject conflicting or intersecting edits, and apply the remaining disjoint edits in descending offset order. Reanalyze the final text once with the same profile and intended input kind to validate the combined result; do not reparse the whole document for each link. After an include or component transformation, use a distinct snapshot and `MarkdownInputKind.Body` with the original profile. Map an edit back to an origin only when `SourceMapResult.CanEdit` is true; multiple origins or covering mappings are not one exact replacement.
+
+The Source package provides the same operation as `Syntamark.Compilation.MdLinkEdits.TryCreateDestinationEdit`, using `MdSourceSnapshot`, `MdAnalysisResult`, `MdSourceEdit` and `MdLinkEditFailure`. Both paths share the destination encoder and rejection rules; Source does not include the runtime facade.
+
 ## Edited snapshots and proofreading
 
 Use [`CreateSession` and `ApplyEdits`](selective-analysis.md#analyze-edited-snapshots) for opt-in paragraph reuse. Existing parse methods keep their behavior. A session returns positions for the new snapshot and explains full-parse fallbacks; persistent syntax node IDs are not guaranteed. Logical resource counters do not establish a timing improvement.

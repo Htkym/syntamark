@@ -125,6 +125,41 @@ Console.WriteLine(mapped.Precision); // CoveringTokens
 Console.WriteLine(mapped.CanEdit); // False
 ```
 
+## リンク宛先の編集
+
+`MarkdownLinkEdits.TryCreateDestinationEdit` は、`SourceSnapshot`、その解析結果である `MarkdownAnalysisResult`、結果の `Links` 内のインデックス、Markdown のエスケープ前の宛先を受け取ります。返る `SourceEdit` は宛先の内容だけを置換し、ラベル、画像の代替テキスト、title、参照ラベル、周囲の区切り記号を保持します。ファイルの読み書き、サイトのルート解決、URI の正規化、文書の再解析は行いません。この API を使うには宛先編集機能を含む候補ペアが必要です。以前の `2.0.0-preview.2026111303` ペアには含まれません。
+
+`Links` を明示的に要求してください。ソース ID、明示したソースバージョン、テキストのハッシュが解析結果と一致し、解析状態と Links の取得状態がどちらも `Complete` である必要があります。インデックスはその結果内のリンクを選ぶため、別の結果から取り出したリンクと無関係なスナップショットを組み合わせることはできません。この操作だけなら構文の出力は不要です。引数が null の場合は例外となり、キャンセル時は `OperationCanceledException` を送出します。それ以外の拒否では false、null の編集案、`MarkdownLinkEditFailure` の理由を返します。
+
+```csharp
+using System;
+using Syntamark;
+
+var source = new SourceSnapshot("guide.md", "1", "[Guide](old.md \"Title\")");
+var options = new MarkdownParseOptions(profileId: "commonmark/0.31.2");
+var analysis = MarkdownParser.Analyze(source.Text, MarkdownAnalysisParts.Links,
+    "docs", source.SourceId, source.Version, options);
+if (!MarkdownLinkEdits.TryCreateDestinationEdit(source, analysis, 0,
+    "https://example.test/a(b)?x=1&y=2", out var edit, out var failure))
+    throw new InvalidOperationException(failure.ToString());
+if (!edit!.IsApplicable(source))
+    throw new InvalidOperationException("The source changed.");
+var span = edit.Target.Span;
+var revised = source.Text.Remove(span.Start, span.Length).Insert(span.Start, edit.Replacement);
+var checkedResult = MarkdownParser.Analyze(revised, MarkdownAnalysisParts.Links,
+    "docs", source.SourceId, "2", options);
+Console.WriteLine(checkedResult.Links![0].Target); // https://example.test/a(b)?x=1&y=2
+Console.WriteLine(checkedResult.Links[0].Title); // Title
+```
+
+3種類の Markdown プロファイルで、インラインリンク、画像、解決済みの参照使用・参照定義の宛先を編集できます。宛先を山括弧で囲む形式と囲まない形式に対応します。Markdown の区切り記号、バックスラッシュ、アンパサンド、空白、表のパイプは文字参照で保護します。デコード後の宛先では Unicode、query、fragment、既存の percent escape を保持します。元の宛先が空でも置換できます。新しい空の宛先は `EmptyDestination`、不正な Unicode とタブ・改行を含む制御文字は `InvalidDestination` として拒否します。autolink は表示文字と宛先が連動するため `UnsupportedLinkKind` となります。未解決参照と宛先位置が不明な場合も、それぞれ理由を返して拒否します。変更が不要な未解決のリテラルは、利用側の出力に原文のまま残せます。
+
+`SnapshotMismatch`、`AnalysisIncomplete`、`LinksUnavailable`、`LinkNotFound` は入力や解析結果の問題を示します。`UnsupportedProfile` は未知のプロファイルへの適用を防ぎます。解析が完了していても、null の位置は編集できません。また、`SourceEdit.IsApplicable` の成功だけでは Markdown 構文の正しさを確認できません。
+
+参照の使用箇所は共有する定義を指すため、複数の使用箇所から同じ編集案が返る場合があります。同じスナップショットに対する編集案を集め、対象範囲と置換内容が同じものを一つにまとめてください。矛盾する編集や交差する編集は拒否し、残った重複しない編集を offset の降順で適用します。適用後は同じプロファイルと意図した入力種別で全体を一度解析し、組み合わせた結果を確認してください。リンクごとの全文再解析は不要です。include や component の変換後は別のスナップショットとし、元のプロファイルを保って `MarkdownInputKind.Body` を使います。編集を元ソースへ戻す場合は `SourceMapResult.CanEdit` を確認してください。複数の元範囲や記号全体を覆う対応を、一つの正確な置換範囲として扱わないでください。
+
+Source パッケージでは、`Syntamark.Compilation.MdLinkEdits.TryCreateDestinationEdit` に `MdSourceSnapshot`、`MdAnalysisResult`、`MdSourceEdit`、`MdLinkEditFailure` を使います。両経路は宛先のエンコード処理と拒否条件を共有します。Source に runtime の公開 facade は含まれません。
+
 ## 編集後のスナップショットと文章校正
 
 段落の再利用を明示的に有効にする場合は、[`CreateSession` と `ApplyEdits`](selective-analysis.md#analyze-edited-snapshots) を使用してください。既存の解析メソッドの動作は変わりません。セッションは新しいスナップショットの位置を返し、全文解析に切り替えた理由を示します。永続的な構文ノード ID は保証しません。論理的なリソースカウンターの値だけでは、処理時間が改善したとは判断できません。

@@ -86,6 +86,7 @@ public sealed class SourceEdit
 {
     public SourceEdit(SourceRange target, string expectedText, string replacement)
         => Core = new((target ?? throw new ArgumentNullException(nameof(target))).Core, expectedText, replacement);
+    internal SourceEdit(MdSourceEdit core) => Core = core;
     private MdSourceEdit Core { get; }
     public SourceRange Target => new(Core.Target);
     public string ExpectedText => Core.ExpectedText;

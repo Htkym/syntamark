@@ -14,6 +14,11 @@ portableContext.Resolving += (_, name) => AssemblyLoadContext.Default.LoadFromAs
 var portable = portableContext.LoadFromAssemblyPath(Path.Combine(AppContext.BaseDirectory, "Portable", "Syntamark.dll"));
 var portableTarget = portable.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName;
 DependencyChecks.Run(portable);
+if (args is ["--link-edits"])
+{
+    LinkEditChecks.Run(portable);
+    return;
+}
 if (args is ["--parser-session"])
 {
     ParserSessionChecks.Run(portable);
@@ -109,6 +114,7 @@ MappingRegressionChecks.Run(portable);
 CommonMarkInlineChecks.Run(portable);
 ReviewFixChecks.Run(runtime, portable);
 SourceMapChecks.Run();
+LinkEditChecks.Run(portable);
 FootnoteChecks.Run(portable);
 NativeYamlChecks.Run(portable);
 SyntaxPositionChecks.Run(portable);

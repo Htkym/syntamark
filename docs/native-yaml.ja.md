@@ -2,7 +2,7 @@
 
 [English](native-yaml.md) | [日本語](native-yaml.ja.md)
 
-`YamlParser` は YamlDotNet に依存せず、単一文書用の構文プロファイル `native-yaml/1` を提供します。実行時 API は `Syntamark` にあります。`Syntamark.Source` には同じ実装が内部型の `MdYamlParser` と関連型として含まれます。この API は構文とスカラーの意味を解析します。C# オブジェクトの生成、OKF 文書の検証、サイトのコンテンツスキーマの適用は行いません。
+`YamlParser` は YamlDotNet に依存せず、単一文書用の構文プロファイル `native-yaml/1` を提供します。実行時 API は `Syntamark` にあります。`Syntamark.Source` には同じ実装が内部型の `MdYamlParser` と関連型として含まれます。この API は構文とスカラーの意味を解析します。C# オブジェクトの生成や、利用側のコンテンツスキーマに基づく検証は行いません。
 
 ```csharp
 using System;

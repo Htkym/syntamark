@@ -9,7 +9,7 @@ dotnet run --project tests/Syntamark.Comparison -c Release --no-restore -- --out
 
 `headings-and-resolved-links/1` は、見出しの level/decoded text/raw span と、解決済みリンク・画像の label/target/title/raw span/target span を文書順に比べる。独立に選んだ原文 token と decoded 値を期待値にする。参照定義は link use と分け、target span は定義側を指す。slug、section、code block、prose、診断、任意 substring の mapping は共通出力に含めない。
 
-Markdig は `UsePreciseSourceLocation()` のみを有効にする。Syntamark は既存の `lithosharp-markdown/1`。共有する入力は両 profile の共通部分であり、この比較から純粋 CommonMark 全体の準拠や処理量の同等性は判断できない。
+Markdig は `UsePreciseSourceLocation()` のみを有効にする。Syntamark は既存の `lithosharp-markdown/1` を使う。共有する入力は両 profile の共通部分であり、この比較から純粋 CommonMark 全体の準拠や処理量の同等性は判断できない。
 
 Markdig の end は inclusive なので `length = end - start + 1` に変換する。`SourceSpan.Empty` `(0,-1)` は位置不明として null にし、それ以外の `(start,start-1)` は既知の 0 幅として保持する。`UrlSpan` の lexical token が `<>` を含む例は、内容だけの Syntamark `TargetRawSpan` と意味が異なるため、別の empty destination probe で実値を出す。比較 adapter は marker を推測で除去しない。
 

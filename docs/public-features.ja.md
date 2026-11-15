@@ -80,7 +80,7 @@ if (analysis.GetAvailability(MarkdownAnalysisParts.Links) == MarkdownAnalysisAva
 
 `GetAvailability` には基本の part を一つ指定します。`NotRequested`、`Complete`、`Partial`、`Unavailable` を区別し、未要求・取得不能の property は null です。profile の対応範囲内で不在を確認できるのは、完全な出力が空の場合です。資源制限によって構文が取得不能でも、ほかの選択 facts が部分的に残る場合があります。`UnsupportedSyntax` は通常のテキストに残った脚注、定義リスト、汎用属性、grid table らしい候補を明示的に要求します。描画の拡張や製品固有の診断ではありません。docs profile で有効な脚注は未対応候補にせず、code・math・HTML token・link destination は既存の解析を使って除外します。
 
-portable adapter の `MdParser.AnalyzeWithBlocks` は `Syntax` を要求せず、同じ解析から従来の描画用 block を保持します。internal な block の位置は body 相対で、公開 facts・候補は入力全体の相対位置です。block は後段の投影制限で残る場合がありますが、block 解析が完了しなければ null です。第二の公開 AST ではありません。[選択解析](selective-analysis.md)には追加の英語の例があります。
+portable adapter の `MdParser.AnalyzeWithBlocks` は `Syntax` を要求せず、同じ解析から従来の描画用 block を保持します。internal な block の位置は body 相対で、公開 facts・候補は入力全体の相対位置です。block は後段の投影制限に達しても残る場合がありますが、block 解析が完了しなければ null です。第二の公開 AST ではありません。[選択解析](selective-analysis.md)には追加の英語の例があります。
 
 <a id="inputs"></a>
 ## front matter、header scan、Body 入力
@@ -127,7 +127,7 @@ Yomiyasu は先頭 BOM を1個除去し、CRLF/CR を LF へ正規化し、Pytho
 <a id="resources"></a>
 ## 処理予算、キャンセル、結果の識別
 
-`MarkdownParseOptions` の既定値は `MaxInputUtf16=1048576`、`MaxOutputItems=131072`、`MaxNestingDepth=200`、`MaxScanUnits=16777216` で、すべて正の値です。入力拒否は `Failed`、開始後の処理予算停止は資源制限診断と不完全な coverage を伴う `Partial` です。公開済みの facts は残る場合があります。`LMD002` は入力拒否、`LMD003` は資源制限による停止を示します。各出力の availability と nullable な位置を確認してください。`Coverage` はすべての構文位置を保証しません。Markdown のキャンセルは `OperationCanceledException`、不正な options や範囲は引数例外です。汎用 YAML は段階によってキャンセルの契約が異なり、[Native YAML](native-yaml.ja.md)に6個の予算を説明しています。
+`MarkdownParseOptions` の既定値は `MaxInputUtf16=1048576`、`MaxOutputItems=131072`、`MaxNestingDepth=200`、`MaxScanUnits=16777216` で、すべて正の値です。入力拒否は `Failed`、開始後の処理予算停止は資源制限診断と不完全な coverage を伴う `Partial` です。公開済みの facts は残る場合があります。`LMD002` は入力拒否、`LMD003` は資源制限による停止を示します。各出力の availability と nullable な位置を確認してください。`Coverage` はすべての構文位置を保証しません。Markdown のキャンセルは `OperationCanceledException`、不正な options や範囲は引数例外です。汎用 YAML は段階によってキャンセルの契約が異なり、[Native YAML](native-yaml.ja.md)で6個の予算を説明しています。
 
 | 診断 | 意味 |
 |---|---|

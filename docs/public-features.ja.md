@@ -23,6 +23,7 @@ Syntamark の公開機能と、対応する英語・日本語の説明を示し�
 | 本文の選択と任意の Yomiyasu 連携 | `samples/Syntamark.Prose` | [Prose](public-features.md#prose) | [校正連携](#prose) |
 | 処理予算、キャンセル、結果の識別 | parse options、`Status`、`Coverage`、hash | [Resources](public-features.md#resources) | [資源制限](#resources) |
 | 再現可能な性能測定 | benchmark executable、session counters | [Measurement](public-features.md#measurement) | [測定](#measurement) |
+| リンク宛先の編集 | `MarkdownLinkEdits.TryCreateDestinationEdit` | [Destination edits](migration-v2.md#editing-link-destinations) | [宛先編集](migration-v2.ja.md) |
 
 <a id="packages"></a>
 ## runtime と compiler host 向け Source

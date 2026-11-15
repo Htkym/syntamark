@@ -23,6 +23,7 @@ This guide maps Syntamark's public features to the same English and Japanese exp
 | Prose selection and optional Yomiyasu bridge | `samples/Syntamark.Prose` | [Prose](#prose) | [校正連携](public-features.ja.md#prose) |
 | Resource budgets, cancellation and result identity | parse options, `Status`, `Coverage`, hashes | [Resources](#resources) | [資源制限](public-features.ja.md#resources) |
 | Reproducible performance measurement | benchmark executables, session counters | [Measurement](#measurement) | [測定](public-features.ja.md#measurement) |
+| Link destination edits | `MarkdownLinkEdits.TryCreateDestinationEdit` | [Destination edits](migration-v2.md#editing-link-destinations) | [宛先編集](migration-v2.ja.md) |
 
 <a id="packages"></a>
 ## Runtime and compiler-host Source
